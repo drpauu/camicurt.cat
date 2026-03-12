@@ -1,4 +1,4 @@
-# rumb.cat
+# camicurt.cat
 
 ## Requisits
 - Node.js 18+.

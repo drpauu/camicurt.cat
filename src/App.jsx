@@ -6,7 +6,7 @@ import { feature, mesh, neighbors as topoNeighbors } from "topojson-client";
 import { supabase, supabaseEnabled } from "./lib/supabase.js";
 import { buildCentroidMap, buildNeighborSet } from "./lib/geography.js";
 import { loadSettings, saveSettings } from "./lib/settings.js";
-import { THEMES, TOMAS_THEME_ID } from "./lib/themes.js";
+import { TOMAS_THEME_ID } from "./lib/themes.js";
 import { RULES, pickRuleForKey, normalizeRule } from "./lib/rules.js";
 import { createAudioManager, loadAudioManifest } from "./lib/audio.js";
 import { useSound } from "./audio/SoundProvider.tsx";
@@ -183,7 +183,7 @@ const LANGUAGES = [
 ];
 
 const BASE_DESCRIPTION =
-  "Objectiu: connecta Inici i Destí escrivint comarques (en qualsevol ordre) fins que hi hagi un camí continu. El camí curt és la ruta òptima i serveix per comparar intents. Verd = dins del camí curt, groc = veïna del camí curt, vermell = fora. La norma pot obligar o evitar zones per allargar el repte. Diari i Setmanal són nivells fixos per a tothom; en Contrarellotge tens un límit de temps amb compte enrere.";
+  "Connecta Inici i Destí amb comarques veïnes, completa una ruta contínua i millora-la pas a pas fins apropar-te al camí òptim.";
 
 const STRINGS = {
   ca: {
@@ -192,6 +192,14 @@ const STRINGS = {
     rule: "Norma",
     difficulty: "Dificultat",
     description: BASE_DESCRIPTION,
+    descriptionNormal:
+      "Mode normal: uneix Inici i Destí triant comarques veïnes, completa una ruta vàlida i intenta millorar-la fins acostar-te al camí òptim.",
+    descriptionDaily:
+      "Mode diari: resol el repte fix d'avui amb la mateixa ruta per a tothom, compara intents, temps i apropa't a l'òptim.",
+    descriptionTimed:
+      "Contrarellotge: completa el camí abans que acabi el compte enrere, evita errors innecessaris i prioritza decisions ràpides per arribar a temps.",
+    descriptionExplore:
+      "Explora: juga sense pressa per practicar connexions entre comarques, provar rutes alternatives, entendre el mapa i preparar-te pels modes exigents.",
     time: "Temps",
     timeLeft: "Temps restant",
     coins: "Rovellons",
@@ -1694,7 +1702,8 @@ export default function App() {
   const [startedAt, setStartedAt] = useState(null);
   const [gameMode, setGameMode] = useState(() => {
     if (typeof window === "undefined") return "normal";
-    return localStorage.getItem("rumb-mode") || "normal";
+    const storedMode = localStorage.getItem("rumb-mode") || "normal";
+    return storedMode === "weekly" ? "normal" : storedMode;
   });
   const [difficulty, setDifficulty] = useState(() => {
     if (typeof window === "undefined") return "pixapi";
@@ -3774,28 +3783,6 @@ export default function App() {
     }
   }
 
-  function handlePlayWeekly() {
-    play("ui_select");
-    const key = weekKey;
-    const record = getCompletionRecord("weekly", key);
-    if (record?.winningAttempt) {
-      openCompletionModal(record);
-      return;
-    }
-    setCalendarSelection({ mode: "weekly", key });
-    if (gameMode !== "weekly") {
-      setGameMode("weekly");
-      return;
-    }
-    const entry = calendarWeeklyMap.get(key);
-    if (entry?.level) {
-      applyCalendarLevel(entry.level);
-      calendarApplyRef.current = `weekly:${key}`;
-    } else if (entry?.levelId) {
-      handleCalendarAction("weekly", key);
-    }
-  }
-
   function handleStartNext() {
     play("ui_select");
     if (isDailyMode) {
@@ -3856,14 +3843,6 @@ export default function App() {
     const [x, y] = centroid;
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
     select(svgRef.current).call(zoomRef.current.translateTo, x, y);
-  }
-
-  function handleThemeSelect(themeId) {
-    play("ui_select");
-    setActiveTheme(themeId);
-    if (themeId === TOMAS_THEME_ID) {
-      triggerWeatherForComarca(lastGuessRef.current, true);
-    }
   }
 
   function handleConfigOpen() {
@@ -3979,9 +3958,7 @@ export default function App() {
   function handleTitleReset() {
     play("ui_select");
     const todayKey = dayKey;
-    const thisWeekKey = weekKey;
     const todayDone = Boolean(getCompletionRecord("daily", todayKey)?.winningAttempt);
-    const weekDone = Boolean(getCompletionRecord("weekly", thisWeekKey)?.winningAttempt);
     setShowModal(false);
     setResultData(null);
     setIsFailed(false);
@@ -4004,10 +3981,6 @@ export default function App() {
 
     if (!todayDone) {
       handleCalendarPick("daily", todayKey);
-      return;
-    }
-    if (!weekDone) {
-      handleCalendarPick("weekly", thisWeekKey);
       return;
     }
     const unlocked = [...unlockedDifficulties];
@@ -4367,7 +4340,7 @@ export default function App() {
     const targetName = targetId ? comarcaById.get(targetId)?.properties.name : "";
     const guessNames = resultData.playerPath.map((entry) => entry.name).join(", ");
     const text = [
-      `rumb.cat: ${startName} → ${targetName}`,
+      `camicurt.cat: ${startName} → ${targetName}`,
       `Mode: ${resultData.mode}`,
       `Dificultat: ${resultData.difficulty}`,
       `Temps: ${timeLabel}`,
@@ -4456,10 +4429,15 @@ export default function App() {
     targetId,
     activeRule?.id
   ]);
-  const currentStats = currentLevelKey ? levelStats[currentLevelKey] || {} : {};
-  const isPerfectRecord = currentStats.perfect;
   const timeLeftUrgent = isTimedMode && timeLeftMs <= 10000;
   const shouldShowSuggestions = isSuggestionsOpen && suggestions.length > 0;
+  const subtitleKey = isDailyMode
+    ? "descriptionDaily"
+    : isTimedMode
+      ? "descriptionTimed"
+      : isExploreMode
+        ? "descriptionExplore"
+        : "descriptionNormal";
   const musicOptions = useMemo(() => {
     if (audioManifest?.music) {
       return Object.entries(audioManifest.music).map(([id, file]) => ({
@@ -4471,9 +4449,7 @@ export default function App() {
   }, [audioManifest]);
   const todayLabel = useMemo(() => formatFullDayLabel(dayKey), [dayKey]);
   const showDailySkeleton = calendarStatus === "loading" && calendarDaily.length === 0;
-  const showWeeklySkeleton = calendarStatus === "loading" && calendarWeekly.length === 0;
   const hasDailyLevels = calendarDaily.some((entry) => entry.levelId);
-  const hasWeeklyLevels = calendarWeekly.some((entry) => entry.levelId);
   const calendarMonthLabel = useMemo(() => {
     return calendarMonth.toLocaleDateString("ca-ES", {
       month: "long",
@@ -4482,10 +4458,6 @@ export default function App() {
   }, [calendarMonth]);
   const calendarMonthDays = useMemo(
     () => buildMonthGrid(calendarMonth),
-    [calendarMonth]
-  );
-  const calendarWeekRows = useMemo(
-    () => buildWeeksForYear(calendarMonth.getFullYear()),
     [calendarMonth]
   );
   const streakTierLabel = useMemo(() => getStreakTier(displayStreak), [displayStreak]);
@@ -4501,11 +4473,11 @@ export default function App() {
         <div className="brand">
           <div className="brand-row">
             <button type="button" className="brand-button" onClick={handleTitleReset}>
-              <h1>rumb.cat</h1>
+              <h1>camicurt.cat</h1>
             </button>
             <span className="brand-date">{todayLabel}</span>
           </div>
-          <p className="subtitle">{t("description")}</p>
+          <p className="subtitle">{t(subtitleKey)}</p>
         </div>
         <div className="topbar-right">
           <div className="topbar-actions">
@@ -4516,14 +4488,6 @@ export default function App() {
               disabled={!isMapReady}
             >
               {t("playToday")}
-            </button>
-            <button
-              type="button"
-              className="topbar-button topbar-play-weekly"
-              onClick={handlePlayWeekly}
-              disabled={!isMapReady}
-            >
-              {t("playWeekly")}
             </button>
             <button
               type="button"
@@ -4888,31 +4852,6 @@ export default function App() {
               </div>
 
               <div className="options-section">
-                <span className="label">{t("stats")}</span>
-                <div className="stats-grid">
-                  <div className="stat-row">
-                    <span className="label">{t("attempts")}</span>
-                    <span className="value">{attempts}</span>
-                  </div>
-                  <div className="stat-row">
-                    <span className="label">{t("bestTime")}</span>
-                    <span className="value">
-                      {currentStats.bestTime ? formatTime(currentStats.bestTime) : "—"}
-                    </span>
-                  </div>
-                  <div className="stat-row">
-                    <span className="label">{t("bestAttempts")}</span>
-                    <span className={`value ${isPerfectRecord ? "is-perfect" : ""}`}>
-                      {currentStats.bestAttempts ?? "—"}
-                    </span>
-                  </div>
-                </div>
-                {isPerfectRecord ? (
-                  <span className="badge success">{t("perfect")}</span>
-                ) : null}
-              </div>
-
-              <div className="options-section">
                 <button
                   type="button"
                   className="config-button"
@@ -4943,213 +4882,84 @@ export default function App() {
                 ×
               </button>
             </div>
-            <div className="calendar-tabs">
-              <button
-                type="button"
-                className={`calendar-tab ${calendarMode === "daily" ? "active" : ""}`}
-                onClick={() => {
-                  play("ui_select");
-                  setCalendarMode("daily");
-                }}
-              >
-                {t("daily")}
-              </button>
-              <button
-                type="button"
-                className={`calendar-tab ${calendarMode === "weekly" ? "active" : ""}`}
-                onClick={() => {
-                  play("ui_select");
-                  setCalendarMode("weekly");
-                }}
-              >
-                {t("weekly")}
-              </button>
-            </div>
-
-            {calendarMode === "daily" ? (
-              <div className="calendar-body">
-                <div className="calendar-month">
-                  <button
-                    type="button"
-                    className="icon-button"
-                    onClick={() => {
-                      play("ui_select");
-                      handleCalendarPrevMonth();
-                    }}
-                    aria-label={t("previous")}
-                  >
-                    ‹
-                  </button>
-                  <span className="calendar-month-label">{calendarMonthLabel}</span>
-                  <button
-                    type="button"
-                    className="icon-button"
-                    onClick={() => {
-                      play("ui_select");
-                      handleCalendarNextMonth();
-                    }}
-                    aria-label={t("next")}
-                  >
-                    ›
-                  </button>
-                </div>
-                <div className="calendar-weekdays">
-                  {CALENDAR_WEEKDAYS.map((weekday) => (
-                    <span key={weekday}>{weekday}</span>
-                  ))}
-                </div>
-                <div className="calendar-grid">
-                  {showDailySkeleton
-                    ? Array.from({ length: 42 }).map((_, index) => (
-                        <div key={`day-skel-${index}`} className="calendar-day skeleton" />
-                      ))
-                    : calendarMonthDays.map((day) => {
-                        const dailyEntry = calendarDailyMap.get(day.key) || null;
-                        const isToday = day.key === dayKey;
-                        const isDoneDaily = Boolean(
-                          getCompletionRecord("daily", day.key)?.winningAttempt
-                        );
-                        const hasDailyLevel = Boolean(dailyEntry?.levelId);
-                        const dayDotClass = hasDailyLevel
-                          ? isDoneDaily
-                            ? "calendar-dot done"
-                            : "calendar-dot active"
-                          : "calendar-dot empty";
-                        const dayLabel = `${formatFullDayLabel(day.key)}${
-                          hasDailyLevel ? "" : ` · ${t("calendarNoLevel")}`
-                        }`;
-                        return (
-                          <button
-                            key={day.key}
-                            type="button"
-                            className={`calendar-day ${day.inMonth ? "" : "muted"} ${
-                              isToday ? "today" : ""
-                            } ${isDoneDaily ? "done" : ""} ${
-                              hasDailyLevel ? "has-level" : "disabled"
-                            }`}
-                            onClick={() => handleCalendarAction("daily", day.key)}
-                            disabled={!hasDailyLevel}
-                            aria-label={dayLabel}
-                            data-calendar-day={day.key}
-                            data-has-level={hasDailyLevel ? "true" : "false"}
-                          >
-                            <span className="calendar-day-label">{day.label}</span>
-                            <span className={dayDotClass} />
-                          </button>
-                        );
-                      })}
-                </div>
-                {!showDailySkeleton &&
-                !hasDailyLevels &&
-                (calendarStatus === "ready" || calendarStatus === "error") ? (
-                  <p className="muted">{t("calendarEmpty")}</p>
-                ) : null}
+            <div className="calendar-body">
+              <div className="calendar-month">
+                <button
+                  type="button"
+                  className="icon-button"
+                  onClick={() => {
+                    play("ui_select");
+                    handleCalendarPrevMonth();
+                  }}
+                  aria-label={t("previous")}
+                >
+                  ‹
+                </button>
+                <span className="calendar-month-label">{calendarMonthLabel}</span>
+                <button
+                  type="button"
+                  className="icon-button"
+                  onClick={() => {
+                    play("ui_select");
+                    handleCalendarNextMonth();
+                  }}
+                  aria-label={t("next")}
+                >
+                  ›
+                </button>
               </div>
-            ) : (
-              <div className="calendar-body">
-                <div className="calendar-month">
-                  <button
-                    type="button"
-                    className="icon-button"
-                    onClick={() => {
-                      play("ui_select");
-                      handleCalendarPrevMonth();
-                    }}
-                    aria-label={t("previous")}
-                  >
-                    ‹
-                  </button>
-                  <span className="calendar-month-label">{calendarMonth.getFullYear()}</span>
-                  <button
-                    type="button"
-                    className="icon-button"
-                    onClick={() => {
-                      play("ui_select");
-                      handleCalendarNextMonth();
-                    }}
-                    aria-label={t("next")}
-                  >
-                    ›
-                  </button>
-                </div>
-                <div className="calendar-week-list">
-                  {showWeeklySkeleton
-                    ? Array.from({ length: 14 }).map((_, index) => (
-                        <div key={`week-skel-${index}`} className="calendar-week skeleton" />
-                      ))
-                    : calendarWeekRows.map((week, index) => {
-                      const weeklyEntry = calendarWeeklyMap.get(week.key) || null;
-                      const isDoneWeekly = Boolean(
-                        getCompletionRecord("weekly", week.key)?.winningAttempt
+              <div className="calendar-weekdays">
+                {CALENDAR_WEEKDAYS.map((weekday) => (
+                  <span key={weekday}>{weekday}</span>
+                ))}
+              </div>
+              <div className="calendar-grid">
+                {showDailySkeleton
+                  ? Array.from({ length: 42 }).map((_, index) => (
+                      <div key={`day-skel-${index}`} className="calendar-day skeleton" />
+                    ))
+                  : calendarMonthDays.map((day) => {
+                      const dailyEntry = calendarDailyMap.get(day.key) || null;
+                      const isToday = day.key === dayKey;
+                      const isDoneDaily = Boolean(
+                        getCompletionRecord("daily", day.key)?.winningAttempt
                       );
-                      const hasWeeklyLevel = Boolean(weeklyEntry?.levelId);
-                      const weekDotClass = hasWeeklyLevel
-                        ? isDoneWeekly
+                      const hasDailyLevel = Boolean(dailyEntry?.levelId);
+                      const dayDotClass = hasDailyLevel
+                        ? isDoneDaily
                           ? "calendar-dot done"
                           : "calendar-dot active"
                         : "calendar-dot empty";
-                      const isCurrent = week.key === weekKey;
-                      const weekLabel = `${formatWeekLabel(week.key)}${
-                        hasWeeklyLevel ? "" : ` · ${t("calendarNoLevel")}`
+                      const dayLabel = `${formatFullDayLabel(day.key)}${
+                        hasDailyLevel ? "" : ` · ${t("calendarNoLevel")}`
                       }`;
                       return (
-                        <div
-                          key={week.key}
-                          className={`calendar-week ${isCurrent ? "current" : ""} ${
-                            isDoneWeekly ? "done" : ""
-                          } ${hasWeeklyLevel ? "" : "disabled"}`}
+                        <button
+                          key={day.key}
+                          type="button"
+                          className={`calendar-day ${day.inMonth ? "" : "muted"} ${
+                            isToday ? "today" : ""
+                          } ${isDoneDaily ? "done" : ""} ${
+                            hasDailyLevel ? "has-level" : "disabled"
+                          }`}
+                          onClick={() => handleCalendarAction("daily", day.key)}
+                          disabled={!hasDailyLevel}
+                          aria-label={dayLabel}
+                          data-calendar-day={day.key}
+                          data-has-level={hasDailyLevel ? "true" : "false"}
                         >
-                          <button
-                            type="button"
-                            className="calendar-week-button"
-                            onClick={() => handleCalendarAction("weekly", week.key)}
-                            disabled={!hasWeeklyLevel}
-                            aria-label={weekLabel}
-                            data-week-index={index}
-                            data-has-level={hasWeeklyLevel ? "true" : "false"}
-                            onKeyDown={(event) => {
-                              const move =
-                                event.key === "ArrowDown"
-                                  ? 1
-                                  : event.key === "ArrowUp"
-                                    ? -1
-                                    : 0;
-                              if (!move) return;
-                              const parent = event.currentTarget.parentElement?.parentElement;
-                              if (!parent) return;
-                              const items = parent.querySelectorAll(
-                                ".calendar-week-button"
-                              );
-                              if (!items.length) return;
-                              event.preventDefault();
-                              let nextIndex = index + move;
-                              while (nextIndex >= 0 && nextIndex < items.length) {
-                                const candidate = items[nextIndex];
-                                if (candidate.getAttribute("data-has-level") === "true") {
-                                  candidate.focus();
-                                  break;
-                                }
-                                nextIndex += move;
-                              }
-                            }}
-                          >
-                            <span className={weekDotClass} />
-                            <span>{formatWeekLabel(week.key)}</span>
-                            {isDoneWeekly ? (
-                              <span className="calendar-status">OK</span>
-                            ) : null}
-                          </button>
-                        </div>
+                          <span className="calendar-day-label">{day.label}</span>
+                          <span className={dayDotClass} />
+                        </button>
                       );
                     })}
-                </div>
-                {!showWeeklySkeleton &&
-                !hasWeeklyLevels &&
-                (calendarStatus === "ready" || calendarStatus === "error") ? (
-                  <p className="muted">{t("calendarEmpty")}</p>
-                ) : null}
               </div>
-            )}
+              {!showDailySkeleton &&
+              !hasDailyLevels &&
+              (calendarStatus === "ready" || calendarStatus === "error") ? (
+                <p className="muted">{t("calendarEmpty")}</p>
+              ) : null}
+            </div>
           </div>
         </div>
       ) : null}
@@ -5169,20 +4979,6 @@ export default function App() {
               </button>
             </div>
             <div className="config-content">
-              <span className="label">{t("theme")}</span>
-              <div className="theme-grid">
-                {THEMES.map((theme) => (
-                  <button
-                    key={theme.id}
-                    type="button"
-                    className={`theme-button ${activeTheme === theme.id ? "active" : ""}`}
-                    onClick={() => handleThemeSelect(theme.id)}
-                  >
-                    <span>{theme.label}</span>
-                  </button>
-                ))}
-              </div>
-
               <span className="label">{t("music")}</span>
               <select
                 className="level-select"
@@ -5363,6 +5159,32 @@ export default function App() {
           </div>
         </div>
       ) : null}
+      <nav className="bottom-nav" aria-label="Navegació principal">
+        <button
+          type="button"
+          className={`bottom-nav-item${!calendarOpen ? " active" : ""}`}
+          onClick={() => setCalendarOpen(false)}
+        >
+          <span className="bottom-nav-icon">🎮</span>
+          <span className="bottom-nav-label">Joc</span>
+        </button>
+        <button
+          type="button"
+          className={`bottom-nav-item${calendarOpen ? " active" : ""}`}
+          onClick={() => setCalendarOpen(true)}
+        >
+          <span className="bottom-nav-icon">📅</span>
+          <span className="bottom-nav-label">Calendari</span>
+        </button>
+        <button
+          type="button"
+          className="bottom-nav-item"
+          onClick={() => setConfigOpen(true)}
+        >
+          <span className="bottom-nav-icon">⚙️</span>
+          <span className="bottom-nav-label">Opcions</span>
+        </button>
+      </nav>
       </div>
     </ThemeProvider>
   );

@@ -1,16 +1,23 @@
 @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
 :root {
-  --bg: #0f1114;
-  --panel: #1a1d22;
-  --text: #f7f6f2;
-  --muted: #a8acb3;
-  --accent: #59a6a2;
-  --accent-strong: #2e6fda;
-  --success: #2f8f4d;
-  --error: #d6453a;
-  --stroke: #202225;
-  --guess: #f7e7a3;
+  --bg:             #F4F0E6;
+  --panel:          #FCFAF5;
+  --surface:        #F8F4EC;
+  --text:           #1F2A30;
+  --muted:          #667074;
+  --accent:         #76B4B0;
+  --accent-hover:   #5E9C98;
+  --accent-strong:  #5C86C5;
+  --success:        #3d8a56;
+  --error:          #D16D5C;
+  --stroke:         #D6C9B6;
+  --stroke-soft:    #CBBEAA;
+  --guess:          #C9A76A;
+  --comarca-fill:   #CDC5B7;
+  --comarca-stroke: #BBAE9E;
+  --shadow:         rgba(31, 42, 48, 0.09);
+  --border:         #D6C9B6;
 }
 
 * {
@@ -20,7 +27,7 @@
 body {
   margin: 0;
   font-family: "Space Grotesk", "IBM Plex Sans", "Helvetica Neue", sans-serif;
-  background: radial-gradient(circle at top, var(--panel) 0%, var(--bg) 55%);
+  background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   height: 100vh;
@@ -39,26 +46,26 @@ body::before {
 }
 
 html[data-weather="clear"] body::before {
-  opacity: 0.18;
+  opacity: 0.12;
   background: radial-gradient(
       circle at 20% 15%,
-      rgba(255, 215, 150, 0.35),
+      rgba(255, 215, 150, 0.28),
       transparent 55%
     ),
-    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.12), transparent 60%);
+    radial-gradient(circle at 80% 20%, rgba(255, 230, 180, 0.10), transparent 60%);
 }
 
 html[data-weather="clouds"] body::before {
-  opacity: 0.22;
-  background: linear-gradient(140deg, rgba(160, 178, 200, 0.35), transparent 65%);
+  opacity: 0.15;
+  background: linear-gradient(140deg, rgba(130, 150, 175, 0.18), transparent 65%);
 }
 
 html[data-weather="rain"] body::before {
-  opacity: 0.35;
+  opacity: 0.25;
   background-image: repeating-linear-gradient(
     120deg,
-    rgba(90, 166, 255, 0.2),
-    rgba(90, 166, 255, 0.2) 1px,
+    rgba(60, 110, 200, 0.14),
+    rgba(60, 110, 200, 0.14) 1px,
     transparent 1px,
     transparent 6px
   );
@@ -66,29 +73,29 @@ html[data-weather="rain"] body::before {
 }
 
 html[data-weather="storm"] body::before {
-  opacity: 0.4;
-  background: linear-gradient(160deg, rgba(60, 60, 90, 0.6), transparent 70%);
+  opacity: 0.20;
+  background: linear-gradient(160deg, rgba(40, 40, 70, 0.18), transparent 70%);
   animation: storm-flash 6s ease-in-out infinite;
 }
 
 html[data-weather="snow"] body::before {
-  opacity: 0.3;
-  background-image: radial-gradient(rgba(210, 230, 255, 0.6) 1px, transparent 1px);
+  opacity: 0.22;
+  background-image: radial-gradient(rgba(100, 140, 200, 0.45) 1px, transparent 1px);
   background-size: 18px 18px;
   animation: snow-fall 10s linear infinite;
 }
 
 html[data-weather="fog"] body::before {
-  opacity: 0.4;
-  background: linear-gradient(0deg, rgba(200, 210, 220, 0.3), transparent 70%);
+  opacity: 0.25;
+  background: linear-gradient(0deg, rgba(150, 160, 170, 0.14), transparent 70%);
 }
 
 html[data-weather="wind"] body::before {
-  opacity: 0.3;
+  opacity: 0.18;
   background-image: repeating-linear-gradient(
     20deg,
-    rgba(200, 230, 255, 0.2),
-    rgba(200, 230, 255, 0.2) 2px,
+    rgba(90, 130, 180, 0.12),
+    rgba(90, 130, 180, 0.12) 2px,
     transparent 2px,
     transparent 10px
   );
@@ -96,7 +103,7 @@ html[data-weather="wind"] body::before {
 }
 
 .page {
-  padding: 32px;
+  padding: 28px 32px 32px;
   display: grid;
   gap: 20px;
   min-height: 100vh;
@@ -110,13 +117,13 @@ html[data-weather="wind"] body::before {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 24px;
+  gap: 20px;
   align-items: flex-start;
 }
 
 .brand {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   max-width: min(680px, 100%);
 }
 
@@ -155,7 +162,7 @@ html[data-weather="wind"] body::before {
   grid-template-columns: auto auto;
   grid-template-areas:
     "today calendar"
-    "weekly streak";
+    "streak streak";
   gap: 10px 14px;
   justify-items: start;
   align-items: start;
@@ -164,16 +171,21 @@ html[data-weather="wind"] body::before {
 .topbar-button {
   border: none;
   background: var(--accent);
-  color: #0e1116;
+  color: #ffffff;
   font-weight: 600;
   padding: 10px 16px;
   border-radius: 12px;
   cursor: pointer;
+  transition: background 0.15s;
+}
+
+.topbar-button:hover {
+  background: var(--accent-hover);
 }
 
 .calendar-icon-button {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(11, 12, 15, 0.6);
+  border: 1px solid var(--border);
+  background: var(--panel);
   color: var(--text);
   font-weight: 600;
   padding: 10px 14px;
@@ -182,14 +194,16 @@ html[data-weather="wind"] body::before {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  box-shadow: 0 1px 3px var(--shadow);
+  transition: background 0.15s;
+}
+
+.calendar-icon-button:hover {
+  background: var(--surface);
 }
 
 .topbar-play-today {
   grid-area: today;
-}
-
-.topbar-play-weekly {
-  grid-area: weekly;
 }
 
 .topbar-calendar {
@@ -218,7 +232,7 @@ html[data-weather="wind"] body::before {
   right: 0;
   height: 4px;
   background: currentColor;
-  opacity: 0.5;
+  opacity: 0.45;
   border-top-left-radius: 4px;
   border-top-right-radius: 4px;
 }
@@ -231,17 +245,12 @@ html[data-weather="wind"] body::before {
   right: 3px;
   height: 1px;
   background: currentColor;
-  opacity: 0.35;
-}
-
-.topbar-button:hover {
-  filter: brightness(1.05);
+  opacity: 0.30;
 }
 
 .topbar-button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-  filter: none;
 }
 
 button:focus-visible,
@@ -260,8 +269,8 @@ textarea:focus-visible {
 }
 
 .calendar-toggle-button {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(11, 12, 15, 0.6);
+  border: 1px solid var(--border);
+  background: var(--surface);
   color: var(--text);
   border-radius: 10px;
   padding: 6px 8px;
@@ -274,8 +283,8 @@ textarea:focus-visible {
 }
 
 .calendar-toggle-button.active {
-  border-color: rgba(89, 166, 162, 0.8);
-  box-shadow: 0 0 0 2px rgba(89, 166, 162, 0.2);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(118, 180, 176, 0.22);
 }
 
 .calendar-toggle-button:disabled {
@@ -298,26 +307,27 @@ textarea:focus-visible {
 }
 
 .status-badge.offline {
-  background: rgba(214, 69, 58, 0.18);
-  color: #f3b4ad;
-  border: 1px solid rgba(214, 69, 58, 0.4);
+  background: rgba(209, 109, 92, 0.12);
+  color: #b84f3e;
+  border: 1px solid rgba(209, 109, 92, 0.35);
 }
 
 .status-badge.warn {
-  background: rgba(225, 169, 84, 0.16);
-  color: #f4d7a0;
-  border: 1px solid rgba(225, 169, 84, 0.4);
+  background: rgba(201, 167, 106, 0.14);
+  color: #7a5a1a;
+  border: 1px solid rgba(201, 167, 106, 0.40);
 }
 
 .streak-card {
   display: grid;
   gap: 4px;
-  background: rgba(17, 19, 24, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: 14px;
   padding: 10px 14px;
   min-width: 160px;
   width: 100%;
+  box-shadow: 0 1px 4px var(--shadow);
 }
 
 .calendar-tabs {
@@ -327,19 +337,20 @@ textarea:focus-visible {
 }
 
 .calendar-tab {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(11, 12, 15, 0.6);
+  border: 1px solid var(--border);
+  background: var(--surface);
   color: var(--text);
   border-radius: 10px;
   padding: 6px 8px;
   font-size: 0.75rem;
   cursor: pointer;
+  transition: background 0.15s;
 }
 
 .calendar-tab.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #0e1116;
+  color: #ffffff;
   font-weight: 600;
 }
 
@@ -353,7 +364,8 @@ textarea:focus-visible {
 .calendar-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(8, 10, 13, 0.55);
+  background: rgba(31, 42, 48, 0.35);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   display: flex;
   justify-content: flex-end;
@@ -364,14 +376,14 @@ textarea:focus-visible {
 
 .calendar-panel {
   background: var(--panel);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
   border-radius: 18px;
   padding: 16px;
   width: min(520px, 90vw);
   display: grid;
   gap: 12px;
   grid-template-rows: auto auto 1fr;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 24px 60px rgba(31, 42, 48, 0.18);
   height: min(80vh, 640px);
   max-height: calc(100vh - 64px);
   overflow: hidden;
@@ -384,8 +396,8 @@ textarea:focus-visible {
 }
 
 .icon-button {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(11, 12, 15, 0.6);
+  border: 1px solid var(--border);
+  background: var(--surface);
   color: var(--text);
   width: 32px;
   height: 32px;
@@ -394,6 +406,7 @@ textarea:focus-visible {
   display: grid;
   place-items: center;
   font-size: 1.1rem;
+  box-shadow: 0 1px 3px var(--shadow);
 }
 
 .calendar-body {
@@ -432,8 +445,8 @@ textarea:focus-visible {
 
 .calendar-day {
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(10, 12, 16, 0.6);
+  border: 1px solid var(--border);
+  background: var(--surface);
   color: var(--text);
   border-radius: 10px;
   padding: 8px 6px;
@@ -442,12 +455,16 @@ textarea:focus-visible {
   display: grid;
   align-content: start;
   gap: 6px;
+  transition: background 0.12s;
+}
+
+.calendar-day:hover {
+  background: #f0ebe0;
 }
 
 .calendar-day.has-level {
-  border-color: rgba(98, 180, 255, 0.45);
-  background: rgba(14, 20, 30, 0.75);
-  box-shadow: 0 0 0 1px rgba(98, 180, 255, 0.12);
+  border-color: rgba(92, 134, 197, 0.40);
+  background: rgba(92, 134, 197, 0.06);
 }
 
 .calendar-day.disabled {
@@ -461,15 +478,16 @@ textarea:focus-visible {
 }
 
 .calendar-day.today {
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: var(--accent);
+  background: rgba(118, 180, 176, 0.07);
 }
 
 .calendar-day.done {
-  border-color: rgba(47, 143, 77, 0.6);
+  border-color: rgba(61, 138, 86, 0.50);
 }
 
 .calendar-day.skeleton {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(31, 42, 48, 0.03);
   border-color: transparent;
   cursor: default;
 }
@@ -482,41 +500,47 @@ textarea:focus-visible {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--stroke-soft);
 }
 
 .calendar-dot.active {
-  background: #4da3ff;
+  background: var(--accent-strong);
 }
 
 .calendar-dot.done {
-  background: #35c46a;
+  background: var(--success);
 }
 
 .calendar-dot.empty {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--stroke-soft);
 }
 
 .calendar-popup {
   position: absolute;
   inset: auto 6px 6px 6px;
-  background: rgba(15, 18, 24, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 10px;
   display: grid;
   gap: 6px;
   z-index: 2;
+  box-shadow: 0 4px 14px var(--shadow);
 }
 
 .calendar-popup-button {
   border: none;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--surface);
   color: var(--text);
   padding: 6px 8px;
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.8rem;
+  transition: background 0.12s;
+}
+
+.calendar-popup-button:hover {
+  background: #ede7d9;
 }
 
 .calendar-popup-button:disabled {
@@ -536,8 +560,8 @@ textarea:focus-visible {
 .calendar-week {
   display: grid;
   gap: 6px;
-  background: rgba(10, 12, 16, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 8px;
   position: relative;
@@ -548,15 +572,15 @@ textarea:focus-visible {
 }
 
 .calendar-week.current {
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: var(--accent);
 }
 
 .calendar-week.done {
-  border-color: rgba(47, 143, 77, 0.6);
+  border-color: rgba(61, 138, 86, 0.45);
 }
 
 .calendar-week.skeleton {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(31, 42, 48, 0.03);
   border-color: transparent;
   min-height: 48px;
 }
@@ -588,7 +612,8 @@ textarea:focus-visible {
 
 h1 {
   margin: 0;
-  font-size: clamp(2rem, 3vw, 3.2rem);
+  font-size: clamp(1.8rem, 3vw, 3.2rem);
+  color: var(--text);
 }
 
 .subtitle {
@@ -599,7 +624,7 @@ h1 {
 
 .game-layout {
   display: grid;
-  grid-template-columns: minmax(0, 2.2fr) minmax(240px, 1fr);
+  grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr);
   gap: 18px;
   align-items: start;
   min-height: 0;
@@ -620,13 +645,14 @@ h1 {
   background: var(--panel);
   padding: 16px 18px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 6px var(--shadow);
   display: grid;
   gap: 12px;
 }
 
 .panel-card.panel-primary {
-  box-shadow: 0 0 0 1px rgba(89, 166, 162, 0.15);
+  box-shadow: 0 0 0 2px rgba(118, 180, 176, 0.22), 0 2px 8px var(--shadow);
 }
 
 .section-header,
@@ -687,17 +713,17 @@ h1 {
 }
 
 .value.start {
-  color: #2e6fda;
+  color: var(--accent-strong);
   font-weight: 600;
 }
 
 .value.target {
-  color: #d6453a;
+  color: var(--error);
   font-weight: 600;
 }
 
 .value.urgent {
-  color: #d6453a;
+  color: var(--error);
   font-weight: 600;
 }
 
@@ -706,7 +732,7 @@ h1 {
 }
 
 .value.is-perfect {
-  color: #7fe1a7;
+  color: var(--success);
   font-weight: 600;
 }
 
@@ -719,10 +745,11 @@ h1 {
   display: none;
   flex-direction: column;
   gap: 6px;
-  background: #0f1114;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 6px;
+  box-shadow: 0 4px 14px var(--shadow);
 }
 
 .suggestions.is-open {
@@ -738,10 +765,11 @@ h1 {
   color: var(--text);
   cursor: pointer;
   font-size: 0.9rem;
+  transition: background 0.12s;
 }
 
 .suggestion:hover {
-  background: rgba(89, 166, 162, 0.2);
+  background: rgba(118, 180, 176, 0.14);
 }
 
 .suggestion.empty {
@@ -750,17 +778,30 @@ h1 {
 }
 
 .guess-form input {
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px 12px;
   color: var(--text);
   font-size: 0.95rem;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.guess-form input::placeholder {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.guess-form input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  background: var(--panel);
 }
 
 .guess-form input.input-error {
-  border-color: rgba(214, 69, 58, 0.8);
-  box-shadow: 0 0 0 2px rgba(214, 69, 58, 0.2);
+  border-color: rgba(209, 109, 92, 0.75);
+  box-shadow: 0 0 0 2px rgba(209, 109, 92, 0.16);
 }
 
 .guess-form input:disabled {
@@ -769,12 +810,19 @@ h1 {
 
 .submit {
   background: var(--accent);
-  color: #0f1114;
+  color: #ffffff;
   border: none;
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 11px 12px;
   font-weight: 600;
   cursor: pointer;
+  font-family: inherit;
+  font-size: 1rem;
+  transition: background 0.15s;
+}
+
+.submit:hover {
+  background: var(--accent-hover);
 }
 
 .submit:disabled {
@@ -791,6 +839,11 @@ h1 {
   border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.new-game-button:hover {
+  opacity: 0.88;
 }
 
 .new-game-button:disabled {
@@ -800,13 +853,19 @@ h1 {
 
 .config-button {
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(11, 12, 15, 0.7);
+  border: 1px solid var(--border);
+  background: var(--surface);
   color: var(--text);
   padding: 12px 14px;
   border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 1px 3px var(--shadow);
+  transition: background 0.15s;
+}
+
+.config-button:hover {
+  background: #ede7d9;
 }
 
 .feedback {
@@ -816,11 +875,11 @@ h1 {
 }
 
 .feedback.good {
-  color: #7fe1a7;
+  color: var(--success);
 }
 
 .feedback.bad {
-  color: #ff7f73;
+  color: var(--error);
 }
 
 .stats {
@@ -872,22 +931,22 @@ h1 {
   padding: 4px 8px;
   border-radius: 999px;
   font-size: 0.8rem;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(31, 42, 48, 0.06);
 }
 
 .guess-history-item.good {
   color: var(--success);
-  border: 1px solid rgba(47, 143, 77, 0.5);
+  border: 1px solid rgba(61, 138, 86, 0.40);
 }
 
 .guess-history-item.near {
-  color: var(--guess);
-  border: 1px solid rgba(247, 231, 163, 0.4);
+  color: #7a5a1a;
+  border: 1px solid rgba(201, 167, 106, 0.50);
 }
 
 .guess-history-item.bad {
   color: var(--error);
-  border: 1px solid rgba(214, 69, 58, 0.5);
+  border: 1px solid rgba(209, 109, 92, 0.40);
 }
 
 .ranking-lists {
@@ -916,23 +975,23 @@ h1 {
   gap: 8px;
   padding: 8px 10px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(15, 17, 20, 0.6);
+  border: 1px solid var(--border);
+  background: var(--surface);
   font-size: 0.85rem;
 }
 
 .achievement {
   padding: 8px 10px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
   color: var(--muted);
   font-size: 0.85rem;
 }
 
 .achievement.unlocked {
-  border-color: rgba(89, 166, 162, 0.6);
+  border-color: rgba(118, 180, 176, 0.55);
   color: var(--text);
-  background: rgba(89, 166, 162, 0.1);
+  background: rgba(118, 180, 176, 0.09);
 }
 
 .modal-actions {
@@ -958,21 +1017,21 @@ h1 {
 }
 
 .rule-chip {
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 10px 12px;
   font-size: 0.9rem;
 }
 
 .rule-chip.good {
-  border-color: rgba(47, 143, 77, 0.7);
-  background: rgba(47, 143, 77, 0.15);
+  border-color: rgba(61, 138, 86, 0.55);
+  background: rgba(61, 138, 86, 0.07);
 }
 
 .rule-chip.bad {
-  border-color: rgba(214, 69, 58, 0.7);
-  background: rgba(214, 69, 58, 0.15);
+  border-color: rgba(209, 109, 92, 0.55);
+  background: rgba(209, 109, 92, 0.07);
 }
 
 .mission {
@@ -980,13 +1039,13 @@ h1 {
   gap: 8px;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(15, 17, 20, 0.6);
+  border: 1px solid var(--border);
+  background: var(--surface);
 }
 
 .mission.done {
-  border-color: rgba(47, 143, 77, 0.5);
-  background: rgba(47, 143, 77, 0.12);
+  border-color: rgba(61, 138, 86, 0.45);
+  background: rgba(61, 138, 86, 0.07);
 }
 
 .mission-title {
@@ -1000,16 +1059,16 @@ h1 {
   justify-content: center;
   padding: 4px 8px;
   border-radius: 999px;
-  background: rgba(89, 166, 162, 0.2);
+  background: rgba(118, 180, 176, 0.14);
   color: var(--text);
   font-size: 0.75rem;
-  border: 1px solid rgba(89, 166, 162, 0.5);
+  border: 1px solid rgba(118, 180, 176, 0.45);
 }
 
 .badge.success {
-  border-color: rgba(47, 143, 77, 0.6);
-  background: rgba(47, 143, 77, 0.2);
-  color: #7fe1a7;
+  border-color: rgba(61, 138, 86, 0.50);
+  background: rgba(61, 138, 86, 0.10);
+  color: var(--success);
 }
 
 .powerups {
@@ -1022,12 +1081,17 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px 12px;
   color: var(--text);
   cursor: pointer;
+  transition: background 0.12s;
+}
+
+.powerup-button:hover {
+  background: #ede7d9;
 }
 
 .powerup-button:disabled {
@@ -1045,17 +1109,18 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px 12px;
   color: var(--text);
   cursor: pointer;
+  transition: background 0.12s;
 }
 
 .theme-button.active {
-  border-color: rgba(89, 166, 162, 0.6);
-  background: rgba(89, 166, 162, 0.15);
+  border-color: var(--accent);
+  background: rgba(118, 180, 176, 0.12);
 }
 
 .theme-button.locked {
@@ -1079,18 +1144,19 @@ h1 {
 }
 
 .scope-button {
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 6px 8px;
   color: var(--text);
   cursor: pointer;
   font-size: 0.8rem;
+  transition: background 0.12s;
 }
 
 .scope-button.active {
-  border-color: rgba(89, 166, 162, 0.6);
-  background: rgba(89, 166, 162, 0.15);
+  border-color: var(--accent);
+  background: rgba(118, 180, 176, 0.12);
 }
 
 .scope-button:disabled {
@@ -1104,11 +1170,12 @@ h1 {
 }
 
 .group-controls input {
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 8px 10px;
   color: var(--text);
+  font-family: inherit;
 }
 
 .group-row {
@@ -1119,21 +1186,27 @@ h1 {
 }
 
 .group-row input {
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 8px 10px;
   color: var(--text);
+  font-family: inherit;
 }
 
 .ghost {
   background: transparent;
-  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border: 1px dashed var(--stroke-soft);
   color: var(--muted);
   border-radius: 10px;
   padding: 8px 10px;
   cursor: pointer;
   font-size: 0.8rem;
+  transition: border-color 0.12s;
+}
+
+.ghost:hover {
+  border-color: var(--stroke);
 }
 
 .ghost:disabled {
@@ -1172,6 +1245,11 @@ h1 {
   border-radius: 10px;
   padding: 10px 12px;
   cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.reset:hover {
+  opacity: 0.88;
 }
 
 .path-list {
@@ -1186,7 +1264,7 @@ h1 {
 }
 
 .guess-item {
-  color: var(--guess);
+  color: #7a5a1a;
 }
 
 .shortest-list {
@@ -1199,14 +1277,18 @@ h1 {
   overflow: auto;
 }
 
+/* ── MAP ── */
+
 .map-wrap {
   position: relative;
-  background: var(--panel);
+  background: var(--surface);
   border-radius: 22px;
   padding: 18px;
   min-height: 0;
   height: 100%;
   overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 10px var(--shadow);
 }
 
 .map-wrap.timed-mode .prompt {
@@ -1217,18 +1299,20 @@ h1 {
   position: absolute;
   top: 16px;
   left: 16px;
-  background: rgba(20, 22, 26, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(252, 250, 245, 0.92);
+  border: 1px solid var(--border);
   padding: 6px 10px;
   border-radius: 12px;
   font-weight: 600;
   font-size: 0.9rem;
   z-index: 4;
+  color: var(--text);
+  box-shadow: 0 1px 4px var(--shadow);
 }
 
 .map-timer.urgent {
   color: var(--error);
-  border-color: rgba(214, 69, 58, 0.6);
+  border-color: rgba(209, 109, 92, 0.55);
 }
 
 .countdown-overlay {
@@ -1236,7 +1320,7 @@ h1 {
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgba(8, 10, 14, 0.75);
+  background: rgba(244, 240, 230, 0.80);
   z-index: 5;
   font-size: 4rem;
   font-weight: 700;
@@ -1244,7 +1328,7 @@ h1 {
 
 .countdown-value {
   color: var(--text);
-  text-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 2px 8px rgba(255, 255, 255, 0.7);
 }
 
 .countdown-active .map,
@@ -1259,27 +1343,29 @@ h1 {
   inset: 0;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, rgba(12, 15, 20, 0.92), rgba(6, 8, 12, 0.96));
+  background: rgba(248, 244, 236, 0.95);
   color: var(--muted);
   font-size: 0.95rem;
   z-index: 3;
 }
 
 .map-wrap.fog {
-  background: linear-gradient(135deg, #1c1f24 0%, #101316 100%);
+  background: linear-gradient(135deg, #ede6d8 0%, #e4dccb 100%);
 }
 
 .prompt {
   position: absolute;
   top: 16px;
   left: 16px;
-  background: rgba(20, 22, 26, 0.85);
+  background: rgba(252, 250, 245, 0.92);
   padding: 8px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px var(--shadow);
   font-size: 0.9rem;
   display: grid;
   gap: 4px;
+  color: var(--text);
 }
 
 .map-controls {
@@ -1291,12 +1377,18 @@ h1 {
 }
 
 .map-controls button {
-  background: rgba(20, 22, 26, 0.85);
+  background: rgba(252, 250, 245, 0.92);
   color: var(--text);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 6px 10px;
   cursor: pointer;
+  box-shadow: 0 1px 4px var(--shadow);
+  transition: background 0.12s;
+}
+
+.map-controls button:hover {
+  background: var(--panel);
 }
 
 .route {
@@ -1315,29 +1407,28 @@ h1 {
 
 .outline {
   fill: none;
-  stroke: #f7f6f2;
-  stroke-width: 2.2;
-  opacity: 0.85;
+  stroke: var(--text);
+  stroke-width: 2.0;
+  opacity: 0.55;
 }
-
 
 .initials {
   pointer-events: none;
 }
 
 .initial {
-  fill: #f7f6f2;
+  fill: var(--text);
   font-size: 0.55rem;
   font-weight: 600;
   text-transform: uppercase;
   paint-order: stroke;
-  stroke: rgba(15, 17, 20, 0.9);
+  stroke: rgba(248, 244, 236, 0.90);
   stroke-width: 3px;
 }
 
 .comarca {
-  fill: var(--accent);
-  stroke: var(--stroke);
+  fill: var(--comarca-fill);
+  stroke: var(--comarca-stroke);
   stroke-width: 1.4;
   transition: fill 0.15s ease, stroke 0.15s ease, opacity 0.15s ease;
   cursor: default;
@@ -1350,20 +1441,20 @@ h1 {
 
 .comarca.is-hidden.is-outline {
   fill: transparent;
-  stroke: rgba(255, 255, 255, 0.55);
+  stroke: rgba(31, 42, 48, 0.30);
   stroke-width: 1.4;
 }
 
 .comarca.is-hidden.is-neighbor {
   fill: transparent;
-  stroke: rgba(255, 255, 255, 0.7);
+  stroke: rgba(31, 42, 48, 0.45);
   stroke-width: 2;
   stroke-dasharray: 6 4;
 }
 
 .comarca.is-hidden.is-hint {
-  fill: rgba(46, 111, 218, 0.4);
-  stroke: #2e6fda;
+  fill: rgba(92, 134, 197, 0.28);
+  stroke: var(--accent-strong);
   stroke-width: 2.2;
 }
 
@@ -1375,15 +1466,15 @@ h1 {
 }
 
 .comarca.is-start {
-  fill: #2e6fda;
+  fill: var(--accent-strong);
 }
 
 .comarca.is-target {
-  fill: #d6453a;
+  fill: var(--error);
 }
 
 .comarca.is-current {
-  stroke: #f7f6f2;
+  stroke: var(--text);
   stroke-width: 2.4;
 }
 
@@ -1395,26 +1486,26 @@ h1 {
 
 .comarca.is-neighbor {
   fill: transparent;
-  stroke: rgba(255, 255, 255, 0.7);
+  stroke: rgba(31, 42, 48, 0.45);
   stroke-width: 2;
   stroke-dasharray: 6 4;
 }
 
 .comarca.is-hint {
-  fill: rgba(46, 111, 218, 0.5);
-  stroke: #2e6fda;
+  fill: rgba(92, 134, 197, 0.28);
+  stroke: var(--accent-strong);
   stroke-width: 2.2;
 }
 
 .comarca.is-replay {
-  fill: rgba(89, 166, 162, 0.55);
-  stroke: #59a6a2;
+  fill: rgba(118, 180, 176, 0.40);
+  stroke: var(--accent);
   stroke-width: 2.2;
 }
 
 .comarca.is-reveal {
-  fill: rgba(225, 169, 84, 0.65);
-  stroke: #e1a954;
+  fill: rgba(201, 167, 106, 0.55);
+  stroke: var(--guess);
   stroke-width: 2.2;
 }
 
@@ -1423,7 +1514,7 @@ h1 {
     fill: var(--error);
   }
   100% {
-    fill: var(--accent);
+    fill: var(--comarca-fill);
   }
 }
 
@@ -1452,24 +1543,25 @@ h1 {
 }
 
 .mode-button {
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 8px 10px;
   color: var(--text);
   cursor: pointer;
   text-align: center;
   font-size: 0.85rem;
+  transition: background 0.12s;
 }
 
 .mode-button.active {
-  border-color: rgba(89, 166, 162, 0.6);
-  background: rgba(89, 166, 162, 0.2);
+  border-color: var(--accent);
+  background: rgba(118, 180, 176, 0.12);
 }
 
 .mode-button.done {
-  border-color: rgba(47, 143, 77, 0.6);
-  background: rgba(47, 143, 77, 0.2);
+  border-color: rgba(61, 138, 86, 0.50);
+  background: rgba(61, 138, 86, 0.08);
 }
 
 .difficulty-grid {
@@ -1481,19 +1573,20 @@ h1 {
 .difficulty-button {
   display: grid;
   gap: 4px;
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 8px 10px;
   color: var(--text);
   cursor: pointer;
   text-align: left;
   font-size: 0.85rem;
+  transition: background 0.12s;
 }
 
 .difficulty-button.active {
-  border-color: rgba(89, 166, 162, 0.6);
-  background: rgba(89, 166, 162, 0.18);
+  border-color: var(--accent);
+  background: rgba(118, 180, 176, 0.12);
 }
 
 .difficulty-button.locked {
@@ -1511,11 +1604,12 @@ h1 {
 }
 
 .level-select {
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 8px 10px;
   color: var(--text);
+  font-family: inherit;
 }
 
 .toggle-row {
@@ -1536,21 +1630,23 @@ h1 {
 
 .range-row input[type="range"] {
   width: 100%;
+  accent-color: var(--accent);
 }
 
 .hint-button {
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px 12px;
   color: var(--text);
   cursor: pointer;
   text-align: left;
+  transition: background 0.12s;
 }
 
 .hint-button.active {
-  border-color: rgba(89, 166, 162, 0.6);
-  background: rgba(89, 166, 162, 0.15);
+  border-color: var(--accent);
+  background: rgba(118, 180, 176, 0.12);
 }
 
 .hint-button:disabled {
@@ -1561,7 +1657,7 @@ h1 {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(8, 9, 12, 0.75);
+  background: rgba(31, 42, 48, 0.40);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1570,7 +1666,7 @@ h1 {
 }
 
 .modal {
-  background: #15181e;
+  background: var(--panel);
   border-radius: 18px;
   padding: 22px;
   max-width: 520px;
@@ -1579,7 +1675,8 @@ h1 {
   overflow-y: auto;
   display: grid;
   gap: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 40px rgba(31, 42, 48, 0.16);
 }
 
 .modal-header {
@@ -1648,40 +1745,23 @@ h1 {
 }
 
 @keyframes rain-shift {
-  from {
-    background-position: 0 0;
-  }
-  to {
-    background-position: -120px 240px;
-  }
+  from { background-position: 0 0; }
+  to   { background-position: -120px 240px; }
 }
 
 @keyframes snow-fall {
-  from {
-    background-position: 0 -200px;
-  }
-  to {
-    background-position: 0 200px;
-  }
+  from { background-position: 0 -200px; }
+  to   { background-position: 0 200px; }
 }
 
 @keyframes wind-shift {
-  from {
-    background-position: 0 0;
-  }
-  to {
-    background-position: 120px 0;
-  }
+  from { background-position: 0 0; }
+  to   { background-position: 120px 0; }
 }
 
 @keyframes storm-flash {
-  0%,
-  100% {
-    opacity: 0.35;
-  }
-  50% {
-    opacity: 0.55;
-  }
+  0%, 100% { opacity: 0.22; }
+  50%       { opacity: 0.36; }
 }
 
 .error-boundary {
@@ -1695,22 +1775,29 @@ h1 {
 
 .error-card {
   background: var(--panel);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 24px;
   width: min(420px, 90vw);
   display: grid;
   gap: 12px;
+  box-shadow: 0 4px 20px var(--shadow);
 }
 
 .error-card pre {
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(31, 42, 48, 0.05);
   padding: 10px;
   border-radius: 10px;
   font-size: 0.75rem;
   color: var(--muted);
 }
 
+/* ── BOTTOM NAV (hidden on desktop) ── */
+.bottom-nav {
+  display: none;
+}
+
+/* ── MOBILE ── */
 @media (max-width: 900px) {
   body {
     height: auto;
@@ -1718,43 +1805,91 @@ h1 {
   }
 
   .page {
-    padding: 20px;
+    padding: 20px 16px 80px;
     height: auto;
     min-height: 100vh;
   }
 
+  /* Header: centred title, date, with tab row below */
   .topbar {
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    position: relative;
   }
 
+  .brand {
+    text-align: center;
+    align-items: center;
+    max-width: 100%;
+  }
+
+  .brand-row {
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  /* Pill-tab row */
   .topbar-right {
     width: 100%;
-    justify-content: flex-start;
+    justify-content: stretch;
   }
 
   .topbar-actions {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    grid-template-columns: unset;
+    grid-template-areas: unset;
+    background: rgba(31, 42, 48, 0.07);
+    border-radius: 14px;
+    padding: 4px;
     width: 100%;
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "today"
-      "weekly"
-      "calendar"
-      "streak";
-    justify-items: start;
+    justify-items: unset;
+  }
+
+  .topbar-button.topbar-play-today {
+    flex: 1;
+    border-radius: 10px;
+    text-align: center;
+    padding: 9px 10px;
+    font-size: 0.85rem;
+  }
+
+  .calendar-icon-button.topbar-calendar {
+    flex: 1;
+    border-radius: 10px;
+    border: none;
+    box-shadow: none;
+    justify-content: center;
+    font-size: 0.85rem;
+    background: transparent;
+    padding: 9px 10px;
+    justify-self: unset;
+    color: var(--muted);
+  }
+
+  .streak-card.topbar-streak {
+    display: none;
   }
 
   .status-stack {
-    justify-items: start;
+    justify-items: center;
   }
 
   .calendar-overlay {
-    padding: 20px;
+    padding: 16px;
     justify-content: center;
+    align-items: flex-end;
   }
 
   .calendar-panel {
     width: 100%;
     max-width: none;
+    border-radius: 18px 18px 0 0;
+    height: min(85vh, 640px);
+    max-height: calc(100vh - 20px);
   }
 
   .stats {
@@ -1779,6 +1914,14 @@ h1 {
 
   .game-layout {
     grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .map-wrap {
+    height: 44vw;
+    min-height: 240px;
+    max-height: 380px;
+    border-radius: 18px;
   }
 
   .side-panel {
@@ -1788,8 +1931,63 @@ h1 {
     padding-right: 0;
   }
 
+  .panel-card {
+    padding: 14px 16px;
+    border-radius: 14px;
+  }
+
+  .submit {
+    border-radius: 12px;
+    padding: 13px 12px;
+  }
+
   .ranking-lists {
     grid-template-columns: 1fr;
+  }
+
+  /* Bottom navigation bar */
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -2px 12px var(--shadow);
+    z-index: 10;
+  }
+
+  .bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 0;
+    font-family: inherit;
+    transition: color 0.15s;
+  }
+
+  .bottom-nav-item.active {
+    color: var(--accent);
+  }
+
+  .bottom-nav-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+  }
+
+  .bottom-nav-label {
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
   }
 }
 

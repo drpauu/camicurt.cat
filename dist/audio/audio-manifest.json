@@ -1,0 +1,108 @@
+{
+  "maxConcurrentSfx": 8,
+  "music": {
+    "segadors": "music/els Segadors.mp3",
+    "himne-del-barca": "music/Himne del bar\u00e7a.mp3",
+    "toc-de-castells": "music/Toc de Castells.mp3"
+  },
+  "sfx": {
+    "click": [
+      "sfx/click_1.wav",
+      "sfx/click_2.wav",
+      "sfx/click_3.wav",
+      "sfx/click_4.wav",
+      "sfx/click_5.wav"
+    ],
+    "submit": [
+      "sfx/submit-1.wav",
+      "sfx/submit-2.wav"
+    ],
+    "correct": [
+      "sfx/success_1.wav",
+      "sfx/success_2.wav",
+      "sfx/success_3.wav",
+      "sfx/success_4.wav",
+      "sfx/success_5.wav"
+    ],
+    "repeat": [
+      "sfx/repeat-1.wav",
+      "sfx/repeat-2.wav"
+    ],
+    "neutral": [
+      "sfx/neutral_1.wav",
+      "sfx/neutral_2.wav",
+      "sfx/neutral_3.wav",
+      "sfx/neutral_4.wav"
+    ],
+    "error": [
+      "sfx/error_1.wav",
+      "sfx/error_2.wav",
+      "sfx/error_3.wav",
+      "sfx/error_4.wav",
+      "sfx/error_5.wav"
+    ],
+    "win": [
+      "sfx/success_1.wav",
+      "sfx/success_2.wav",
+      "sfx/success_3.wav",
+      "sfx/success_4.wav",
+      "sfx/success_5.wav"
+    ],
+    "countdown": [
+      "sfx/countdown-1.wav",
+      "sfx/countdown-2.wav",
+      "sfx/countdown-3.wav"
+    ],
+    "toggle": [
+      "sfx/toggle-1.wav",
+      "sfx/toggle-2.wav"
+    ],
+    "open": [
+      "sfx/open-1.wav",
+      "sfx/open-2.wav"
+    ],
+    "close": [
+      "sfx/close-1.wav",
+      "sfx/close-2.wav"
+    ],
+    "powerup": [
+      "sfx/powerup-1.wav",
+      "sfx/powerup-2.wav"
+    ]
+  },
+  "themes": {
+    "default": {
+      "rate": 1
+    },
+    "terra": {
+      "rate": 0.94
+    },
+    "mar": {
+      "rate": 0.9
+    },
+    "pinyer": {
+      "rate": 0.96
+    },
+    "nit": {
+      "rate": 1.03
+    },
+    "volcans": {
+      "rate": 0.88
+    },
+    "festa": {
+      "rate": 1.12
+    },
+    "retro": {
+      "rate": 1.15
+    },
+    "monestir": {
+      "rate": 0.93
+    },
+    "solar": {
+      "rate": 1.05
+    },
+    "tomas-molina": {
+      "rate": 1
+    }
+  }
+}
