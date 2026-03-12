@@ -1,20 +1,25 @@
 :root {
   color-scheme: light;
-  --bg: #f4efe6;
-  --bg-strong: #e8dfd1;
-  --ink: #1b1b1b;
-  --ink-soft: #4a433a;
-  --accent: #da6b3e;
-  --accent-deep: #a84a27;
+  --bg: #F4F0E6;
+  --bg-strong: #F8F4EC;
+  --ink: #1F2A30;
+  --ink-soft: #667074;
+  --accent: #76B4B0;
+  --accent-hover: #5E9C98;
+  --accent-deep: #487D7A;
   --sea: #2b2b2b;
   --sea-deep: #1f1f1f;
-  --map-fill: #8fbfba;
-  --map-stroke: #1f1f1f;
+  --map-fill: #76B4B0;
+  --map-stroke: #1F2A30;
   --correct: #2f8f4d;
-  --wrong: #c8523e;
-  --panel: #fdfaf3;
-  --shadow: 0 18px 50px rgba(49, 40, 30, 0.15);
+  --wrong: #D16D5C;
+  --panel: #FCFAF5;
+  --shadow: 0 18px 50px rgba(49, 40, 30, 0.1);
   --map-bg: #2b2b2b;
+  --border: #D6C9B6;
+  --border-soft: #CBBEAA;
+  --route: #5C86C5;
+  --warm: #C9A76A;
 }
 
 * {
@@ -23,10 +28,19 @@
 
 body {
   margin: 0;
-  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-family: "Manrope", "Space Grotesk", system-ui, sans-serif;
   color: var(--ink);
-  background: radial-gradient(circle at 10% 20%, #fff7ea 0%, var(--bg) 45%, #efe3d2 100%);
+  background: var(--bg);
   min-height: 100vh;
+}
+
+/* Button interaction system */
+button {
+  transition: all 0.3s ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.98) !important;
 }
 
 .app {
@@ -74,7 +88,7 @@ body {
 
 .stat {
   background: var(--panel);
-  border: 1px solid rgba(60, 50, 40, 0.15);
+  border: 1px solid var(--border);
   padding: 14px 16px;
   border-radius: 14px;
   box-shadow: var(--shadow);
@@ -133,17 +147,17 @@ body {
   font-size: 0.75rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  border: 1px solid rgba(60, 50, 40, 0.15);
+  border: 1px solid var(--border);
 }
 
 .legend-chip.start {
-  border-color: #c7483f;
-  color: #c7483f;
+  border-color: var(--route);
+  color: var(--route);
 }
 
 .legend-chip.target {
-  border-color: #2c6fd6;
-  color: #2c6fd6;
+  border-color: var(--wrong);
+  color: var(--wrong);
 }
 
 .legend-chip.correct {
@@ -165,7 +179,7 @@ body {
   background: var(--panel);
   padding: 18px 20px;
   border-radius: 18px;
-  border: 1px solid rgba(60, 50, 40, 0.12);
+  border: 1px solid var(--border);
   box-shadow: var(--shadow);
 }
 
@@ -189,7 +203,8 @@ body {
 #guess-input {
   padding: 12px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(60, 50, 40, 0.2);
+  border: 1px solid var(--border);
+  background: var(--bg-strong);
   font-size: 1rem;
 }
 
@@ -197,11 +212,11 @@ body {
   display: none;
   flex-direction: column;
   gap: 6px;
-  background: #fff;
-  border: 1px solid rgba(60, 50, 40, 0.15);
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 8px;
-  box-shadow: 0 12px 26px rgba(49, 40, 30, 0.12);
+  box-shadow: 0 12px 26px rgba(49, 40, 30, 0.08);
 }
 
 .suggestions.is-open {
@@ -219,7 +234,7 @@ body {
 }
 
 .suggestion:hover {
-  background: rgba(218, 107, 62, 0.1);
+  background: rgba(118, 180, 176, 0.15);
 }
 
 .suggestion.empty {
@@ -233,24 +248,36 @@ body {
   border: none;
   border-radius: 12px;
   padding: 12px 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 #guess-form button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(216, 107, 62, 0.3);
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(118, 180, 176, 0.3);
+}
+
+#guess-form button:active {
+  background: var(--accent-deep);
 }
 
 #reset {
   margin-top: 10px;
   background: transparent;
-  border: 1px dashed rgba(60, 50, 40, 0.3);
-  color: var(--ink-soft);
+  border: 2px solid var(--accent);
+  color: var(--accent-deep);
   padding: 10px 12px;
   border-radius: 10px;
   cursor: pointer;
+  font-weight: 700;
+}
+
+#reset:hover {
+  background: var(--accent);
+  color: #fff;
+  transform: translateY(-1px);
 }
 
 .feedback {
@@ -304,14 +331,14 @@ body {
 }
 
 .comarca.is-start {
-  fill: #d6453a;
-  stroke: #5b1410;
+  fill: var(--route);
+  stroke: #3a5d90;
   stroke-width: 2;
 }
 
 .comarca.is-target {
-  fill: #2f6edb;
-  stroke: #0f2e6e;
+  fill: var(--wrong);
+  stroke: #9e4a3c;
   stroke-width: 2.4;
 }
 

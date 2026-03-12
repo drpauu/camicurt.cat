@@ -5,16 +5,20 @@ export const THEMES = [
     id: "default",
     label: "Clàssic",
     vars: {
-      "--bg": "#0f1114",
-      "--panel": "#1a1d22",
-      "--text": "#f7f6f2",
-      "--muted": "#a8acb3",
-      "--accent": "#59a6a2",
-      "--accent-strong": "#2e6fda",
+      "--bg": "#F4F0E6",
+      "--panel": "#FCFAF5",
+      "--panel-secondary": "#F8F4EC",
+      "--text": "#1F2A30",
+      "--muted": "#667074",
+      "--accent": "#76B4B0",
+      "--accent-hover": "#5E9C98",
+      "--accent-strong": "#487D7A",
       "--success": "#2f8f4d",
-      "--error": "#d6453a",
-      "--stroke": "#202225",
-      "--guess": "#f7e7a3"
+      "--error": "#D16D5C",
+      "--stroke": "#D6C9B6",
+      "--stroke-soft": "#CBBEAA",
+      "--guess": "#C9A76A",
+      "--route": "#5C86C5"
     }
   },
   {
