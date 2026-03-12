@@ -1,16 +1,21 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
 :root {
-  --bg: #0f1114;
-  --panel: #1a1d22;
-  --text: #f7f6f2;
-  --muted: #a8acb3;
-  --accent: #59a6a2;
-  --accent-strong: #2e6fda;
+  --bg: #F4F0E6;
+  --panel: #FCFAF5;
+  --panel-secondary: #F8F4EC;
+  --text: #1F2A30;
+  --muted: #667074;
+  --accent: #76B4B0;
+  --accent-hover: #5E9C98;
+  --accent-strong: #487D7A;
   --success: #2f8f4d;
-  --error: #d6453a;
-  --stroke: #202225;
-  --guess: #f7e7a3;
+  --error: #D16D5C;
+  --stroke: #D6C9B6;
+  --stroke-soft: #CBBEAA;
+  --guess: #C9A76A;
+  --route: #5C86C5;
 }
 
 * {
@@ -19,13 +24,23 @@
 
 body {
   margin: 0;
-  font-family: "Space Grotesk", "IBM Plex Sans", "Helvetica Neue", sans-serif;
-  background: radial-gradient(circle at top, var(--panel) 0%, var(--bg) 55%);
+  font-family: "Manrope", "Space Grotesk", "IBM Plex Sans", "Helvetica Neue", sans-serif;
+  background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   height: 100vh;
   overflow: hidden;
   position: relative;
+}
+
+/* Button interaction system */
+.btn-interact,
+button {
+  transition: all 0.3s ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.98) !important;
 }
 
 body::before {
@@ -164,16 +179,16 @@ html[data-weather="wind"] body::before {
 .topbar-button {
   border: none;
   background: var(--accent);
-  color: #0e1116;
-  font-weight: 600;
+  color: #fff;
+  font-weight: 700;
   padding: 10px 16px;
   border-radius: 12px;
   cursor: pointer;
 }
 
 .calendar-icon-button {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(11, 12, 15, 0.6);
+  border: 1px solid var(--stroke);
+  background: var(--panel);
   color: var(--text);
   font-weight: 600;
   padding: 10px 14px;
@@ -235,7 +250,13 @@ html[data-weather="wind"] body::before {
 }
 
 .topbar-button:hover {
-  filter: brightness(1.05);
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(118, 180, 176, 0.3);
+}
+
+.topbar-button:active {
+  background: var(--accent-strong);
 }
 
 .topbar-button:disabled {
@@ -260,8 +281,8 @@ textarea:focus-visible {
 }
 
 .calendar-toggle-button {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(11, 12, 15, 0.6);
+  border: 1px solid var(--stroke);
+  background: var(--panel);
   color: var(--text);
   border-radius: 10px;
   padding: 6px 8px;
@@ -274,8 +295,8 @@ textarea:focus-visible {
 }
 
 .calendar-toggle-button.active {
-  border-color: rgba(89, 166, 162, 0.8);
-  box-shadow: 0 0 0 2px rgba(89, 166, 162, 0.2);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(118, 180, 176, 0.2);
 }
 
 .calendar-toggle-button:disabled {
@@ -298,22 +319,22 @@ textarea:focus-visible {
 }
 
 .status-badge.offline {
-  background: rgba(214, 69, 58, 0.18);
-  color: #f3b4ad;
-  border: 1px solid rgba(214, 69, 58, 0.4);
+  background: rgba(209, 109, 92, 0.15);
+  color: #a84a3a;
+  border: 1px solid rgba(209, 109, 92, 0.4);
 }
 
 .status-badge.warn {
-  background: rgba(225, 169, 84, 0.16);
-  color: #f4d7a0;
-  border: 1px solid rgba(225, 169, 84, 0.4);
+  background: rgba(201, 167, 106, 0.2);
+  color: #8a6e2a;
+  border: 1px solid rgba(201, 167, 106, 0.5);
 }
 
 .streak-card {
   display: grid;
   gap: 4px;
-  background: rgba(17, 19, 24, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel);
+  border: 1px solid var(--stroke);
   border-radius: 14px;
   padding: 10px 14px;
   min-width: 160px;
@@ -327,8 +348,8 @@ textarea:focus-visible {
 }
 
 .calendar-tab {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(11, 12, 15, 0.6);
+  border: 1px solid var(--stroke);
+  background: var(--panel);
   color: var(--text);
   border-radius: 10px;
   padding: 6px 8px;
@@ -339,7 +360,7 @@ textarea:focus-visible {
 .calendar-tab.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #0e1116;
+  color: #fff;
   font-weight: 600;
 }
 
@@ -353,7 +374,7 @@ textarea:focus-visible {
 .calendar-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(8, 10, 13, 0.55);
+  background: rgba(31, 42, 48, 0.3);
   backdrop-filter: blur(8px);
   display: flex;
   justify-content: flex-end;
@@ -364,14 +385,14 @@ textarea:focus-visible {
 
 .calendar-panel {
   background: var(--panel);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--stroke);
   border-radius: 18px;
   padding: 16px;
   width: min(520px, 90vw);
   display: grid;
   gap: 12px;
   grid-template-rows: auto auto 1fr;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.1);
   height: min(80vh, 640px);
   max-height: calc(100vh - 64px);
   overflow: hidden;
@@ -384,8 +405,8 @@ textarea:focus-visible {
 }
 
 .icon-button {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(11, 12, 15, 0.6);
+  border: 1px solid var(--stroke);
+  background: var(--panel);
   color: var(--text);
   width: 32px;
   height: 32px;
@@ -394,6 +415,11 @@ textarea:focus-visible {
   display: grid;
   place-items: center;
   font-size: 1.1rem;
+}
+
+.icon-button:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
 }
 
 .calendar-body {
@@ -432,8 +458,8 @@ textarea:focus-visible {
 
 .calendar-day {
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(10, 12, 16, 0.6);
+  border: 1px solid var(--stroke);
+  background: var(--panel);
   color: var(--text);
   border-radius: 10px;
   padding: 8px 6px;
@@ -445,9 +471,9 @@ textarea:focus-visible {
 }
 
 .calendar-day.has-level {
-  border-color: rgba(98, 180, 255, 0.45);
-  background: rgba(14, 20, 30, 0.75);
-  box-shadow: 0 0 0 1px rgba(98, 180, 255, 0.12);
+  border-color: rgba(92, 134, 197, 0.5);
+  background: rgba(92, 134, 197, 0.08);
+  box-shadow: 0 0 0 1px rgba(92, 134, 197, 0.12);
 }
 
 .calendar-day.disabled {
@@ -461,7 +487,7 @@ textarea:focus-visible {
 }
 
 .calendar-day.today {
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: var(--accent);
 }
 
 .calendar-day.done {
@@ -469,7 +495,7 @@ textarea:focus-visible {
 }
 
 .calendar-day.skeleton {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--panel-secondary);
   border-color: transparent;
   cursor: default;
 }
@@ -482,11 +508,11 @@ textarea:focus-visible {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--stroke-soft);
 }
 
 .calendar-dot.active {
-  background: #4da3ff;
+  background: var(--route);
 }
 
 .calendar-dot.done {
@@ -494,24 +520,25 @@ textarea:focus-visible {
 }
 
 .calendar-dot.empty {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--stroke-soft);
 }
 
 .calendar-popup {
   position: absolute;
   inset: auto 6px 6px 6px;
-  background: rgba(15, 18, 24, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel);
+  border: 1px solid var(--stroke);
   border-radius: 12px;
   padding: 10px;
   display: grid;
   gap: 6px;
   z-index: 2;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
 .calendar-popup-button {
   border: none;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(118, 180, 176, 0.15);
   color: var(--text);
   padding: 6px 8px;
   border-radius: 8px;
@@ -536,8 +563,8 @@ textarea:focus-visible {
 .calendar-week {
   display: grid;
   gap: 6px;
-  background: rgba(10, 12, 16, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel);
+  border: 1px solid var(--stroke);
   border-radius: 12px;
   padding: 8px;
   position: relative;
@@ -548,7 +575,7 @@ textarea:focus-visible {
 }
 
 .calendar-week.current {
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: var(--accent);
 }
 
 .calendar-week.done {
@@ -556,7 +583,7 @@ textarea:focus-visible {
 }
 
 .calendar-week.skeleton {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--panel-secondary);
   border-color: transparent;
   min-height: 48px;
 }
@@ -620,13 +647,14 @@ h1 {
   background: var(--panel);
   padding: 16px 18px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--stroke);
   display: grid;
   gap: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .panel-card.panel-primary {
-  box-shadow: 0 0 0 1px rgba(89, 166, 162, 0.15);
+  box-shadow: 0 0 0 1px rgba(118, 180, 176, 0.2), 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .section-header,
@@ -687,17 +715,17 @@ h1 {
 }
 
 .value.start {
-  color: #2e6fda;
+  color: var(--route);
   font-weight: 600;
 }
 
 .value.target {
-  color: #d6453a;
+  color: var(--error);
   font-weight: 600;
 }
 
 .value.urgent {
-  color: #d6453a;
+  color: var(--error);
   font-weight: 600;
 }
 
@@ -706,7 +734,7 @@ h1 {
 }
 
 .value.is-perfect {
-  color: #7fe1a7;
+  color: var(--success);
   font-weight: 600;
 }
 
@@ -719,10 +747,11 @@ h1 {
   display: none;
   flex-direction: column;
   gap: 6px;
-  background: #0f1114;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel);
+  border: 1px solid var(--stroke);
   border-radius: 10px;
   padding: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 .suggestions.is-open {
@@ -741,7 +770,7 @@ h1 {
 }
 
 .suggestion:hover {
-  background: rgba(89, 166, 162, 0.2);
+  background: rgba(118, 180, 176, 0.15);
 }
 
 .suggestion.empty {
@@ -750,8 +779,8 @@ h1 {
 }
 
 .guess-form input {
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel-secondary);
+  border: 1px solid var(--stroke);
   border-radius: 10px;
   padding: 10px 12px;
   color: var(--text);
@@ -759,8 +788,8 @@ h1 {
 }
 
 .guess-form input.input-error {
-  border-color: rgba(214, 69, 58, 0.8);
-  box-shadow: 0 0 0 2px rgba(214, 69, 58, 0.2);
+  border-color: rgba(209, 109, 92, 0.8);
+  box-shadow: 0 0 0 2px rgba(209, 109, 92, 0.2);
 }
 
 .guess-form input:disabled {
@@ -769,12 +798,22 @@ h1 {
 
 .submit {
   background: var(--accent);
-  color: #0f1114;
+  color: #fff;
   border: none;
   border-radius: 10px;
   padding: 10px 12px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+}
+
+.submit:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(118, 180, 176, 0.3);
+}
+
+.submit:active:not(:disabled) {
+  background: var(--accent-strong);
 }
 
 .submit:disabled {
@@ -785,12 +824,22 @@ h1 {
 .new-game-button {
   width: 100%;
   border: none;
-  background: var(--accent-strong);
+  background: var(--accent);
   color: #fff;
   padding: 12px 14px;
   border-radius: 12px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+}
+
+.new-game-button:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(118, 180, 176, 0.3);
+}
+
+.new-game-button:active:not(:disabled) {
+  background: var(--accent-strong);
 }
 
 .new-game-button:disabled {
@@ -800,13 +849,19 @@ h1 {
 
 .config-button {
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(11, 12, 15, 0.7);
-  color: var(--text);
+  border: 2px solid var(--accent);
+  background: transparent;
+  color: var(--accent-strong);
   padding: 12px 14px;
   border-radius: 12px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+}
+
+.config-button:hover {
+  background: var(--accent);
+  color: #fff;
+  transform: translateY(-1px);
 }
 
 .feedback {
@@ -816,11 +871,11 @@ h1 {
 }
 
 .feedback.good {
-  color: #7fe1a7;
+  color: var(--success);
 }
 
 .feedback.bad {
-  color: #ff7f73;
+  color: var(--error);
 }
 
 .stats {
@@ -872,7 +927,7 @@ h1 {
   padding: 4px 8px;
   border-radius: 999px;
   font-size: 0.8rem;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--panel-secondary);
 }
 
 .guess-history-item.good {
@@ -916,23 +971,23 @@ h1 {
   gap: 8px;
   padding: 8px 10px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(15, 17, 20, 0.6);
+  border: 1px solid var(--stroke);
+  background: var(--panel);
   font-size: 0.85rem;
 }
 
 .achievement {
   padding: 8px 10px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--stroke);
   color: var(--muted);
   font-size: 0.85rem;
 }
 
 .achievement.unlocked {
-  border-color: rgba(89, 166, 162, 0.6);
+  border-color: rgba(118, 180, 176, 0.6);
   color: var(--text);
-  background: rgba(89, 166, 162, 0.1);
+  background: rgba(118, 180, 176, 0.1);
 }
 
 .modal-actions {
@@ -958,8 +1013,8 @@ h1 {
 }
 
 .rule-chip {
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel-secondary);
+  border: 1px solid var(--stroke);
   border-radius: 12px;
   padding: 10px 12px;
   font-size: 0.9rem;
@@ -980,8 +1035,8 @@ h1 {
   gap: 8px;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(15, 17, 20, 0.6);
+  border: 1px solid var(--stroke);
+  background: var(--panel-secondary);
 }
 
 .mission.done {
@@ -1000,16 +1055,16 @@ h1 {
   justify-content: center;
   padding: 4px 8px;
   border-radius: 999px;
-  background: rgba(89, 166, 162, 0.2);
-  color: var(--text);
+  background: rgba(118, 180, 176, 0.15);
+  color: var(--accent-strong);
   font-size: 0.75rem;
-  border: 1px solid rgba(89, 166, 162, 0.5);
+  border: 1px solid rgba(118, 180, 176, 0.4);
 }
 
 .badge.success {
-  border-color: rgba(47, 143, 77, 0.6);
-  background: rgba(47, 143, 77, 0.2);
-  color: #7fe1a7;
+  border-color: rgba(47, 143, 77, 0.5);
+  background: rgba(47, 143, 77, 0.12);
+  color: var(--success);
 }
 
 .powerups {
@@ -1022,8 +1077,8 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel-secondary);
+  border: 1px solid var(--stroke);
   border-radius: 10px;
   padding: 10px 12px;
   color: var(--text);
@@ -1045,8 +1100,8 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel-secondary);
+  border: 1px solid var(--stroke);
   border-radius: 10px;
   padding: 10px 12px;
   color: var(--text);
@@ -1054,8 +1109,8 @@ h1 {
 }
 
 .theme-button.active {
-  border-color: rgba(89, 166, 162, 0.6);
-  background: rgba(89, 166, 162, 0.15);
+  border-color: var(--accent);
+  background: rgba(118, 180, 176, 0.12);
 }
 
 .theme-button.locked {
@@ -1079,8 +1134,8 @@ h1 {
 }
 
 .scope-button {
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel-secondary);
+  border: 1px solid var(--stroke);
   border-radius: 10px;
   padding: 6px 8px;
   color: var(--text);
@@ -1089,8 +1144,8 @@ h1 {
 }
 
 .scope-button.active {
-  border-color: rgba(89, 166, 162, 0.6);
-  background: rgba(89, 166, 162, 0.15);
+  border-color: var(--accent);
+  background: rgba(118, 180, 176, 0.12);
 }
 
 .scope-button:disabled {
@@ -1104,8 +1159,8 @@ h1 {
 }
 
 .group-controls input {
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel-secondary);
+  border: 1px solid var(--stroke);
   border-radius: 10px;
   padding: 8px 10px;
   color: var(--text);
@@ -1119,8 +1174,8 @@ h1 {
 }
 
 .group-row input {
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel-secondary);
+  border: 1px solid var(--stroke);
   border-radius: 10px;
   padding: 8px 10px;
   color: var(--text);
@@ -1128,7 +1183,7 @@ h1 {
 
 .ghost {
   background: transparent;
-  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border: 1px dashed var(--stroke-soft);
   color: var(--muted);
   border-radius: 10px;
   padding: 8px 10px;
@@ -1166,12 +1221,19 @@ h1 {
 }
 
 .reset {
-  background: var(--accent-strong);
+  background: var(--accent);
   color: #fff;
   border: none;
   border-radius: 10px;
   padding: 10px 12px;
   cursor: pointer;
+  font-weight: 700;
+}
+
+.reset:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(118, 180, 176, 0.3);
 }
 
 .path-list {
@@ -1217,8 +1279,8 @@ h1 {
   position: absolute;
   top: 16px;
   left: 16px;
-  background: rgba(20, 22, 26, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(252, 250, 245, 0.9);
+  border: 1px solid var(--stroke);
   padding: 6px 10px;
   border-radius: 12px;
   font-weight: 600;
@@ -1236,7 +1298,7 @@ h1 {
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgba(8, 10, 14, 0.75);
+  background: rgba(244, 240, 230, 0.75);
   z-index: 5;
   font-size: 4rem;
   font-weight: 700;
@@ -1259,27 +1321,28 @@ h1 {
   inset: 0;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, rgba(12, 15, 20, 0.92), rgba(6, 8, 12, 0.96));
+  background: linear-gradient(135deg, rgba(248, 244, 236, 0.95), rgba(252, 250, 245, 0.98));
   color: var(--muted);
   font-size: 0.95rem;
   z-index: 3;
 }
 
 .map-wrap.fog {
-  background: linear-gradient(135deg, #1c1f24 0%, #101316 100%);
+  background: linear-gradient(135deg, #e8e0d2 0%, #d6ccbe 100%);
 }
 
 .prompt {
   position: absolute;
   top: 16px;
   left: 16px;
-  background: rgba(20, 22, 26, 0.85);
+  background: rgba(252, 250, 245, 0.9);
   padding: 8px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--stroke);
   font-size: 0.9rem;
   display: grid;
   gap: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .map-controls {
@@ -1291,12 +1354,18 @@ h1 {
 }
 
 .map-controls button {
-  background: rgba(20, 22, 26, 0.85);
+  background: rgba(252, 250, 245, 0.9);
   color: var(--text);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--stroke);
   border-radius: 10px;
   padding: 6px 10px;
   cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.map-controls button:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
 }
 
 .route {
@@ -1315,7 +1384,7 @@ h1 {
 
 .outline {
   fill: none;
-  stroke: #f7f6f2;
+  stroke: var(--text);
   stroke-width: 2.2;
   opacity: 0.85;
 }
@@ -1326,12 +1395,12 @@ h1 {
 }
 
 .initial {
-  fill: #f7f6f2;
+  fill: var(--text);
   font-size: 0.55rem;
   font-weight: 600;
   text-transform: uppercase;
   paint-order: stroke;
-  stroke: rgba(15, 17, 20, 0.9);
+  stroke: rgba(252, 250, 245, 0.9);
   stroke-width: 3px;
 }
 
@@ -1350,20 +1419,20 @@ h1 {
 
 .comarca.is-hidden.is-outline {
   fill: transparent;
-  stroke: rgba(255, 255, 255, 0.55);
+  stroke: rgba(31, 42, 48, 0.4);
   stroke-width: 1.4;
 }
 
 .comarca.is-hidden.is-neighbor {
   fill: transparent;
-  stroke: rgba(255, 255, 255, 0.7);
+  stroke: rgba(31, 42, 48, 0.5);
   stroke-width: 2;
   stroke-dasharray: 6 4;
 }
 
 .comarca.is-hidden.is-hint {
-  fill: rgba(46, 111, 218, 0.4);
-  stroke: #2e6fda;
+  fill: rgba(92, 134, 197, 0.35);
+  stroke: var(--route);
   stroke-width: 2.2;
 }
 
@@ -1375,15 +1444,15 @@ h1 {
 }
 
 .comarca.is-start {
-  fill: #2e6fda;
+  fill: var(--route);
 }
 
 .comarca.is-target {
-  fill: #d6453a;
+  fill: var(--error);
 }
 
 .comarca.is-current {
-  stroke: #f7f6f2;
+  stroke: var(--text);
   stroke-width: 2.4;
 }
 
@@ -1395,26 +1464,26 @@ h1 {
 
 .comarca.is-neighbor {
   fill: transparent;
-  stroke: rgba(255, 255, 255, 0.7);
+  stroke: rgba(31, 42, 48, 0.5);
   stroke-width: 2;
   stroke-dasharray: 6 4;
 }
 
 .comarca.is-hint {
-  fill: rgba(46, 111, 218, 0.5);
-  stroke: #2e6fda;
+  fill: rgba(92, 134, 197, 0.4);
+  stroke: var(--route);
   stroke-width: 2.2;
 }
 
 .comarca.is-replay {
-  fill: rgba(89, 166, 162, 0.55);
-  stroke: #59a6a2;
+  fill: rgba(118, 180, 176, 0.45);
+  stroke: var(--accent);
   stroke-width: 2.2;
 }
 
 .comarca.is-reveal {
-  fill: rgba(225, 169, 84, 0.65);
-  stroke: #e1a954;
+  fill: rgba(201, 167, 106, 0.5);
+  stroke: var(--guess);
   stroke-width: 2.2;
 }
 
@@ -1452,8 +1521,8 @@ h1 {
 }
 
 .mode-button {
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel-secondary);
+  border: 1px solid var(--stroke);
   border-radius: 10px;
   padding: 8px 10px;
   color: var(--text);
@@ -1463,8 +1532,8 @@ h1 {
 }
 
 .mode-button.active {
-  border-color: rgba(89, 166, 162, 0.6);
-  background: rgba(89, 166, 162, 0.2);
+  border-color: var(--accent);
+  background: rgba(118, 180, 176, 0.15);
 }
 
 .mode-button.done {
@@ -1481,8 +1550,8 @@ h1 {
 .difficulty-button {
   display: grid;
   gap: 4px;
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel-secondary);
+  border: 1px solid var(--stroke);
   border-radius: 10px;
   padding: 8px 10px;
   color: var(--text);
@@ -1492,8 +1561,8 @@ h1 {
 }
 
 .difficulty-button.active {
-  border-color: rgba(89, 166, 162, 0.6);
-  background: rgba(89, 166, 162, 0.18);
+  border-color: var(--accent);
+  background: rgba(118, 180, 176, 0.12);
 }
 
 .difficulty-button.locked {
@@ -1511,8 +1580,8 @@ h1 {
 }
 
 .level-select {
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel-secondary);
+  border: 1px solid var(--stroke);
   border-radius: 10px;
   padding: 8px 10px;
   color: var(--text);
@@ -1539,8 +1608,8 @@ h1 {
 }
 
 .hint-button {
-  background: #111318;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel-secondary);
+  border: 1px solid var(--stroke);
   border-radius: 10px;
   padding: 10px 12px;
   color: var(--text);
@@ -1549,8 +1618,8 @@ h1 {
 }
 
 .hint-button.active {
-  border-color: rgba(89, 166, 162, 0.6);
-  background: rgba(89, 166, 162, 0.15);
+  border-color: var(--accent);
+  background: rgba(118, 180, 176, 0.12);
 }
 
 .hint-button:disabled {
@@ -1561,7 +1630,8 @@ h1 {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(8, 9, 12, 0.75);
+  background: rgba(31, 42, 48, 0.3);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1570,7 +1640,7 @@ h1 {
 }
 
 .modal {
-  background: #15181e;
+  background: var(--panel);
   border-radius: 18px;
   padding: 22px;
   max-width: 520px;
@@ -1579,7 +1649,8 @@ h1 {
   overflow-y: auto;
   display: grid;
   gap: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--stroke);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.12);
 }
 
 .modal-header {
@@ -1695,16 +1766,17 @@ h1 {
 
 .error-card {
   background: var(--panel);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--stroke);
   border-radius: 16px;
   padding: 24px;
   width: min(420px, 90vw);
   display: grid;
   gap: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
 }
 
 .error-card pre {
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--panel-secondary);
   padding: 10px;
   border-radius: 10px;
   font-size: 0.75rem;
