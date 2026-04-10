@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { feature, neighbors as topoNeighbors } from "https://esm.sh/topojson-client@3.1.0";
+import { geoCentroid } from "https://esm.sh/d3-geo@3.1.1";
 import topology from "./catalunya-comarques.topojson.json" assert { type: "json" };
 import rules from "./rules.json" assert { type: "json" };
 
@@ -42,12 +43,21 @@ const DAILY_MIN_INTERNAL = 4;
 const WEEKLY_MIN_INTERNAL = 8;
 
 function normalizeName(value: string) {
-  return value
+  return String(value ?? "")
+    .normalize("NFC")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLocaleLowerCase("ca");
+}
+
+function slugifyName(value: string) {
+  return String(value ?? "")
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, " ")
-    .trim();
+    .trim()
+    .replace(/\s+/g, "-");
 }
 
 function hashString(value: string) {
@@ -73,33 +83,85 @@ function pickRandom<T>(list: T[], rng = Math.random) {
   return list[Math.floor(rng() * list.length)];
 }
 
-function findShortestPath(startId: string, targetId: string, adjacency: Map<string, Set<string>>) {
-  if (!startId || !targetId) return [];
-  if (startId === targetId) return [startId];
-  const queue = [startId];
-  const visited = new Set([startId]);
-  const prev = new Map<string, string>();
+function sortedNeighbors(adjacency: Map<string, Set<string>>, id: string, allowedSet?: Set<string>) {
+  return [...(adjacency.get(id) || new Set<string>())]
+    .filter((neighborId) => !allowedSet || allowedSet.has(neighborId))
+    .sort((a, b) => a.localeCompare(b, "ca"));
+}
+
+function dijkstraAllShortestPaths(
+  startId: string,
+  targetId: string,
+  adjacency: Map<string, Set<string>>,
+  options: { allowedSet?: Set<string>; maxPaths?: number } = {}
+) {
+  const { allowedSet, maxPaths = 64 } = options;
+  if (!startId || !targetId) {
+    return { primaryPath: [], paths: [], distance: Infinity, truncated: false };
+  }
+  if (allowedSet && (!allowedSet.has(startId) || !allowedSet.has(targetId))) {
+    return { primaryPath: [], paths: [], distance: Infinity, truncated: false };
+  }
+  if (startId === targetId) {
+    return { primaryPath: [startId], paths: [[startId]], distance: 0, truncated: false };
+  }
+
+  const distances = new Map<string, number>([[startId, 0]]);
+  const predecessors = new Map<string, string[]>();
+  const queue = [{ id: startId, distance: 0 }];
+  let targetDistance = Infinity;
 
   while (queue.length) {
-    const current = queue.shift()!;
-    const neighbors = adjacency.get(current) || new Set();
-    for (const next of neighbors) {
-      if (visited.has(next)) continue;
-      visited.add(next);
-      prev.set(next, current);
-      if (next === targetId) {
-        const path = [targetId];
-        let step = targetId;
-        while (prev.has(step)) {
-          step = prev.get(step)!;
-          path.push(step);
+    queue.sort((a, b) => a.distance - b.distance || a.id.localeCompare(b.id, "ca"));
+    const { id: current, distance } = queue.shift()!;
+    if (distance !== distances.get(current)) continue;
+    if (distance > targetDistance) break;
+    for (const next of sortedNeighbors(adjacency, current, allowedSet)) {
+      const nextDistance = distance + 1;
+      const knownDistance = distances.get(next);
+      if (knownDistance === undefined || nextDistance < knownDistance) {
+        distances.set(next, nextDistance);
+        predecessors.set(next, [current]);
+        queue.push({ id: next, distance: nextDistance });
+        if (next === targetId) targetDistance = nextDistance;
+      } else if (nextDistance === knownDistance) {
+        const list = predecessors.get(next) || [];
+        if (!list.includes(current)) {
+          list.push(current);
+          list.sort((a, b) => a.localeCompare(b, "ca"));
+          predecessors.set(next, list);
         }
-        return path.reverse();
       }
-      queue.push(next);
     }
   }
-  return [];
+
+  const distance = distances.get(targetId);
+  if (distance === undefined) {
+    return { primaryPath: [], paths: [], distance: Infinity, truncated: false };
+  }
+
+  const paths: string[][] = [];
+  let truncated = false;
+  function walk(nodeId: string, suffix: string[]) {
+    if (paths.length >= maxPaths) {
+      truncated = true;
+      return;
+    }
+    if (nodeId === startId) {
+      paths.push([startId, ...suffix]);
+      return;
+    }
+    for (const previous of predecessors.get(nodeId) || []) {
+      walk(previous, [nodeId, ...suffix]);
+      if (truncated) return;
+    }
+  }
+  walk(targetId, []);
+  return { primaryPath: paths[0] || [], paths, distance, truncated };
+}
+
+function findShortestPath(startId: string, targetId: string, adjacency: Map<string, Set<string>>) {
+  return dijkstraAllShortestPaths(startId, targetId, adjacency).primaryPath;
 }
 
 function findShortestPathInSet(
@@ -108,33 +170,7 @@ function findShortestPathInSet(
   adjacency: Map<string, Set<string>>,
   allowedSet: Set<string>
 ) {
-  if (!startId || !targetId) return [];
-  if (!allowedSet.has(startId) || !allowedSet.has(targetId)) return [];
-  if (startId === targetId) return [startId];
-  const queue = [startId];
-  const visited = new Set([startId]);
-  const prev = new Map<string, string>();
-
-  while (queue.length) {
-    const current = queue.shift()!;
-    const neighbors = adjacency.get(current) || new Set();
-    for (const next of neighbors) {
-      if (visited.has(next) || !allowedSet.has(next)) continue;
-      visited.add(next);
-      prev.set(next, current);
-      if (next === targetId) {
-        const path = [targetId];
-        let step = targetId;
-        while (prev.has(step)) {
-          step = prev.get(step)!;
-          path.push(step);
-        }
-        return path.reverse();
-      }
-      queue.push(next);
-    }
-  }
-  return [];
+  return dijkstraAllShortestPaths(startId, targetId, adjacency, { allowedSet }).primaryPath;
 }
 
 function hasPathViaNode(
@@ -151,34 +187,168 @@ function hasPathViaNode(
   return toTarget.length > 0;
 }
 
+function pointDistance(a: any, b: any) {
+  if (!a || !b) return 0;
+  const ax = Number(a.lon);
+  const ay = Number(a.lat);
+  const bx = Number(b.lon);
+  const by = Number(b.lat);
+  if (![ax, ay, bx, by].every(Number.isFinite)) return 0;
+  return Math.hypot(ax - bx, ay - by);
+}
+
+function maxNeighborDistance(adjacency: Map<string, Set<string>>, centroidMap: Map<string, any>) {
+  let max = 0;
+  adjacency.forEach((neighbors, id) => {
+    const from = centroidMap.get(id);
+    neighbors.forEach((neighborId) => {
+      const distance = pointDistance(from, centroidMap.get(neighborId));
+      if (distance > max) max = distance;
+    });
+  });
+  return max || 1;
+}
+
+function aStarShortestPath(
+  startId: string,
+  targetId: string,
+  adjacency: Map<string, Set<string>>,
+  options: { allowedSet?: Set<string>; centroidMap?: Map<string, any> } = {}
+) {
+  const { allowedSet, centroidMap = new Map() } = options;
+  if (!startId || !targetId) return [];
+  if (allowedSet && (!allowedSet.has(startId) || !allowedSet.has(targetId))) return [];
+  if (startId === targetId) return [startId];
+  const edgeScale = maxNeighborDistance(adjacency, centroidMap);
+  const heuristic = (id: string) => pointDistance(centroidMap.get(id), centroidMap.get(targetId)) / edgeScale;
+  const open = [{ id: startId, fScore: heuristic(startId) }];
+  const openIds = new Set([startId]);
+  const cameFrom = new Map<string, string>();
+  const gScore = new Map<string, number>([[startId, 0]]);
+  while (open.length) {
+    open.sort((a, b) => a.fScore - b.fScore || a.id.localeCompare(b.id, "ca"));
+    const current = open.shift()!.id;
+    openIds.delete(current);
+    if (current === targetId) {
+      const path = [targetId];
+      let step = targetId;
+      while (cameFrom.has(step)) {
+        step = cameFrom.get(step)!;
+        path.push(step);
+      }
+      return path.reverse();
+    }
+    const currentScore = gScore.get(current) ?? Infinity;
+    for (const next of sortedNeighbors(adjacency, current, allowedSet)) {
+      const tentativeScore = currentScore + 1;
+      if (tentativeScore >= (gScore.get(next) ?? Infinity)) continue;
+      cameFrom.set(next, current);
+      gScore.set(next, tentativeScore);
+      const fScore = tentativeScore + heuristic(next);
+      if (!openIds.has(next)) {
+        open.push({ id: next, fScore });
+        openIds.add(next);
+      } else {
+        const entry = open.find((item) => item.id === next);
+        if (entry) entry.fScore = fScore;
+      }
+    }
+  }
+  return [];
+}
+
+function hasDuplicateIds(path: string[]) {
+  return new Set(path).size !== path.length;
+}
+
+function findShortestPathsWithRule(
+  startId: string,
+  targetId: string,
+  adjacency: Map<string, Set<string>>,
+  rule: any,
+  allIds: string[],
+  options: { centroidMap?: Map<string, any>; maxPaths?: number } = {}
+) {
+  const { centroidMap = new Map(), maxPaths = 64 } = options;
+  if (!rule) {
+    const result = dijkstraAllShortestPaths(startId, targetId, adjacency, { maxPaths });
+    const astarPath = aStarShortestPath(startId, targetId, adjacency, { centroidMap });
+    return { ...result, astarPath };
+  }
+  if (rule.kind === "avoid") {
+    const blocked = new Set(rule.comarcaIds || []);
+    const allowed = new Set(allIds.filter((id) => !blocked.has(id)));
+    const result = dijkstraAllShortestPaths(startId, targetId, adjacency, {
+      allowedSet: allowed,
+      maxPaths
+    });
+    const astarPath = aStarShortestPath(startId, targetId, adjacency, {
+      allowedSet: allowed,
+      centroidMap
+    });
+    return { ...result, astarPath };
+  }
+  if (rule.kind === "mustIncludeAny") {
+    let bestDistance = Infinity;
+    let truncated = false;
+    const paths: string[][] = [];
+    const seen = new Set<string>();
+    (rule.comarcaIds || []).forEach((nodeId: string) => {
+      const first = dijkstraAllShortestPaths(startId, nodeId, adjacency, { maxPaths });
+      const second = dijkstraAllShortestPaths(nodeId, targetId, adjacency, { maxPaths });
+      if (!first.primaryPath.length || !second.primaryPath.length) return;
+      first.paths.forEach((firstPath) => {
+        second.paths.forEach((secondPath) => {
+          const combined = firstPath.concat(secondPath.slice(1));
+          if (hasDuplicateIds(combined)) return;
+          const distance = combined.length - 1;
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            paths.length = 0;
+            seen.clear();
+          }
+          if (distance !== bestDistance || paths.length >= maxPaths) {
+            if (paths.length >= maxPaths) truncated = true;
+            return;
+          }
+          const key = combined.join("|");
+          if (seen.has(key)) return;
+          seen.add(key);
+          paths.push(combined);
+        });
+      });
+    });
+    const astarCandidates = (rule.comarcaIds || [])
+      .map((nodeId: string) => {
+        const first = aStarShortestPath(startId, nodeId, adjacency, { centroidMap });
+        const second = aStarShortestPath(nodeId, targetId, adjacency, { centroidMap });
+        if (!first.length || !second.length) return [];
+        const combined = first.concat(second.slice(1));
+        return hasDuplicateIds(combined) ? [] : combined;
+      })
+      .filter((path: string[]) => path.length);
+    const astarPath = astarCandidates.sort((a: string[], b: string[]) => a.length - b.length)[0] || [];
+    return {
+      primaryPath: paths[0] || [],
+      paths,
+      distance: paths[0]?.length ? paths[0].length - 1 : Infinity,
+      truncated,
+      astarPath
+    };
+  }
+  return findShortestPathsWithRule(startId, targetId, adjacency, null, allIds, options);
+}
+
 function findShortestPathWithRule(
   startId: string,
   targetId: string,
   adjacency: Map<string, Set<string>>,
   rule: any,
-  allIds: string[]
+  allIds: string[],
+  options: { centroidMap?: Map<string, any>; maxPaths?: number } = {}
 ) {
-  if (!rule) return findShortestPath(startId, targetId, adjacency);
-  if (rule.kind === "avoid") {
-    const blocked = new Set(rule.comarcaIds || []);
-    const allowed = new Set(allIds.filter((id) => !blocked.has(id)));
-    return findShortestPathInSet(startId, targetId, adjacency, allowed);
-  }
-  if (rule.kind === "mustIncludeAny") {
-    const candidates = rule.comarcaIds || [];
-    let best: string[] = [];
-    candidates.forEach((nodeId: string) => {
-      const first = findShortestPath(startId, nodeId, adjacency);
-      const second = findShortestPath(nodeId, targetId, adjacency);
-      if (!first.length || !second.length) return;
-      const combined = first.concat(second.slice(1));
-      if (!best.length || combined.length < best.length) {
-        best = combined;
-      }
-    });
-    return best.length ? best : findShortestPath(startId, targetId, adjacency);
-  }
-  return findShortestPath(startId, targetId, adjacency);
+  return findShortestPathsWithRule(startId, targetId, adjacency, rule, allIds, options)
+    .primaryPath;
 }
 
 function resolveRule(def: any, ctx: any) {
@@ -188,7 +358,7 @@ function resolveRule(def: any, ctx: any) {
   );
   const pick = pool.length ? pickRandom(pool, ctx.rng) : ctx.comarcaNames[0];
   return {
-    id: `${def.id}-${normalizeName(pick).replace(/\s+/g, "-")}`,
+    id: `${def.id}-${slugifyName(pick)}`,
     kind: "avoid",
     label: `No pots passar per ${pick}.`,
     comarques: [pick],
@@ -250,6 +420,7 @@ function buildLevel({
   ids,
   names,
   normalizedToId,
+  centroidMap,
   adjacency,
   minInternal,
   rulePool
@@ -258,6 +429,7 @@ function buildLevel({
   ids: string[];
   names: string[];
   normalizedToId: Map<string, string>;
+  centroidMap: Map<string, any>;
   adjacency: Map<string, Set<string>>;
   minInternal: number;
   rulePool: any[];
@@ -296,7 +468,8 @@ function buildLevel({
       candidateTarget,
       adjacency,
       candidateRule,
-      ids
+      ids,
+      { centroidMap, maxPaths: 64 }
     );
     const basePath = findShortestPath(candidateStart, candidateTarget, adjacency);
     if (!path.length) continue;
@@ -404,6 +577,13 @@ const names = collection.features.map((featureItem: any) => featureItem.properti
 const normalizedToId = new Map<string, string>();
 collection.features.forEach((featureItem: any) => {
   normalizedToId.set(normalizeName(featureItem.properties.name), featureItem.properties.id);
+});
+const centroidMap = new Map<string, { lat: number; lon: number }>();
+collection.features.forEach((featureItem: any) => {
+  const [lon, lat] = geoCentroid(featureItem);
+  if (Number.isFinite(lat) && Number.isFinite(lon)) {
+    centroidMap.set(featureItem.properties.id, { lat, lon });
+  }
 });
 const neighborIndex = topoNeighbors(topology.objects[objectKey].geometries || []);
 const adjacencyMap = new Map<string, Set<string>>();
@@ -546,6 +726,7 @@ Deno.serve(async (req) => {
       ids,
       names,
       normalizedToId,
+      centroidMap,
       adjacency: adjacencyMap,
       minInternal: DAILY_MIN_INTERNAL,
       rulePool: ruleDef ? [ruleDef] : rulePool
@@ -605,6 +786,7 @@ Deno.serve(async (req) => {
       ids,
       names,
       normalizedToId,
+      centroidMap,
       adjacency: adjacencyMap,
       minInternal: WEEKLY_MIN_INTERNAL,
       rulePool: ruleDef ? [ruleDef] : rulePool

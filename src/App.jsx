@@ -5,6 +5,14 @@ import { zoom, zoomIdentity } from "d3-zoom";
 import { feature, mesh, neighbors as topoNeighbors } from "topojson-client";
 import { supabase, supabaseEnabled } from "./lib/supabase.js";
 import { buildCentroidMap, buildNeighborSet } from "./lib/geography.js";
+import { normalizeName, slugifyName } from "./lib/names.js";
+import {
+  buildShortestPathCache,
+  deserializeShortestPathCache,
+  findShortestPath,
+  findShortestPathInSet,
+  findShortestPathsWithRule
+} from "./lib/pathfinding.js";
 import { loadSettings, saveSettings } from "./lib/settings.js";
 import { TOMAS_THEME_ID } from "./lib/themes.js";
 import { RULES, pickRuleForKey, normalizeRule } from "./lib/rules.js";
@@ -48,7 +56,7 @@ const MAP_CACHE_KEY = "rumb-map-cache-v1";
 const MAP_CACHE_VERSION = "2026-01-05";
 const MAP_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 const MAP_TOPO_URL = `/catalunya-comarques.topojson?v=${MAP_CACHE_VERSION}`;
-const PING_URL = import.meta.env.VITE_PING_URL || "https://example.com/";
+const PING_URL = import.meta.env.VITE_PING_URL || "";
 const TELEMETRY_QUEUE_KEY = "rumb-telemetry-queue-v1";
 const ATTEMPTS_QUEUE_KEY = "rumb-attempts-queue-v1";
 const MAX_TELEMETRY_QUEUE = 200;
@@ -284,6 +292,7 @@ const STRINGS = {
     yourPath: "El teu recorregut",
     correctPath: "Resultat correcte",
     shortestCount: "Camí més curt: {value} comarques",
+    optimalAlternatives: "{value} camins òptims trobats",
     topTime: "Top temps",
     topAttempts: "Top intents",
     topRoute: "Top ruta",
@@ -838,15 +847,6 @@ function pickRandom(list, rng = Math.random) {
   return list[Math.floor(rng() * list.length)];
 }
 
-function normalizeName(value) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
 function getInitials(value) {
   const skip = new Set(["el", "la", "les", "l", "de", "del", "d", "dels"]);
   return value
@@ -1103,13 +1103,6 @@ function deserializeAdjacency(list) {
   return new Map(list.map(([id, neighbors]) => [id, new Set(neighbors || [])]));
 }
 
-function deserializeShortestPathCache(list) {
-  if (!Array.isArray(list)) return new Map();
-  return new Map(
-    list.map(([startId, targets]) => [startId, new Map(targets || [])])
-  );
-}
-
 function readMapCache() {
   if (typeof window === "undefined") return null;
   const raw = localStorage.getItem(MAP_CACHE_KEY);
@@ -1246,49 +1239,6 @@ function resolveWeatherState(weatherCode, windSpeed) {
   return "clear";
 }
 
-function buildShortestPathCache(adjacency) {
-  if (!adjacency || !adjacency.size) return new Map();
-  const ids = [...adjacency.keys()];
-  const cache = new Map();
-
-  ids.forEach((startId) => {
-    const queue = [startId];
-    const visited = new Set([startId]);
-    const prev = new Map();
-
-    while (queue.length) {
-      const current = queue.shift();
-      const neighbors = adjacency.get(current) || new Set();
-      for (const next of neighbors) {
-        if (visited.has(next)) continue;
-        visited.add(next);
-        prev.set(next, current);
-        queue.push(next);
-      }
-    }
-
-    const targetMap = new Map();
-    ids.forEach((targetId) => {
-      if (targetId === startId) {
-        targetMap.set(targetId, [startId]);
-        return;
-      }
-      if (!visited.has(targetId)) return;
-      const path = [targetId];
-      let step = targetId;
-      while (prev.has(step)) {
-        step = prev.get(step);
-        path.push(step);
-        if (step === startId) break;
-      }
-      targetMap.set(targetId, path.reverse());
-    });
-    cache.set(startId, targetMap);
-  });
-
-  return cache;
-}
-
 function readQueue(key) {
   if (typeof window === "undefined") return [];
   const raw = localStorage.getItem(key);
@@ -1377,97 +1327,12 @@ function mulberry32(seed) {
   };
 }
 
-function findShortestPath(startId, targetId, adjacency, cache) {
-  if (!startId || !targetId) return [];
-  if (startId === targetId) return [startId];
-  const cached = cache?.get(startId)?.get(targetId);
-  if (cached) return cached;
-  const queue = [startId];
-  const visited = new Set([startId]);
-  const prev = new Map();
-
-  while (queue.length) {
-    const current = queue.shift();
-    const neighbors = adjacency.get(current) || new Set();
-    for (const next of neighbors) {
-      if (visited.has(next)) continue;
-      visited.add(next);
-      prev.set(next, current);
-      if (next === targetId) {
-        const path = [targetId];
-        let step = targetId;
-        while (prev.has(step)) {
-          step = prev.get(step);
-          path.push(step);
-        }
-        return path.reverse();
-      }
-      queue.push(next);
-    }
-  }
-  return [];
-}
-
-function findShortestPathInSet(startId, targetId, adjacency, allowedSet) {
-  if (!startId || !targetId) return [];
-  if (!allowedSet.has(startId) || !allowedSet.has(targetId)) return [];
-  if (startId === targetId) return [startId];
-  const queue = [startId];
-  const visited = new Set([startId]);
-  const prev = new Map();
-
-  while (queue.length) {
-    const current = queue.shift();
-    const neighbors = adjacency.get(current) || new Set();
-    for (const next of neighbors) {
-      if (visited.has(next) || !allowedSet.has(next)) continue;
-      visited.add(next);
-      prev.set(next, current);
-      if (next === targetId) {
-        const path = [targetId];
-        let step = targetId;
-        while (prev.has(step)) {
-          step = prev.get(step);
-          path.push(step);
-        }
-        return path.reverse();
-      }
-      queue.push(next);
-    }
-  }
-  return [];
-}
-
 function hasPathViaNode(startId, targetId, nodeId, adjacency, allowedSet) {
   if (!allowedSet.has(nodeId)) return false;
   const toNode = findShortestPathInSet(startId, nodeId, adjacency, allowedSet);
   if (!toNode.length) return false;
   const toTarget = findShortestPathInSet(nodeId, targetId, adjacency, allowedSet);
   return toTarget.length > 0;
-}
-
-function findShortestPathWithRule(startId, targetId, adjacency, rule, allIds, cache) {
-  if (!rule) return findShortestPath(startId, targetId, adjacency, cache);
-  if (rule.kind === "avoid") {
-    const blocked = new Set(rule.comarcaIds || []);
-    const allowed = new Set(allIds.filter((id) => !blocked.has(id)));
-    return findShortestPathInSet(startId, targetId, adjacency, allowed);
-  }
-  if (rule.kind === "mustIncludeAny") {
-    const candidates = rule.comarcaIds || [];
-    let best = [];
-    candidates.forEach((nodeId) => {
-      const first = findShortestPath(startId, nodeId, adjacency, cache);
-      const second = findShortestPath(nodeId, targetId, adjacency, cache);
-      if (!first.length || !second.length) return;
-      const combined = first.concat(second.slice(1));
-      if (!best.length || combined.length < best.length) {
-        best = combined;
-      }
-    });
-    return best.length ? best : findShortestPath(startId, targetId, adjacency, cache);
-  }
-  return findShortestPath(startId, targetId, adjacency, cache);
 }
 
 function resolveRule(def, ctx) {
@@ -1477,7 +1342,7 @@ function resolveRule(def, ctx) {
   );
   const pick = pool.length ? pickRandom(pool, ctx.rng) : ctx.comarcaNames[0];
   return {
-    id: `${def.id}-${normalizeName(pick).replace(/\s+/g, "-")}`,
+    id: `${def.id}-${slugifyName(pick)}`,
     kind: "avoid",
     label: `No pots passar per ${pick}.`,
     comarques: [pick],
@@ -1695,6 +1560,7 @@ export default function App() {
   const [hintsUsed, setHintsUsed] = useState(0);
   const [attempts, setAttempts] = useState(0);
   const [shortestPath, setShortestPath] = useState([]);
+  const [shortestPaths, setShortestPaths] = useState([]);
   const [activeRule, setActiveRule] = useState(null);
   const [resultData, setResultData] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -1867,7 +1733,7 @@ export default function App() {
   const isWeeklyMode = gameMode === "weekly";
   const isDailyMode = gameMode === "daily";
   const isFixedMode = isDailyMode || isWeeklyMode;
-  const shouldLoadCalendar = calendarOpen || isDailyMode || isWeeklyMode;
+  const shouldLoadCalendar = calendarOpen || optionsOpen || isDailyMode || isWeeklyMode;
   const activeDifficulty = isFixedMode ? "cap-colla-rutes" : difficulty;
   const difficultyConfig = useMemo(() => {
     return DIFFICULTIES.find((entry) => entry.id === activeDifficulty) || DIFFICULTIES[0];
@@ -2063,6 +1929,17 @@ export default function App() {
   }, [sfxEnabled, sfxVolume]);
 
   useEffect(() => {
+    if (!optionsOpen || typeof window === "undefined") return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setOptionsOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [optionsOpen]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     if (Object.keys(dailyResults).length > 60) {
       setDailyResults((prev) => trimResults(prev, 60));
@@ -2132,6 +2009,10 @@ export default function App() {
     let timer;
 
     const checkConnectivity = async () => {
+      if (!PING_URL) {
+        setIsOnline(navigator.onLine !== false);
+        return;
+      }
       try {
         await fetch(PING_URL, { mode: "no-cors", cache: "no-store" });
         if (!cancelled) setIsOnline(true);
@@ -2857,6 +2738,31 @@ export default function App() {
     });
   }, [activeRule, startId, targetId, adjacency, allowedSet, guessedSet]);
 
+  function resolveShortestPaths(start, target, rule, fallbackPath = []) {
+    const allIds = comarques.map((featureItem) => featureItem.properties.id);
+    const fallback = Array.isArray(fallbackPath) ? fallbackPath : [];
+    if (!start || !target || !adjacency.size || !allIds.length) {
+      return {
+        primaryPath: fallback,
+        paths: fallback.length ? [fallback] : [],
+        distance: fallback.length ? fallback.length - 1 : Infinity,
+        truncated: false,
+        astarConsistent: true
+      };
+    }
+    const result = findShortestPathsWithRule(start, target, adjacency, rule, allIds, {
+      cache: shortestPathCache,
+      centroidMap,
+      maxPaths: 64
+    });
+    const primaryPath = result.primaryPath.length ? result.primaryPath : fallback;
+    return {
+      ...result,
+      primaryPath,
+      paths: result.paths.length ? result.paths : primaryPath.length ? [primaryPath] : []
+    };
+  }
+
   const showNeighborHintActive = tempNeighborHint;
   const showInitialsActive = tempInitialsHint;
 
@@ -2926,7 +2832,7 @@ export default function App() {
         neighborSet.has(featureItem.id) &&
         !isStart &&
         !isTarget;
-      const isHidden = !isRevealed && !isNeighbor;
+      const isHidden = false;
       const isOutline = showInitialsActive && isHidden;
 
       const classes = [
@@ -3134,8 +3040,11 @@ export default function App() {
     const { result, showResult } = options;
     const start = level.start_id;
     const target = level.target_id;
-    const nextShortest = Array.isArray(level.shortest_path) ? level.shortest_path : [];
     const rule = buildRuleFromLevel(level, comarcaById, normalizedToId);
+    const storedShortest = Array.isArray(level.shortest_path) ? level.shortest_path : [];
+    const pathResult = resolveShortestPaths(start, target, rule, storedShortest);
+    const nextShortest = pathResult.primaryPath;
+    const nextShortestPaths = pathResult.paths;
     const playerPath = Array.isArray(result?.playerPath) ? result.playerPath : [];
     const basePowerups = getPowerupUses(activeDifficulty);
 
@@ -3160,6 +3069,7 @@ export default function App() {
     setShowModal(Boolean(result && showResult));
     setResultData(result || null);
     setShortestPath(nextShortest);
+    setShortestPaths(nextShortestPaths);
     setActiveRule(rule);
     setElapsedMs(result?.timeMs || 0);
     setStartedAt(null);
@@ -3301,6 +3211,7 @@ export default function App() {
     let start = null;
     let target = null;
     let nextShortest = [];
+    let nextShortestPaths = [];
     let selectedRule = null;
     let attemptsLeft = 500;
 
@@ -3330,14 +3241,15 @@ export default function App() {
           ? prepareRule(fixedRuleDef, ctx)
           : pickRule(pool, ctx);
       if (!isExploreMode && !candidateRule) continue;
-      const path = findShortestPathWithRule(
+      const pathResult = findShortestPathsWithRule(
         candidateStart,
         candidateTarget,
         adjacency,
         candidateRule,
         ids,
-        shortestPathCache
+        { cache: shortestPathCache, centroidMap, maxPaths: 64 }
       );
+      const path = pathResult.primaryPath;
       const basePath =
         !isExploreMode && candidateRule
           ? findShortestPath(candidateStart, candidateTarget, adjacency, shortestPathCache)
@@ -3350,6 +3262,7 @@ export default function App() {
       start = candidateStart;
       target = candidateTarget;
       nextShortest = path;
+      nextShortestPaths = pathResult.paths;
       selectedRule = candidateRule;
       break;
     }
@@ -3382,14 +3295,15 @@ export default function App() {
             ? prepareRule(fixedRuleDef, ctx)
             : pickRule(pool, ctx);
         if (!isExploreMode && !candidateRule) continue;
-        const path = findShortestPathWithRule(
+        const pathResult = findShortestPathsWithRule(
           candidateStart,
           candidateTarget,
           adjacency,
           candidateRule,
           ids,
-          shortestPathCache
+          { cache: shortestPathCache, centroidMap, maxPaths: 64 }
         );
+        const path = pathResult.primaryPath;
         const basePath =
           !isExploreMode && candidateRule
             ? findShortestPath(candidateStart, candidateTarget, adjacency, shortestPathCache)
@@ -3407,6 +3321,7 @@ export default function App() {
         start = candidateStart;
         target = candidateTarget;
         nextShortest = path;
+        nextShortestPaths = pathResult.paths;
         selectedRule = candidateRule;
         break;
       }
@@ -3414,7 +3329,13 @@ export default function App() {
     if (!start || !target) {
       start = ids[0];
       target = ids[1] || ids[0];
-      nextShortest = findShortestPath(start, target, adjacency, shortestPathCache);
+      const pathResult = findShortestPathsWithRule(start, target, adjacency, null, ids, {
+        cache: shortestPathCache,
+        centroidMap,
+        maxPaths: 64
+      });
+      nextShortest = pathResult.primaryPath;
+      nextShortestPaths = pathResult.paths;
     }
     if (!selectedRule) {
       const startName = comarcaById.get(start)?.properties.name;
@@ -3445,20 +3366,25 @@ export default function App() {
               allIds: ids
             });
       if (candidateRule) {
-        const candidatePath = findShortestPathWithRule(
+        const candidatePathResult = findShortestPathsWithRule(
           start,
           target,
           adjacency,
           candidateRule,
           ids,
-          shortestPathCache
+          { cache: shortestPathCache, centroidMap, maxPaths: 64 }
         );
+        const candidatePath = candidatePathResult.primaryPath;
         const basePath = findShortestPath(start, target, adjacency, shortestPathCache);
         if (candidatePath.length && basePath.length && candidatePath.length > basePath.length) {
           selectedRule = candidateRule;
           nextShortest = candidatePath;
+          nextShortestPaths = candidatePathResult.paths;
         }
       }
+    }
+    if (!nextShortestPaths.length && nextShortest.length) {
+      nextShortestPaths = [nextShortest];
     }
 
     setStartId(start);
@@ -3486,6 +3412,7 @@ export default function App() {
     setShowModal(false);
     setResultData(null);
     setShortestPath(nextShortest);
+    setShortestPaths(nextShortestPaths);
     setActiveRule(isExploreMode ? null : selectedRule);
     setElapsedMs(0);
     setStartedAt(null);
@@ -3763,6 +3690,7 @@ export default function App() {
 
   function handlePlayToday() {
     play("ui_select");
+    setOptionsOpen(false);
     const key = dayKey;
     const record = getCompletionRecord("daily", key);
     if (record?.winningAttempt) {
@@ -3780,6 +3708,29 @@ export default function App() {
       calendarApplyRef.current = `daily:${key}`;
     } else if (entry?.levelId) {
       handleCalendarAction("daily", key);
+    }
+  }
+
+  function handlePlayWeekly() {
+    play("ui_select");
+    setOptionsOpen(false);
+    const key = weekKey;
+    const record = getCompletionRecord("weekly", key);
+    if (record?.winningAttempt) {
+      openCompletionModal(record);
+      return;
+    }
+    setCalendarSelection({ mode: "weekly", key });
+    if (gameMode !== "weekly") {
+      setGameMode("weekly");
+      return;
+    }
+    const entry = calendarWeeklyMap.get(key);
+    if (entry?.level) {
+      applyCalendarLevel(entry.level);
+      calendarApplyRef.current = `weekly:${key}`;
+    } else if (entry?.levelId) {
+      handleCalendarAction("weekly", key);
     }
   }
 
@@ -3847,6 +3798,7 @@ export default function App() {
 
   function handleConfigOpen() {
     play("ui_select");
+    setOptionsOpen(false);
     setConfigOpen(true);
   }
 
@@ -4112,6 +4064,7 @@ export default function App() {
     const totalTime = startedAt ? Date.now() - startedAt : elapsedMs;
     const bonusMs = isTimedMode ? Math.max(timeLimitMs - totalTime, 0) : 0;
     const shortestCount = shortestPath.length ? shortestPath.length - 2 : 0;
+    const optimalPathCount = shortestPaths.length || (shortestPath.length ? 1 : 0);
     const foundCount = path.length ? Math.max(path.length - 2, 0) : 0;
     const distance = Math.max(foundCount - shortestCount, 0);
     const startName = startId ? comarcaById.get(startId)?.properties.name : "";
@@ -4252,6 +4205,7 @@ export default function App() {
       playerPath: guessHistory,
       shortestPath: shortestNames,
       shortestCount,
+      optimalPathCount,
       foundCount,
       distance,
       ruleLabel: activeRule?.label || "Sense norma",
@@ -4477,17 +4431,16 @@ export default function App() {
             </button>
             <span className="brand-date">{todayLabel}</span>
           </div>
-          <p className="subtitle">{t(subtitleKey)}</p>
         </div>
         <div className="topbar-right">
           <div className="topbar-actions">
             <button
               type="button"
-              className="topbar-button topbar-play-today"
-              onClick={handlePlayToday}
+              className="topbar-button topbar-new-game"
+              onClick={handleStartNext}
               disabled={!isMapReady}
             >
-              {t("playToday")}
+              {t("newGame")}
             </button>
             <button
               type="button"
@@ -4498,19 +4451,7 @@ export default function App() {
               <span className="calendar-icon" aria-hidden="true" />
               <span>{t("calendar")}</span>
             </button>
-            <div className="streak-card topbar-streak">
-              <span className="label">Ratxa</span>
-              <span className="value">
-                {displayStreak} {displayStreak === 1 ? "dia" : "dies"}
-              </span>
-              <span className="muted">{streakTierLabel}</span>
-            </div>
           </div>
-          {!isOnline ? (
-            <div className="status-stack">
-              <span className="status-badge offline">{t("offline")}</span>
-            </div>
-          ) : null}
         </div>
       </header>
 
@@ -4536,27 +4477,24 @@ export default function App() {
               Carregant mapa...
             </div>
           ) : null}
-          <div className="prompt">
-            <div className="route">
-              {startName && targetName ? (
-                <span>
-                  Ruta: <strong>{startName}</strong> → <strong>{targetName}</strong>
-                </span>
-              ) : (
-                <span>Carregant dades...</span>
-              )}
-            </div>
-            <div className="status">
-              {isExploreMode
-                ? "Explora el mapa"
-                : isComplete
-                  ? `Has completat el camí.`
-                  : isFailed
-                    ? "Temps esgotat"
-                    : currentName
-                      ? `Darrera: ${currentName}`
-                      : "—"}
-            </div>
+          <div className="prompt map-brief">
+            {startName && targetName ? (
+              <>
+                <div className="route">
+                  <span>
+                    <strong>{t("start")}:</strong> {startName}
+                  </span>
+                  <span>
+                    <strong>{t("target")}:</strong> {targetName}
+                  </span>
+                </div>
+                <div className="status rule-line">
+                  <strong>{t("rule")}:</strong> {activeRule?.label || t("noRule")}
+                </div>
+              </>
+            ) : (
+              <span>Carregant dades...</span>
+            )}
           </div>
           <div className="map-controls">
             <button
@@ -4633,26 +4571,7 @@ export default function App() {
         </div>
 
         <aside className="side-panel">
-          <div className="panel-card action-card">
-            <div className="action-header">
-              <span className="label">{t("action")}</span>
-              <span className="action-status muted">{actionStatus}</span>
-            </div>
-            <div className="action-progress muted">
-              <span className="progress-item">
-                {t("usedCount", { value: usedCount })}
-              </span>
-              {typeof optimalCount === "number" ? (
-                <span className="progress-item">
-                  {t("optimalCount", { value: optimalCount })}
-                </span>
-              ) : null}
-              {typeof currentPathCount === "number" ? (
-                <span className="progress-item">
-                  {t("currentCount", { value: currentPathCount })}
-                </span>
-              ) : null}
-            </div>
+          <div className="panel-card action-card play-card">
             <form className="guess-form action-form" onSubmit={handleGuessSubmit}>
               <label className="label" htmlFor="guess-input">
                 {t("guessLabel")}
@@ -4698,67 +4617,68 @@ export default function App() {
                 {guessFeedback.text}
               </div>
             ) : null}
-          </div>
-
-          <div className="panel-card challenge-card">
-            <div className="section-header">
-              <span className="label">{t("challenge")}</span>
-            </div>
-            <div className="stat-inline">
-              <span className="label">{t("start")}:</span>
-              <span className="value start">{startName || "—"}</span>
-            </div>
-            <div className="stat-inline">
-              <span className="label">{t("target")}:</span>
-              <span className="value target">{targetName || "—"}</span>
-            </div>
-            <span className="label">{t("rule")}</span>
-            <div
-              className={`rule-chip ${
-                ruleStatus.failed ? "bad" : ruleStatus.satisfied ? "good" : ""
-              }`}
-            >
-              {activeRule?.label || t("noRule")}
-            </div>
-            <div className="stat-inline">
-              <span className="label">{t("difficulty")}:</span>
-              <span className="value">{difficultyConfig.shortLabel}</span>
-            </div>
-            <div className="guess-history">
-              {guessHistoryWithStatus.length ? (
-                <ul className="guess-history-list">
-                  {guessHistoryWithStatus.map((entry, index) => (
-                    <li
-                      key={`${entry.id}-${index}`}
-                      className={`guess-history-item ${entry.status}`}
+            <div className="side-powerups">
+              <span className="label">{t("powerups")}</span>
+              <div className="powerups">
+                {POWERUPS.map((powerup) => {
+                  const usesLeft = powerups[powerup.id] ?? 0;
+                  const disabled =
+                    isComplete ||
+                    isFailed ||
+                    isCountdownActive ||
+                    (!isExploreMode && !isTimedMode && usesLeft <= 0);
+                  return (
+                    <button
+                      key={powerup.id}
+                      type="button"
+                      className="powerup-button"
+                      onClick={() => handlePowerupUse(powerup.id)}
+                      disabled={disabled}
                     >
-                      {entry.name}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <span className="muted">—</span>
-              )}
+                      <span>{powerup.label}</span>
+                      <span className="badge">{isExploreMode ? "∞" : usesLeft}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-
-          <div className={`panel-card options-card ${optionsOpen ? "is-open" : ""}`}>
             <button
               type="button"
-              className="options-toggle"
+              className="options-launch-button"
               onClick={() => {
                 play("ui_select");
-                setOptionsOpen((prev) => !prev);
+                setOptionsOpen(true);
               }}
-              aria-expanded={optionsOpen}
-              aria-controls="options-panel"
+              aria-haspopup="dialog"
             >
-              <span className="label">{t("options")}</span>
-              <span className="chevron" aria-hidden="true">
-                {optionsOpen ? "▴" : "▾"}
-              </span>
+              {t("options")}
             </button>
-            <div id="options-panel" className="options-body" hidden={!optionsOpen}>
+          </div>
+        </aside>
+      </section>
+
+      {optionsOpen ? (
+        <div className="modal-backdrop options-modal-backdrop" onClick={() => setOptionsOpen(false)}>
+          <div
+            id="options-panel"
+            className="modal options-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("options")}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h2>{t("options")}</h2>
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setOptionsOpen(false)}
+                aria-label={t("close")}
+              >
+                ×
+              </button>
+            </div>
+            <div className="options-body">
               <div className="options-section">
                 <span className="label">{t("mode")}</span>
                 <div className="mode-buttons">
@@ -4775,6 +4695,28 @@ export default function App() {
                       {t(mode.id)}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              <div className="options-section">
+                <span className="label">{t("challenge")}</span>
+                <div className="mode-buttons two">
+                  <button
+                    type="button"
+                    className={`mode-button ${isDailyMode ? "active" : ""}`}
+                    onClick={handlePlayToday}
+                    disabled={!isMapReady}
+                  >
+                    {t("daily")}
+                  </button>
+                  <button
+                    type="button"
+                    className={`mode-button ${isWeeklyMode ? "active" : ""}`}
+                    onClick={handlePlayWeekly}
+                    disabled={!isMapReady}
+                  >
+                    {t("weekly")}
+                  </button>
                 </div>
               </div>
 
@@ -4813,57 +4755,25 @@ export default function App() {
                 ) : null}
               </div>
 
-              <div className="options-section">
-                <button
-                  type="button"
-                  className="new-game-button"
-                  onClick={handleStartNext}
-                  disabled={!isMapReady}
-                >
-                  {t("newGame")}
-                </button>
-              </div>
-
-              <div className="options-section">
-                <span className="label">{t("powerups")}</span>
-                <div className="powerups">
-                  {POWERUPS.map((powerup) => {
-                    const usesLeft = powerups[powerup.id] ?? 0;
-                    const disabled =
-                      isComplete ||
-                      isFailed ||
-                      isCountdownActive ||
-                      (!isExploreMode && !isTimedMode && usesLeft <= 0);
-                    return (
-                      <button
-                        key={powerup.id}
-                        type="button"
-                        className="powerup-button"
-                        onClick={() => handlePowerupUse(powerup.id)}
-                        disabled={disabled}
-                      >
-                        <span>{powerup.label}</span>
-                        <span className="badge">{isExploreMode ? "∞" : usesLeft}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <span className="muted">5s</span>
-              </div>
-
-              <div className="options-section">
+              <div className="options-section options-actions">
                 <button
                   type="button"
                   className="config-button"
-                  onClick={handleConfigOpen}
+                  onClick={() => {
+                    setOptionsOpen(false);
+                    handleCalendarOpen("daily");
+                  }}
                 >
+                  {t("calendar")}
+                </button>
+                <button type="button" className="config-button" onClick={handleConfigOpen}>
                   {t("config")}
                 </button>
               </div>
             </div>
           </div>
-        </aside>
-      </section>
+        </div>
+      ) : null}
 
       {calendarOpen ? (
         <div className="calendar-overlay" onClick={handleCalendarClose}>
@@ -5145,6 +5055,11 @@ export default function App() {
               <p className="modal-subtitle">
                 {t("shortestCount", { value: resultData.shortestCount })}
               </p>
+              {resultData.optimalPathCount > 1 ? (
+                <p className="modal-subtitle">
+                  {t("optimalAlternatives", { value: resultData.optimalPathCount })}
+                </p>
+              ) : null}
               <ol className="shortest-list">
                 {resultData.shortestPath.map((name, index) => (
                   <li key={`short-${name}-${index}`}>{name}</li>
@@ -5179,7 +5094,7 @@ export default function App() {
         <button
           type="button"
           className="bottom-nav-item"
-          onClick={() => setConfigOpen(true)}
+          onClick={() => setOptionsOpen(true)}
         >
           <span className="bottom-nav-icon">⚙️</span>
           <span className="bottom-nav-label">Opcions</span>

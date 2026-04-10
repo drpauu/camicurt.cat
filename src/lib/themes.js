@@ -7,6 +7,7 @@ export const THEMES = [
     vars: {
       "--bg": "#0f1114",
       "--panel": "#1a1d22",
+      "--surface": "#12161b",
       "--text": "#f7f6f2",
       "--muted": "#a8acb3",
       "--accent": "#59a6a2",
@@ -14,7 +15,12 @@ export const THEMES = [
       "--success": "#2f8f4d",
       "--error": "#d6453a",
       "--stroke": "#202225",
-      "--guess": "#f7e7a3"
+      "--stroke-soft": "#48525c",
+      "--guess": "#e4b75f",
+      "--comarca-fill": "#384550",
+      "--comarca-stroke": "#7f8c97",
+      "--border": "#323943",
+      "--shadow": "rgba(0, 0, 0, 0.28)"
     }
   },
   {

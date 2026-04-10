@@ -2,7 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
+import { geoCentroid } from "d3-geo";
 import { feature, neighbors as topoNeighbors } from "topojson-client";
+import { normalizeName, slugifyName } from "../src/lib/names.js";
+import {
+  findShortestPath,
+  findShortestPathInSet,
+  findShortestPathsWithRule
+} from "../src/lib/pathfinding.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -42,15 +49,6 @@ function getRuleTags(def) {
   return ["cultural"];
 }
 
-function normalizeName(value) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
 function hashString(value) {
   let hash = 0;
   for (let i = 0; i < value.length; i += 1) {
@@ -74,95 +72,12 @@ function pickRandom(list, rng = Math.random) {
   return list[Math.floor(rng() * list.length)];
 }
 
-function findShortestPath(startId, targetId, adjacency) {
-  if (!startId || !targetId) return [];
-  if (startId === targetId) return [startId];
-  const queue = [startId];
-  const visited = new Set([startId]);
-  const prev = new Map();
-
-  while (queue.length) {
-    const current = queue.shift();
-    const neighbors = adjacency.get(current) || new Set();
-    for (const next of neighbors) {
-      if (visited.has(next)) continue;
-      visited.add(next);
-      prev.set(next, current);
-      if (next === targetId) {
-        const path = [targetId];
-        let step = targetId;
-        while (prev.has(step)) {
-          step = prev.get(step);
-          path.push(step);
-        }
-        return path.reverse();
-      }
-      queue.push(next);
-    }
-  }
-  return [];
-}
-
-function findShortestPathInSet(startId, targetId, adjacency, allowedSet) {
-  if (!startId || !targetId) return [];
-  if (!allowedSet.has(startId) || !allowedSet.has(targetId)) return [];
-  if (startId === targetId) return [startId];
-  const queue = [startId];
-  const visited = new Set([startId]);
-  const prev = new Map();
-
-  while (queue.length) {
-    const current = queue.shift();
-    const neighbors = adjacency.get(current) || new Set();
-    for (const next of neighbors) {
-      if (visited.has(next) || !allowedSet.has(next)) continue;
-      visited.add(next);
-      prev.set(next, current);
-      if (next === targetId) {
-        const path = [targetId];
-        let step = targetId;
-        while (prev.has(step)) {
-          step = prev.get(step);
-          path.push(step);
-        }
-        return path.reverse();
-      }
-      queue.push(next);
-    }
-  }
-  return [];
-}
-
 function hasPathViaNode(startId, targetId, nodeId, adjacency, allowedSet) {
   if (!allowedSet.has(nodeId)) return false;
   const toNode = findShortestPathInSet(startId, nodeId, adjacency, allowedSet);
   if (!toNode.length) return false;
   const toTarget = findShortestPathInSet(nodeId, targetId, adjacency, allowedSet);
   return toTarget.length > 0;
-}
-
-function findShortestPathWithRule(startId, targetId, adjacency, rule, allIds) {
-  if (!rule) return findShortestPath(startId, targetId, adjacency);
-  if (rule.kind === "avoid") {
-    const blocked = new Set(rule.comarcaIds || []);
-    const allowed = new Set(allIds.filter((id) => !blocked.has(id)));
-    return findShortestPathInSet(startId, targetId, adjacency, allowed);
-  }
-  if (rule.kind === "mustIncludeAny") {
-    const candidates = rule.comarcaIds || [];
-    let best = [];
-    candidates.forEach((nodeId) => {
-      const first = findShortestPath(startId, nodeId, adjacency);
-      const second = findShortestPath(nodeId, targetId, adjacency);
-      if (!first.length || !second.length) return;
-      const combined = first.concat(second.slice(1));
-      if (!best.length || combined.length < best.length) {
-        best = combined;
-      }
-    });
-    return best.length ? best : findShortestPath(startId, targetId, adjacency);
-  }
-  return findShortestPath(startId, targetId, adjacency);
 }
 
 function resolveRule(def, ctx) {
@@ -172,7 +87,7 @@ function resolveRule(def, ctx) {
   );
   const pick = pool.length ? pickRandom(pool, ctx.rng) : ctx.comarcaNames[0];
   return {
-    id: `${def.id}-${normalizeName(pick).replace(/\s+/g, "-")}`,
+    id: `${def.id}-${slugifyName(pick)}`,
     kind: "avoid",
     label: `No pots passar per ${pick}.`,
     comarques: [pick],
@@ -273,6 +188,13 @@ function loadTopology() {
   collection.features.forEach((featureItem) => {
     normalizedToId.set(normalizeName(featureItem.properties.name), featureItem.properties.id);
   });
+  const centroidMap = new Map();
+  collection.features.forEach((featureItem) => {
+    const [lon, lat] = geoCentroid(featureItem);
+    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+      centroidMap.set(featureItem.properties.id, { lat, lon });
+    }
+  });
   const neighborIndex = topoNeighbors(object.geometries || []);
   const adjacencyMap = new Map();
   neighborIndex.forEach((neighbors, index) => {
@@ -281,10 +203,19 @@ function loadTopology() {
       new Set(neighbors.map((neighborIndexItem) => ids[neighborIndexItem]))
     );
   });
-  return { ids, names, normalizedToId, adjacencyMap, collection };
+  return { ids, names, normalizedToId, centroidMap, adjacencyMap, collection };
 }
 
-function buildLevel({ rng, ids, names, normalizedToId, adjacency, minInternal, rulePool }) {
+function buildLevel({
+  rng,
+  ids,
+  names,
+  normalizedToId,
+  centroidMap,
+  adjacency,
+  minInternal,
+  rulePool
+}) {
   const minLength = Math.max(minInternal + 2, 3);
   const pool = rulePool.length ? rulePool : RULE_DEFS;
   let start = null;
@@ -315,13 +246,15 @@ function buildLevel({ rng, ids, names, normalizedToId, adjacency, minInternal, r
     };
     const candidateRule = pickRule(pool, ctx);
     if (!candidateRule) continue;
-    const path = findShortestPathWithRule(
+    const pathResult = findShortestPathsWithRule(
       candidateStart,
       candidateTarget,
       adjacency,
       candidateRule,
-      ids
+      ids,
+      { centroidMap, maxPaths: 64 }
     );
+    const path = pathResult.primaryPath;
     const basePath = findShortestPath(candidateStart, candidateTarget, adjacency);
     if (!path.length) continue;
     if (basePath.length && path.length <= basePath.length) continue;
@@ -374,7 +307,7 @@ async function run() {
   }
 
   const supabase = createClient(supabaseUrl, serviceKey);
-  const { ids, names, normalizedToId, adjacencyMap } = loadTopology();
+  const { ids, names, normalizedToId, centroidMap, adjacencyMap } = loadTopology();
 
   const today = new Date();
   const dayKey = getDayKey(today);
@@ -428,6 +361,7 @@ async function run() {
       ids,
       names,
       normalizedToId,
+      centroidMap,
       adjacency: adjacencyMap,
       minInternal: 4,
       rulePool: ruleDef ? [ruleDef] : rulePool
@@ -487,6 +421,7 @@ async function run() {
       ids,
       names,
       normalizedToId,
+      centroidMap,
       adjacency: adjacencyMap,
       minInternal: 8,
       rulePool: ruleDef ? [ruleDef] : rulePool
