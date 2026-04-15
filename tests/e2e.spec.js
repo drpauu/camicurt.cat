@@ -82,6 +82,43 @@ test("inicia el nivell setmanal", async ({ page }) => {
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "weekly");
 });
 
+test("contrarellotge tanca opcions i mostra compte enrere des de 5", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("rumb-mode", "normal");
+  });
+  await gotoHome(page);
+  await page.waitForSelector("svg.map");
+  await page.evaluate(() => {
+    window.__countdownValues = [];
+    const recordCountdown = () => {
+      const text = document.querySelector(".countdown-value")?.textContent?.trim();
+      if (!text) return;
+      const values = window.__countdownValues;
+      if (values[values.length - 1] !== text) {
+        values.push(text);
+      }
+    };
+    const observer = new MutationObserver(recordCountdown);
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      characterData: true
+    });
+    window.__countdownObserver = observer;
+  });
+  await page.getByRole("button", { name: /Opcions/i }).click();
+  const optionsDialog = page.getByRole("dialog", { name: /Opcions/i });
+  await expect(optionsDialog).toBeVisible();
+  await optionsDialog.getByRole("button", { name: /Contrarellotge/i }).click();
+  await expect(optionsDialog).toBeHidden();
+
+  const countdown = page.locator(".countdown-value");
+  await expect(countdown).toHaveText("5");
+  await expect(countdown).toBeHidden({ timeout: 8000 });
+  const values = await page.evaluate(() => window.__countdownValues);
+  expect(values).toEqual(["5", "4", "3", "2", "1"]);
+});
+
 test("obre el modal si el nivell ja està completat", async ({ page }) => {
   const dayKey = getTodayKey();
   await page.addInitScript((key) => {
@@ -144,4 +181,59 @@ test("la configuració es persisteix", async ({ page }) => {
     return raw ? JSON.parse(raw).language : null;
   });
   expect(language).toBe("aranes");
+});
+
+test("arrenca amb l'audio silenciat i el volum funciona en mobil", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await gotoHome(page);
+  await page.waitForSelector("svg.map");
+  await page.waitForFunction(() => {
+    const appRaw = localStorage.getItem("rumb-settings-v1");
+    const soundRaw = localStorage.getItem("rumb-sound-settings-v1");
+    if (!appRaw || !soundRaw) return false;
+    const app = JSON.parse(appRaw);
+    const sound = JSON.parse(soundRaw);
+    return (
+      app.musicEnabled === false &&
+      app.musicVolume === 0 &&
+      app.sfxEnabled === false &&
+      app.sfxVolume === 0 &&
+      sound.enabled === false &&
+      sound.masterVolume === 0 &&
+      sound.sfxVolume === 0
+    );
+  });
+
+  await page.locator(".bottom-nav").getByRole("button", { name: /Opcions/i }).click();
+  await page.getByRole("button", { name: /Configuraci/i }).click();
+  const ranges = page.locator('.config-content input[type="range"]');
+  await expect(ranges).toHaveCount(3);
+  await expect(ranges.nth(0)).toHaveValue("0");
+  await expect(ranges.nth(1)).toHaveValue("0");
+  await expect(ranges.nth(2)).toHaveValue("0");
+  await expect(ranges.nth(1)).toBeEnabled();
+  await expect(ranges.nth(2)).toBeEnabled();
+  await expect(page.locator('.config-content input[type="checkbox"]').first()).not.toBeChecked();
+
+  const setRangeValue = async (range, value) => {
+    await range.evaluate((input, nextValue) => {
+      input.value = nextValue;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    }, value);
+  };
+
+  await setRangeValue(ranges.nth(0), "0.42");
+  await expect(ranges.nth(0)).toHaveValue("0.42");
+  await page.waitForFunction(() => {
+    const settings = JSON.parse(localStorage.getItem("rumb-settings-v1") || "{}");
+    return settings.musicEnabled === true && settings.musicVolume === 0.42;
+  });
+
+  await setRangeValue(ranges.nth(1), "0.35");
+  await expect(ranges.nth(1)).toHaveValue("0.35");
+  await page.waitForFunction(() => {
+    const sound = JSON.parse(localStorage.getItem("rumb-sound-settings-v1") || "{}");
+    return sound.enabled === true && sound.masterVolume === 0.35 && sound.sfxVolume === 1;
+  });
 });

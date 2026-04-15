@@ -64,6 +64,11 @@ const MAX_TELEMETRY_QUEUE = 200;
 const MAX_ATTEMPTS_QUEUE = 50;
 const LEVEL_STATS_MAX = 200;
 
+function clampVolumeValue(value) {
+  const numeric = typeof value === "number" && Number.isFinite(value) ? value : 0;
+  return Math.max(0, Math.min(numeric, 1));
+}
+
 function BrandLogo({ className = "" }) {
   return (
     <span
@@ -1605,7 +1610,7 @@ export default function App() {
     sfxVolume,
     setSfxVolume
   } = useSound();
-  const [musicEnabled] = useState(initialSettings.musicEnabled);
+  const [musicEnabled, setMusicEnabled] = useState(initialSettings.musicEnabled);
   const [musicVolume, setMusicVolume] = useState(initialSettings.musicVolume);
   const [musicTrack, setMusicTrack] = useState(initialSettings.musicTrack);
   const [language, setLanguage] = useState(initialSettings.language);
@@ -2249,13 +2254,13 @@ export default function App() {
   useEffect(() => {
     if (!isTimedMode || !isCountdownActive) return;
     if (countdownValue === null) return;
-    if (countdownValue <= 0) {
-      setIsCountdownActive(false);
-      setCountdownValue(null);
-      setStartedAt(Date.now());
-      return;
-    }
     const timer = setTimeout(() => {
+      if (countdownValue <= 1) {
+        setIsCountdownActive(false);
+        setCountdownValue(null);
+        setStartedAt(Date.now());
+        return;
+      }
       setCountdownValue((prev) => (prev !== null ? prev - 1 : prev));
     }, 1000);
     return () => clearTimeout(timer);
@@ -2649,8 +2654,11 @@ export default function App() {
           if (typeof playerData.language === "string") {
             setLanguage(playerData.language);
           }
+          if (typeof playerData.music_enabled === "boolean") {
+            setMusicEnabled(playerData.music_enabled);
+          }
           if (typeof playerData.music_volume === "number") {
-            setMusicVolume(playerData.music_volume);
+            setMusicVolume(clampVolumeValue(playerData.music_volume));
           }
           if (typeof playerData.music_track === "string") {
             setMusicTrack(playerData.music_track);
@@ -2659,7 +2667,7 @@ export default function App() {
             setSfxEnabled(playerData.sfx_enabled);
           }
           if (typeof playerData.sfx_volume === "number") {
-            setSfxVolume(playerData.sfx_volume);
+            setSfxVolume(clampVolumeValue(playerData.sfx_volume));
           }
         }
       }
@@ -3013,13 +3021,17 @@ export default function App() {
     musicStartedRef.current = false;
   }
 
-  function startMusic(trackId = musicTrack, volumeOverride) {
-    if (!musicEnabled) return;
+  function startMusic(trackId = musicTrack, volumeOverride, options = {}) {
+    if (!musicEnabled && !options.force) return;
     if (audioManagerRef.current) {
       const nextVolume =
         typeof volumeOverride === "number" && Number.isFinite(volumeOverride)
           ? volumeOverride
           : musicVolume;
+      if (nextVolume <= 0) {
+        stopMusic();
+        return;
+      }
       const playPromise = audioManagerRef.current.playMusic(
         trackId,
         nextVolume,
@@ -3039,6 +3051,43 @@ export default function App() {
         musicBlockedRef.current = false;
         musicStartedRef.current = true;
       }
+    }
+  }
+
+  function handleMusicVolumeInput(event) {
+    const nextVolume = clampVolumeValue(Number(event.currentTarget.value));
+    setMusicVolume(nextVolume);
+    if (nextVolume > 0) {
+      setMusicEnabled(true);
+      startMusic(musicTrack, nextVolume, { force: true });
+      return;
+    }
+    setMusicEnabled(false);
+    stopMusic();
+  }
+
+  function handleSfxToggle(nextEnabled) {
+    setSfxEnabled(nextEnabled);
+    if (!nextEnabled) return;
+    if (masterVolume <= 0) setMasterVolume(1);
+    if (sfxVolume <= 0) setSfxVolume(1);
+  }
+
+  function handleMasterVolumeInput(event) {
+    const nextVolume = clampVolumeValue(Number(event.currentTarget.value));
+    setMasterVolume(nextVolume);
+    if (nextVolume > 0) {
+      if (sfxVolume <= 0) setSfxVolume(1);
+      setSfxEnabled(true);
+    }
+  }
+
+  function handleSfxVolumeInput(event) {
+    const nextVolume = clampVolumeValue(Number(event.currentTarget.value));
+    setSfxVolume(nextVolume);
+    if (nextVolume > 0) {
+      if (masterVolume <= 0) setMasterVolume(1);
+      setSfxEnabled(true);
     }
   }
 
@@ -3137,7 +3186,7 @@ export default function App() {
   }
 
   function beginTimedCountdown() {
-    setCountdownValue(3);
+    setCountdownValue(5);
     setIsCountdownActive(true);
     setStartedAt(null);
   }
@@ -3908,6 +3957,14 @@ export default function App() {
   function handleCalendarClose() {
     play("ui_select");
     setCalendarOpen(false);
+  }
+
+  function handleModePick(modeId) {
+    play("ui_select");
+    setGameMode(modeId);
+    if (modeId === "timed") {
+      setOptionsOpen(false);
+    }
   }
 
   function handleTitleReset() {
@@ -4714,10 +4771,7 @@ export default function App() {
                       key={mode.id}
                       type="button"
                       className={`mode-button ${gameMode === mode.id ? "active" : ""}`}
-                      onClick={() => {
-                        play("ui_select");
-                        setGameMode(mode.id);
-                      }}
+                      onClick={() => handleModePick(mode.id)}
                     >
                       {t(mode.id)}
                     </button>
@@ -4891,7 +4945,10 @@ export default function App() {
                 onChange={(event) => {
                   const nextTrack = event.target.value;
                   setMusicTrack(nextTrack);
-                  startMusic(nextTrack);
+                  if (musicVolume > 0) {
+                    setMusicEnabled(true);
+                    startMusic(nextTrack, musicVolume, { force: true });
+                  }
                 }}
               >
                 {musicOptions.map((track) => (
@@ -4908,13 +4965,9 @@ export default function App() {
                   max="1"
                   step="0.01"
                   value={musicVolume}
-                  onChange={(event) => {
-                    const nextVolume = Number(event.target.value);
-                    setMusicVolume(nextVolume);
-                    if (nextVolume > 0) {
-                      startMusic(musicTrack, nextVolume);
-                    }
-                  }}
+                  aria-label={t("volume")}
+                  onInput={handleMusicVolumeInput}
+                  onChange={handleMusicVolumeInput}
                 />
               </div>
 
@@ -4923,7 +4976,7 @@ export default function App() {
                 <input
                   type="checkbox"
                   checked={sfxEnabled}
-                  onChange={(event) => setSfxEnabled(event.target.checked)}
+                  onChange={(event) => handleSfxToggle(event.target.checked)}
                 />
                 <span>{t("soundToggle")}</span>
               </label>
@@ -4935,8 +4988,9 @@ export default function App() {
                   max="1"
                   step="0.01"
                   value={masterVolume}
-                  onChange={(event) => setMasterVolume(Number(event.target.value))}
-                  disabled={!sfxEnabled}
+                  aria-label={t("masterVolume")}
+                  onInput={handleMasterVolumeInput}
+                  onChange={handleMasterVolumeInput}
                 />
               </div>
               <div className="range-row">
@@ -4947,8 +5001,9 @@ export default function App() {
                   max="1"
                   step="0.01"
                   value={sfxVolume}
-                  onChange={(event) => setSfxVolume(Number(event.target.value))}
-                  disabled={!sfxEnabled}
+                  aria-label={t("sfxVolume")}
+                  onInput={handleSfxVolumeInput}
+                  onChange={handleSfxVolumeInput}
                 />
               </div>
 

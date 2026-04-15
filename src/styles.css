@@ -1705,11 +1705,17 @@ h1 {
 .range-row {
   display: grid;
   gap: 6px;
+  min-width: 0;
 }
 
 .range-row input[type="range"] {
   width: 100%;
+  min-width: 0;
+  height: 34px;
+  margin: 0;
   accent-color: var(--accent);
+  cursor: pointer;
+  touch-action: pan-y;
 }
 
 .hint-button {

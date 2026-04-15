@@ -7,11 +7,11 @@ const LANGUAGE_KEY = "rumb-language-v1";
 export const DEFAULT_SETTINGS = {
   theme: "default",
   language: "ca",
-  musicEnabled: true,
-  musicVolume: 1,
+  musicEnabled: false,
+  musicVolume: 0,
   musicTrack: "segadors",
-  sfxEnabled: true,
-  sfxVolume: 1
+  sfxEnabled: false,
+  sfxVolume: 0
 };
 
 function coerceNumber(value, fallback) {
@@ -38,10 +38,10 @@ export function loadSettings() {
       return {
         theme: coerceString(parsed.theme, DEFAULT_SETTINGS.theme),
         language: coerceString(parsed.language, DEFAULT_SETTINGS.language),
-        musicEnabled: DEFAULT_SETTINGS.musicEnabled,
+        musicEnabled: coerceBoolean(parsed.musicEnabled, DEFAULT_SETTINGS.musicEnabled),
         musicVolume: coerceNumber(parsed.musicVolume, DEFAULT_SETTINGS.musicVolume),
         musicTrack: coerceString(parsed.musicTrack, DEFAULT_SETTINGS.musicTrack),
-        sfxEnabled: DEFAULT_SETTINGS.sfxEnabled,
+        sfxEnabled: coerceBoolean(parsed.sfxEnabled, DEFAULT_SETTINGS.sfxEnabled),
         sfxVolume: coerceNumber(parsed.sfxVolume, DEFAULT_SETTINGS.sfxVolume)
       };
     } catch {
@@ -61,7 +61,7 @@ export function loadSettings() {
   if (musicRaw) {
     try {
       const parsed = JSON.parse(musicRaw);
-      musicEnabled = DEFAULT_SETTINGS.musicEnabled;
+      musicEnabled = coerceBoolean(parsed.enabled, musicEnabled);
       musicVolume = coerceNumber(parsed.volume, musicVolume);
       musicTrack = coerceString(parsed.track, musicTrack);
     } catch {
@@ -73,7 +73,7 @@ export function loadSettings() {
   if (sfxRaw) {
     try {
       const parsed = JSON.parse(sfxRaw);
-      sfxEnabled = DEFAULT_SETTINGS.sfxEnabled;
+      sfxEnabled = coerceBoolean(parsed.enabled, sfxEnabled);
       sfxVolume = coerceNumber(parsed.volume, sfxVolume);
     } catch {
       // ignorem

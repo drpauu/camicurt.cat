@@ -17,10 +17,12 @@ type SoundContextValue = {
 };
 
 const SOUND_SETTINGS_KEY = "rumb-sound-settings-v1";
+const APP_SETTINGS_KEY = "rumb-settings-v1";
 const POOL_SIZE = 3;
 const BURST_WINDOW_MS = 600;
 const BURST_LIMIT = 3;
 const OUTCOME_DUCK_MS = 1200;
+const DEFAULT_SOUND_SETTINGS = { enabled: false, masterVolume: 0, sfxVolume: 0 };
 
 const SoundContext = createContext<SoundContextValue | null>(null);
 
@@ -31,19 +33,39 @@ function clampVolume(value: number, fallback: number) {
 
 function loadSoundSettings() {
   if (typeof window === "undefined") {
-    return { enabled: true, masterVolume: 1, sfxVolume: 1 };
+    return { ...DEFAULT_SOUND_SETTINGS };
   }
   const raw = localStorage.getItem(SOUND_SETTINGS_KEY);
-  if (!raw) return { enabled: true, masterVolume: 1, sfxVolume: 1 };
+  if (!raw) {
+    const appRaw = localStorage.getItem(APP_SETTINGS_KEY);
+    if (appRaw) {
+      try {
+        const parsed = JSON.parse(appRaw);
+        const sfxVolume = clampVolume(parsed.sfxVolume, DEFAULT_SOUND_SETTINGS.sfxVolume);
+        return {
+          enabled:
+            typeof parsed.sfxEnabled === "boolean"
+              ? parsed.sfxEnabled
+              : DEFAULT_SOUND_SETTINGS.enabled,
+          masterVolume: sfxVolume,
+          sfxVolume
+        };
+      } catch {
+        return { ...DEFAULT_SOUND_SETTINGS };
+      }
+    }
+    return { ...DEFAULT_SOUND_SETTINGS };
+  }
   try {
     const parsed = JSON.parse(raw);
     return {
-      enabled: typeof parsed.enabled === "boolean" ? parsed.enabled : true,
-      masterVolume: clampVolume(parsed.masterVolume, 1),
-      sfxVolume: clampVolume(parsed.sfxVolume, 1)
+      enabled:
+        typeof parsed.enabled === "boolean" ? parsed.enabled : DEFAULT_SOUND_SETTINGS.enabled,
+      masterVolume: clampVolume(parsed.masterVolume, DEFAULT_SOUND_SETTINGS.masterVolume),
+      sfxVolume: clampVolume(parsed.sfxVolume, DEFAULT_SOUND_SETTINGS.sfxVolume)
     };
   } catch {
-    return { enabled: true, masterVolume: 1, sfxVolume: 1 };
+    return { ...DEFAULT_SOUND_SETTINGS };
   }
 }
 
