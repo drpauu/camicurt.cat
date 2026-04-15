@@ -1,30 +1,55 @@
 export const TOMAS_THEME_ID = "tomas-molina";
 
+export const DEFAULT_THEME_VARS = {
+  "--bg": "#F7F2E8",
+  "--panel": "#FFFCF5",
+  "--surface": "#F2ECE1",
+  "--text": "#1F2A30",
+  "--muted": "#667074",
+  "--accent": "#65AFA9",
+  "--accent-hover": "#4F9892",
+  "--accent-strong": "#2F6FD0",
+  "--success": "#2F8F4D",
+  "--error": "#D84A3F",
+  "--stroke": "#D8CCBA",
+  "--stroke-soft": "#C6B9A6",
+  "--guess": "#E2AE3F",
+  "--comarca-fill": "#D8D0C2",
+  "--comarca-stroke": "#AFA392",
+  "--border": "#D8CCBA",
+  "--shadow": "rgba(31, 42, 48, 0.10)"
+};
+
+const DARK_THEME_BASE_VARS = {
+  "--bg": "#0f1114",
+  "--panel": "#1a1d22",
+  "--surface": "#12161b",
+  "--text": "#f7f6f2",
+  "--muted": "#a8acb3",
+  "--accent": "#59a6a2",
+  "--accent-hover": "#4f9692",
+  "--accent-strong": "#2e6fda",
+  "--success": "#2f8f4d",
+  "--error": "#d6453a",
+  "--stroke": "#202225",
+  "--stroke-soft": "#48525c",
+  "--guess": "#e4b75f",
+  "--comarca-fill": "#384550",
+  "--comarca-stroke": "#7f8c97",
+  "--border": "#323943",
+  "--shadow": "rgba(0, 0, 0, 0.28)"
+};
+
 export const THEMES = [
   {
     id: "default",
     label: "Clàssic",
-    vars: {
-      "--bg": "#0f1114",
-      "--panel": "#1a1d22",
-      "--surface": "#12161b",
-      "--text": "#f7f6f2",
-      "--muted": "#a8acb3",
-      "--accent": "#59a6a2",
-      "--accent-strong": "#2e6fda",
-      "--success": "#2f8f4d",
-      "--error": "#d6453a",
-      "--stroke": "#202225",
-      "--stroke-soft": "#48525c",
-      "--guess": "#e4b75f",
-      "--comarca-fill": "#384550",
-      "--comarca-stroke": "#7f8c97",
-      "--border": "#323943",
-      "--shadow": "rgba(0, 0, 0, 0.28)"
-    }
+    colorScheme: "light",
+    vars: DEFAULT_THEME_VARS
   },
   {
     id: "terra",
+    colorScheme: "dark",
     label: "Terra Viva",
     vars: {
       "--bg": "#15130f",
@@ -41,6 +66,7 @@ export const THEMES = [
   },
   {
     id: "mar",
+    colorScheme: "dark",
     label: "Mar Blava",
     vars: {
       "--bg": "#0d1318",
@@ -57,6 +83,7 @@ export const THEMES = [
   },
   {
     id: "pinyer",
+    colorScheme: "dark",
     label: "Pinyer",
     vars: {
       "--bg": "#0f1410",
@@ -73,6 +100,7 @@ export const THEMES = [
   },
   {
     id: "nit",
+    colorScheme: "dark",
     label: "Nit Lliure",
     vars: {
       "--bg": "#111115",
@@ -89,6 +117,7 @@ export const THEMES = [
   },
   {
     id: "volcans",
+    colorScheme: "dark",
     label: "Volcans",
     vars: {
       "--bg": "#1a0d0c",
@@ -105,6 +134,7 @@ export const THEMES = [
   },
   {
     id: "festa",
+    colorScheme: "dark",
     label: "Festa Major",
     vars: {
       "--bg": "#161019",
@@ -121,6 +151,7 @@ export const THEMES = [
   },
   {
     id: "retro",
+    colorScheme: "dark",
     label: "CRT",
     vars: {
       "--bg": "#0b0f0c",
@@ -137,6 +168,7 @@ export const THEMES = [
   },
   {
     id: "monestir",
+    colorScheme: "dark",
     label: "Monestir",
     vars: {
       "--bg": "#131516",
@@ -153,6 +185,7 @@ export const THEMES = [
   },
   {
     id: "solar",
+    colorScheme: "dark",
     label: "Solar",
     vars: {
       "--bg": "#111218",
@@ -169,6 +202,7 @@ export const THEMES = [
   },
   {
     id: TOMAS_THEME_ID,
+    colorScheme: "dark",
     label: "Tomàs Molina",
     vars: {
       "--bg": "#0d1118",
@@ -253,6 +287,11 @@ export const WEATHER_VARIANTS = {
 
 export function getThemeById(id) {
   return THEMES.find((theme) => theme.id === id) || THEMES[0];
+}
+
+export function getResolvedThemeVars(theme) {
+  const baseVars = theme?.colorScheme === "dark" ? DARK_THEME_BASE_VARS : DEFAULT_THEME_VARS;
+  return { ...baseVars, ...(theme?.vars || {}) };
 }
 
 export function applyThemeVars(vars, root = document.documentElement) {

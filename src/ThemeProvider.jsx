@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo } from "react";
 import {
   TOMAS_THEME_ID,
   WEATHER_VARIANTS,
+  getResolvedThemeVars,
   getThemeById,
   applyThemeVars
 } from "./lib/themes.js";
@@ -16,7 +17,8 @@ export function ThemeProvider({ themeId = "default", weatherState = "clear", chi
   useEffect(() => {
     if (typeof document === "undefined") return;
     const theme = getThemeById(themeId);
-    applyThemeVars(theme.vars);
+    applyThemeVars(getResolvedThemeVars(theme));
+    document.documentElement.style.colorScheme = theme.colorScheme || "dark";
     if (themeId === TOMAS_THEME_ID) {
       const variant = WEATHER_VARIANTS[weatherState] || WEATHER_VARIANTS.clear;
       if (variant?.vars) applyThemeVars(variant.vars);

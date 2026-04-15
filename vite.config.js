@@ -9,6 +9,11 @@ const logoDir = path.resolve(projectRoot, "logo");
 const logoRoute = "/logo/";
 const logoAssetFiles = [
   "favicon.ico",
+  "favicon-simple.svg",
+  "favicon-simple-96.png",
+  "favicon-simple-48.png",
+  "favicon-simple-32.png",
+  "favicon-simple-16.png",
   "favicon-32x32.png",
   "favicon-16x16.png",
   "apple-touch-icon.png",
@@ -23,12 +28,29 @@ const logoAssetFiles = [
 const contentTypes = {
   ".ico": "image/x-icon",
   ".png": "image/png",
+  ".svg": "image/svg+xml",
   ".webmanifest": "application/manifest+json"
 };
 
 function logoAssetsPlugin() {
+  function keepStableLogoUrls(html) {
+    return html
+      .replace(/href="\/assets\/favicon-simple-96-[^"]+\.png"/g, 'href="/logo/favicon-simple-96.png"')
+      .replace(/href="\/assets\/favicon-simple-48-[^"]+\.png"/g, 'href="/logo/favicon-simple-48.png"')
+      .replace(/href="\/assets\/favicon-simple-32-[^"]+\.png"/g, 'href="/logo/favicon-simple-32.png"')
+      .replace(/href="\/assets\/favicon-simple-16-[^"]+\.png"/g, 'href="/logo/favicon-simple-16.png"')
+      .replace(/href="\/assets\/favicon-simple-[^"]+\.svg"/g, 'href="/logo/favicon-simple.svg"')
+      .replace(/href="\/assets\/favicon-[^"]+\.ico"/g, 'href="/logo/favicon.ico"')
+      .replace(/href="\/assets\/apple-touch-icon-[^"]+\.png"/g, 'href="/logo/apple-touch-icon.png"')
+      .replace(/href="\/assets\/site-[^"]+\.webmanifest"/g, 'href="/logo/site.webmanifest"');
+  }
+
   return {
     name: "camicurt-logo-assets",
+    enforce: "post",
+    transformIndexHtml(html) {
+      return keepStableLogoUrls(html);
+    },
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const requestUrl = new URL(req.url || "/", "http://localhost");
@@ -58,7 +80,13 @@ function logoAssetsPlugin() {
         fs.createReadStream(filePath).pipe(res);
       });
     },
-    generateBundle() {
+    generateBundle(_, bundle) {
+      for (const chunk of Object.values(bundle)) {
+        if (chunk.type === "asset" && chunk.fileName.endsWith(".html")) {
+          chunk.source = keepStableLogoUrls(String(chunk.source));
+        }
+      }
+
       for (const fileName of logoAssetFiles) {
         const filePath = path.join(logoDir, fileName);
         if (!fs.existsSync(filePath)) continue;

@@ -1,23 +1,24 @@
 @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
 :root {
-  --bg:             #F4F0E6;
-  --panel:          #FCFAF5;
-  --surface:        #F8F4EC;
+  color-scheme: light;
+  --bg:             #F7F2E8;
+  --panel:          #FFFCF5;
+  --surface:        #F2ECE1;
   --text:           #1F2A30;
   --muted:          #667074;
-  --accent:         #76B4B0;
-  --accent-hover:   #5E9C98;
-  --accent-strong:  #5C86C5;
-  --success:        #3d8a56;
-  --error:          #D16D5C;
-  --stroke:         #D6C9B6;
-  --stroke-soft:    #CBBEAA;
-  --guess:          #C9A76A;
-  --comarca-fill:   #CDC5B7;
-  --comarca-stroke: #BBAE9E;
-  --shadow:         rgba(31, 42, 48, 0.09);
-  --border:         #D6C9B6;
+  --accent:         #65AFA9;
+  --accent-hover:   #4F9892;
+  --accent-strong:  #2F6FD0;
+  --success:        #2F8F4D;
+  --error:          #D84A3F;
+  --stroke:         #D8CCBA;
+  --stroke-soft:    #C6B9A6;
+  --guess:          #E2AE3F;
+  --comarca-fill:   #D8D0C2;
+  --comarca-stroke: #AFA392;
+  --shadow:         rgba(31, 42, 48, 0.10);
+  --border:         #D8CCBA;
 }
 
 * {
@@ -149,23 +150,23 @@ html[data-weather="wind"] body::before {
   text-align: left;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  min-height: 42px;
+  gap: 12px;
+  min-height: 52px;
 }
 
 .brand-logo {
   display: block;
-  width: 42px;
-  height: 38px;
-  flex: 0 0 42px;
+  width: 64px;
+  height: 50px;
+  flex: 0 0 64px;
   overflow: hidden;
   position: relative;
 }
 
 .brand-logo-image {
   display: block;
-  width: 96px;
-  height: 96px;
+  width: 146px;
+  height: 146px;
   max-width: none;
   position: absolute;
   left: 50%;
@@ -200,6 +201,32 @@ html[data-weather="wind"] body::before {
 
 .topbar-button:hover {
   background: var(--accent-hover);
+}
+
+.topbar-challenge {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 600;
+  padding: 9px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px var(--shadow);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.topbar-challenge:hover {
+  background: var(--surface);
+}
+
+.topbar-challenge.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+}
+
+.topbar-challenge:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .calendar-icon-button {
@@ -373,7 +400,7 @@ textarea:focus-visible {
 .calendar-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(31, 42, 48, 0.35);
+  background: color-mix(in srgb, var(--text) 35%, transparent);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   display: flex;
@@ -496,7 +523,7 @@ textarea:focus-visible {
 }
 
 .calendar-day.skeleton {
-  background: rgba(31, 42, 48, 0.03);
+  background: color-mix(in srgb, var(--text) 3%, transparent);
   border-color: transparent;
   cursor: default;
 }
@@ -549,7 +576,7 @@ textarea:focus-visible {
 }
 
 .calendar-popup-button:hover {
-  background: #ede7d9;
+  background: color-mix(in srgb, var(--surface) 90%, var(--text));
 }
 
 .calendar-popup-button:disabled {
@@ -589,7 +616,7 @@ textarea:focus-visible {
 }
 
 .calendar-week.skeleton {
-  background: rgba(31, 42, 48, 0.03);
+  background: color-mix(in srgb, var(--text) 3%, transparent);
   border-color: transparent;
   min-height: 48px;
 }
@@ -903,7 +930,7 @@ h1 {
 }
 
 .config-button:hover {
-  background: #ede7d9;
+  background: color-mix(in srgb, var(--surface) 90%, var(--text));
 }
 
 .feedback {
@@ -969,7 +996,7 @@ h1 {
   padding: 4px 8px;
   border-radius: 999px;
   font-size: 0.8rem;
-  background: rgba(31, 42, 48, 0.06);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
 }
 
 .guess-history-item.good {
@@ -1129,7 +1156,7 @@ h1 {
 }
 
 .powerup-button:hover {
-  background: #ede7d9;
+  background: color-mix(in srgb, var(--surface) 90%, var(--text));
 }
 
 .powerup-button:disabled {
@@ -1359,7 +1386,7 @@ h1 {
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgba(244, 240, 230, 0.80);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
   z-index: 5;
   font-size: 4rem;
   font-weight: 700;
@@ -1493,13 +1520,13 @@ h1 {
 
 .comarca.is-hidden.is-outline {
   fill: transparent;
-  stroke: rgba(31, 42, 48, 0.30);
+  stroke: color-mix(in srgb, var(--text) 30%, transparent);
   stroke-width: 1.4;
 }
 
 .comarca.is-hidden.is-neighbor {
   fill: transparent;
-  stroke: rgba(31, 42, 48, 0.45);
+  stroke: color-mix(in srgb, var(--text) 45%, transparent);
   stroke-width: 2;
   stroke-dasharray: 6 4;
 }
@@ -1538,7 +1565,7 @@ h1 {
 
 .comarca.is-neighbor {
   fill: transparent;
-  stroke: rgba(31, 42, 48, 0.45);
+  stroke: color-mix(in srgb, var(--text) 45%, transparent);
   stroke-width: 2;
   stroke-dasharray: 6 4;
 }
@@ -1709,7 +1736,7 @@ h1 {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(31, 42, 48, 0.40);
+  background: color-mix(in srgb, var(--text) 42%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1845,7 +1872,7 @@ h1 {
 }
 
 .error-card pre {
-  background: rgba(31, 42, 48, 0.05);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
   padding: 10px;
   border-radius: 10px;
   font-size: 0.75rem;
@@ -1891,19 +1918,19 @@ h1 {
   }
 
   .brand-button {
-    min-height: 38px;
-    gap: 8px;
+    min-height: 44px;
+    gap: 10px;
   }
 
   .brand-logo {
-    width: 38px;
-    height: 34px;
-    flex-basis: 38px;
+    width: 54px;
+    height: 42px;
+    flex-basis: 54px;
   }
 
   .brand-logo-image {
-    width: 88px;
-    height: 88px;
+    width: 126px;
+    height: 126px;
   }
 
   h1 {
@@ -1922,7 +1949,7 @@ h1 {
     gap: 4px;
     grid-template-columns: unset;
     grid-template-areas: unset;
-    background: rgba(31, 42, 48, 0.07);
+    background: color-mix(in srgb, var(--text) 7%, transparent);
     border-radius: 14px;
     padding: 4px;
     width: 100%;
@@ -1934,7 +1961,26 @@ h1 {
     border-radius: 8px;
     text-align: center;
     padding: 9px 10px;
-    font-size: 0.85rem;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .topbar-challenge {
+    flex: 1;
+    border-radius: 8px;
+    border: none;
+    box-shadow: none;
+    text-align: center;
+    font-size: 0.8rem;
+    background: transparent;
+    padding: 9px 8px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .topbar-challenge.active {
+    background: var(--panel);
+    color: var(--text);
   }
 
   .calendar-icon-button.topbar-calendar {
@@ -1943,11 +1989,12 @@ h1 {
     border: none;
     box-shadow: none;
     justify-content: center;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     background: transparent;
     padding: 9px 10px;
     justify-self: unset;
     color: var(--muted);
+    white-space: nowrap;
   }
 
   .streak-card.topbar-streak {

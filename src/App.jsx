@@ -145,18 +145,6 @@ const POWERUPS = [
     }
   },
   {
-    id: "temp-neighbors",
-    label: "Veïnes (5s)",
-    durationMs: 5000,
-    penaltyMs: 3000,
-    uses: {
-      pixapi: 2,
-      dominguero: 2,
-      rondinaire: 1,
-      "cap-colla-rutes": 0
-    }
-  },
-  {
     id: "temp-initials",
     label: "Inicials (5s)",
     durationMs: 5000,
@@ -1752,7 +1740,7 @@ export default function App() {
   const isWeeklyMode = gameMode === "weekly";
   const isDailyMode = gameMode === "daily";
   const isFixedMode = isDailyMode || isWeeklyMode;
-  const shouldLoadCalendar = calendarOpen || optionsOpen || isDailyMode || isWeeklyMode;
+  const shouldLoadCalendar = calendarOpen || isDailyMode || isWeeklyMode;
   const activeDifficulty = isFixedMode ? "cap-colla-rutes" : difficulty;
   const difficultyConfig = useMemo(() => {
     return DIFFICULTIES.find((entry) => entry.id === activeDifficulty) || DIFFICULTIES[0];
@@ -3559,10 +3547,6 @@ export default function App() {
     if (isTimedMode) {
       setTimePenaltyMs((prev) => prev + (powerup.penaltyMs || 0));
     }
-    if (powerupId === "temp-neighbors") {
-      activateTempHint("neighbors", powerup.durationMs || 5000, setTempNeighborHint);
-      return;
-    }
     if (powerupId === "temp-initials") {
       activateTempHint("initials", powerup.durationMs || 5000, setTempInitialsHint);
     }
@@ -4469,6 +4453,24 @@ export default function App() {
             </button>
             <button
               type="button"
+              className={`topbar-challenge ${isDailyMode ? "active" : ""}`}
+              onClick={handlePlayToday}
+              disabled={!isMapReady}
+              aria-pressed={isDailyMode}
+            >
+              {t("daily")}
+            </button>
+            <button
+              type="button"
+              className={`topbar-challenge ${isWeeklyMode ? "active" : ""}`}
+              onClick={handlePlayWeekly}
+              disabled={!isMapReady}
+              aria-pressed={isWeeklyMode}
+            >
+              {t("weekly")}
+            </button>
+            <button
+              type="button"
               className="calendar-icon-button topbar-calendar"
               onClick={() => handleCalendarOpen("daily")}
               aria-label={t("calendar")}
@@ -4724,28 +4726,6 @@ export default function App() {
               </div>
 
               <div className="options-section">
-                <span className="label">{t("challenge")}</span>
-                <div className="mode-buttons two">
-                  <button
-                    type="button"
-                    className={`mode-button ${isDailyMode ? "active" : ""}`}
-                    onClick={handlePlayToday}
-                    disabled={!isMapReady}
-                  >
-                    {t("daily")}
-                  </button>
-                  <button
-                    type="button"
-                    className={`mode-button ${isWeeklyMode ? "active" : ""}`}
-                    onClick={handlePlayWeekly}
-                    disabled={!isMapReady}
-                  >
-                    {t("weekly")}
-                  </button>
-                </div>
-              </div>
-
-              <div className="options-section">
                 <span className="label">{t("difficulty")}</span>
                 <div className="difficulty-grid">
                   {DIFFICULTIES.map((entry) => {
@@ -4780,17 +4760,7 @@ export default function App() {
                 ) : null}
               </div>
 
-              <div className="options-section options-actions">
-                <button
-                  type="button"
-                  className="config-button"
-                  onClick={() => {
-                    setOptionsOpen(false);
-                    handleCalendarOpen("daily");
-                  }}
-                >
-                  {t("calendar")}
-                </button>
+              <div className="options-section">
                 <button type="button" className="config-button" onClick={handleConfigOpen}>
                   {t("config")}
                 </button>
@@ -5107,14 +5077,6 @@ export default function App() {
         >
           <span className="bottom-nav-icon">🎮</span>
           <span className="bottom-nav-label">Joc</span>
-        </button>
-        <button
-          type="button"
-          className={`bottom-nav-item${calendarOpen ? " active" : ""}`}
-          onClick={() => setCalendarOpen(true)}
-        >
-          <span className="bottom-nav-icon">📅</span>
-          <span className="bottom-nav-label">Calendari</span>
         </button>
         <button
           type="button"
