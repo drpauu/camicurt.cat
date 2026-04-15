@@ -3274,6 +3274,10 @@ export default function App() {
         : RULE_DEFS;
     const fixedMode = isDailyMode || isWeeklyMode;
     const fixedKey = isDailyMode ? activeDayKey : isWeeklyMode ? activeWeekKey : null;
+    const previousPairs =
+      forceNew && !fixedMode && startId && targetId
+        ? new Set([`${startId}:${targetId}`, `${targetId}:${startId}`])
+        : null;
     let fixedRuleDef = null;
     if (!isExploreMode && fixedMode && fixedKey) {
       const assignments = readRuleAssignments();
@@ -3313,6 +3317,7 @@ export default function App() {
       const candidateStart = pickRandom(ids, rng);
       const candidateTarget = pickRandom(ids, rng);
       if (candidateTarget === candidateStart) continue;
+      if (previousPairs?.has(`${candidateStart}:${candidateTarget}`)) continue;
       const neighbors = adjacency.get(candidateStart);
       if (neighbors && neighbors.has(candidateTarget)) continue;
       const startName = comarcaById.get(candidateStart)?.properties.name;
@@ -3867,6 +3872,8 @@ export default function App() {
       return;
     }
 
+    setCalendarSelection(null);
+    calendarApplyRef.current = null;
     resetGame(true);
   }
 

@@ -38,13 +38,18 @@ test("carrega el mapa i la UI base", async ({ page }) => {
     return {
       dateTitleBottomDelta:
         titleBox && dateBox ? Math.abs(titleBox.bottom - dateBox.bottom) : Infinity,
+      descriptionTitleBottomDelta:
+        titleBox && descriptionBox
+          ? Math.abs(titleBox.bottom - descriptionBox.bottom)
+          : Infinity,
       descriptionStartsAfterDate:
         dateBox && descriptionBox ? descriptionBox.left > dateBox.right : false,
       descriptionBeforeActions:
         descriptionBox && actionsBox ? descriptionBox.right <= actionsBox.left - 4 : false
     };
   });
-  expect(headerAlignment.dateTitleBottomDelta).toBeLessThanOrEqual(10);
+  expect(headerAlignment.dateTitleBottomDelta).toBeLessThanOrEqual(4);
+  expect(headerAlignment.descriptionTitleBottomDelta).toBeLessThanOrEqual(4);
   expect(headerAlignment.descriptionStartsAfterDate).toBeTruthy();
   expect(headerAlignment.descriptionBeforeActions).toBeTruthy();
   const faviconLinks = await page.$$eval('link[rel~="icon"]', (links) =>
@@ -83,6 +88,23 @@ test("carrega el mapa i la UI base", async ({ page }) => {
   await expect(page.getByText(/^Jugada$/i)).toHaveCount(0);
   await expect(page.getByText(/Comarques:/i)).toHaveCount(0);
   await expect(page.getByText(/Òptim:/i)).toHaveCount(0);
+});
+
+test("nova partida genera un repte nou mantenint mode i dificultat", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("rumb-mode", "normal");
+    localStorage.setItem("rumb-difficulty", "pixapi");
+  });
+  await gotoHome(page);
+  await page.waitForSelector("svg.map");
+  const route = page.locator(".map-brief .route");
+  const before = (await route.textContent())?.trim();
+  expect(before).toBeTruthy();
+
+  await page.getByRole("button", { name: /Nova partida/i }).click();
+  await expect.poll(async () => (await route.textContent())?.trim()).not.toBe(before);
+  expect(await page.evaluate(() => localStorage.getItem("rumb-mode"))).toBe("normal");
+  expect(await page.evaluate(() => localStorage.getItem("rumb-difficulty"))).toBe("pixapi");
 });
 
 test("el comodi d'inicials mostra lletres grans sense sortir del mapa de cada comarca", async ({ page }) => {
@@ -378,19 +400,26 @@ test("usa les families de sons del manifest en interaccions reals", async ({ pag
   await expectKind("submit");
   await expectKind("error");
 
-  await input.fill("a");
-  await page.waitForSelector(".suggestion");
-  const candidate = await page.evaluate(() => {
+  const candidates = await page.evaluate(() => {
     const routeText = document.querySelector(".map-brief .route")?.textContent || "";
-    return [...document.querySelectorAll(".suggestion")]
-      .map((button) => button.textContent.trim())
-      .find((name) => !routeText.includes(name));
+    return [
+      ...new Set(
+        [...document.querySelectorAll("path.comarca[data-comarca-name]")]
+          .map((path) => path.getAttribute("data-comarca-name"))
+          .filter((name) => name && !routeText.includes(name))
+      )
+    ].slice(0, 20);
   });
-  expect(candidate).toBeTruthy();
-  await page.locator(".suggestion", { hasText: candidate }).first().click();
+  expect(candidates.length).toBeGreaterThan(0);
+  const repeatCandidate = candidates[0];
+  for (const name of candidates) {
+    await input.fill(name);
+    await page.getByRole("button", { name: /Esbrina/i }).click();
+    const kinds = await playedKinds();
+    if (kinds.includes("neutral")) break;
+  }
   await expectKind("neutral");
-  await page.getByRole("button", { name: /Esbrina/i }).click();
-  await input.fill(candidate);
+  await input.fill(repeatCandidate);
   await page.getByRole("button", { name: /Esbrina/i }).click();
   await expectKind("repeat");
 

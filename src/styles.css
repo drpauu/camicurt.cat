@@ -115,11 +115,10 @@ html[data-weather="wind"] body::before {
 }
 
 .topbar {
-  display: flex;
-  flex-wrap: nowrap;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
-  align-items: flex-start;
+  align-items: end;
 }
 
 .brand {
@@ -129,32 +128,33 @@ html[data-weather="wind"] body::before {
 }
 
 .brand-row {
-  display: grid;
-  grid-template-columns: auto auto minmax(180px, 1fr);
-  align-items: end;
+  display: flex;
+  align-items: flex-end;
   column-gap: 10px;
   min-width: 0;
 }
 
 .brand-date {
-  align-self: end;
+  flex: 0 0 auto;
+  align-self: flex-end;
   color: var(--muted);
   font-size: 0.88rem;
   line-height: 1;
-  padding-bottom: 7px;
+  padding-bottom: 8px;
   text-transform: none;
   white-space: nowrap;
 }
 
 .brand-mode-description {
-  align-self: start;
+  flex: 1 1 220px;
+  align-self: flex-end;
   color: var(--text);
   color: color-mix(in srgb, var(--text) 82%, var(--muted));
   font-size: 0.86rem;
   line-height: 1.25;
   max-width: min(620px, 100%);
   min-width: 0;
-  padding-top: 2px;
+  padding-bottom: 4px;
   overflow: hidden;
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -162,6 +162,7 @@ html[data-weather="wind"] body::before {
 }
 
 .brand-button {
+  flex: 0 0 auto;
   padding: 0;
   border: none;
   background: none;
@@ -169,7 +170,7 @@ html[data-weather="wind"] body::before {
   cursor: pointer;
   text-align: left;
   display: inline-flex;
-  align-items: center;
+  align-items: flex-end;
   align-self: end;
   gap: 12px;
   min-height: 52px;
@@ -201,9 +202,10 @@ html[data-weather="wind"] body::before {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  align-items: center;
+  align-items: flex-end;
   justify-content: flex-end;
-  padding-top: 4px;
+  padding-top: 0;
+  align-self: end;
 }
 
 .topbar-actions {
