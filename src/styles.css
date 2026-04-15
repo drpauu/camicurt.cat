@@ -130,7 +130,7 @@ html[data-weather="wind"] body::before {
 .brand-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
 }
 
@@ -147,6 +147,30 @@ html[data-weather="wind"] body::before {
   color: inherit;
   cursor: pointer;
   text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+}
+
+.brand-logo {
+  display: block;
+  width: 42px;
+  height: 38px;
+  flex: 0 0 42px;
+  overflow: hidden;
+  position: relative;
+}
+
+.brand-logo-image {
+  display: block;
+  width: 96px;
+  height: 96px;
+  max-width: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -44%);
 }
 
 .topbar-right {
@@ -1863,7 +1887,23 @@ h1 {
   .brand-row {
     flex-direction: column;
     align-items: center;
-    gap: 2px;
+    gap: 4px;
+  }
+
+  .brand-button {
+    min-height: 38px;
+    gap: 8px;
+  }
+
+  .brand-logo {
+    width: 38px;
+    height: 34px;
+    flex-basis: 38px;
+  }
+
+  .brand-logo-image {
+    width: 88px;
+    height: 88px;
   }
 
   h1 {

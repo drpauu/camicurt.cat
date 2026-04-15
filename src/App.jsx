@@ -56,12 +56,31 @@ const MAP_CACHE_KEY = "rumb-map-cache-v1";
 const MAP_CACHE_VERSION = "2026-01-05";
 const MAP_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 const MAP_TOPO_URL = `/catalunya-comarques.topojson?v=${MAP_CACHE_VERSION}`;
+const BRAND_LOGO_SRC = "/logo/logo-512.png";
 const PING_URL = import.meta.env.VITE_PING_URL || "";
 const TELEMETRY_QUEUE_KEY = "rumb-telemetry-queue-v1";
 const ATTEMPTS_QUEUE_KEY = "rumb-attempts-queue-v1";
 const MAX_TELEMETRY_QUEUE = 200;
 const MAX_ATTEMPTS_QUEUE = 50;
 const LEVEL_STATS_MAX = 200;
+
+function BrandLogo({ className = "" }) {
+  return (
+    <span
+      className={["brand-logo", className].filter(Boolean).join(" ")}
+      aria-hidden="true"
+    >
+      <img
+        className="brand-logo-image"
+        src={BRAND_LOGO_SRC}
+        width="96"
+        height="96"
+        alt=""
+        decoding="async"
+      />
+    </span>
+  );
+}
 
 const DIFFICULTIES = [
   {
@@ -4426,7 +4445,13 @@ export default function App() {
       <header className="topbar">
         <div className="brand">
           <div className="brand-row">
-            <button type="button" className="brand-button" onClick={handleTitleReset}>
+            <button
+              type="button"
+              className="brand-button"
+              onClick={handleTitleReset}
+              aria-label="Reinicia camicurt.cat"
+            >
+              <BrandLogo />
               <h1>camicurt.cat</h1>
             </button>
             <span className="brand-date">{todayLabel}</span>
