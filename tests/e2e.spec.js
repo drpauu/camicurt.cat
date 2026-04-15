@@ -305,6 +305,132 @@ test("arrenca amb l'audio silenciat i el volum funciona en mobil", async ({ page
   });
 });
 
+test("usa les families de sons del manifest en interaccions reals", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("rumb-mode", "normal");
+    localStorage.setItem(
+      "rumb-settings-v1",
+      JSON.stringify({
+        theme: "default",
+        language: "ca",
+        musicEnabled: false,
+        musicVolume: 0,
+        musicTrack: "segadors",
+        sfxEnabled: true,
+        sfxVolume: 1
+      })
+    );
+    localStorage.setItem(
+      "rumb-sfx-settings-v1",
+      JSON.stringify({ enabled: true, volume: 1 })
+    );
+    localStorage.setItem(
+      "rumb-sound-settings-v1",
+      JSON.stringify({ enabled: true, masterVolume: 1, sfxVolume: 1 })
+    );
+    window.__playedAudio = [];
+    HTMLMediaElement.prototype.play = function () {
+      window.__playedAudio.push({
+        kind: this.dataset?.sfxKind || "",
+        file: this.dataset?.sfxFile || "",
+        src: this.currentSrc || this.src || ""
+      });
+      setTimeout(() => this.dispatchEvent(new Event("ended")), 0);
+      return Promise.resolve();
+    };
+  });
+
+  const manifestResponse = page.waitForResponse((response) =>
+    response.url().includes("/audio/audio-manifest.json")
+  );
+  await gotoHome(page);
+  await manifestResponse;
+  await page.waitForSelector("svg.map");
+
+  const playedKinds = () =>
+    page.evaluate(() => window.__playedAudio.map((entry) => entry.kind).filter(Boolean));
+  const expectKind = async (kind) => {
+    await expect.poll(async () => await playedKinds()).toContain(kind);
+  };
+
+  await page.getByRole("button", { name: /Apropar/i }).click();
+  await expectKind("click");
+
+  await page.getByRole("button", { name: /Opcions/i }).click();
+  await expectKind("open");
+  let optionsDialog = page.getByRole("dialog", { name: /Opcions/i });
+  await optionsDialog.getByRole("button", { name: /Contrarellotge/i }).click();
+  await expectKind("toggle");
+  await expectKind("countdown");
+  await expect(page.locator(".countdown-value")).toBeHidden({ timeout: 8000 });
+
+  await page.getByRole("button", { name: /Opcions/i }).click();
+  optionsDialog = page.getByRole("dialog", { name: /Opcions/i });
+  await optionsDialog.getByRole("button", { name: /^Explora$/i }).click();
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "explore");
+  await optionsDialog.getByRole("button", { name: /Configuraci/i }).click();
+  await page.locator(".config-modal").getByRole("button", { name: /Tanca/i }).click();
+  await expectKind("close");
+
+  const input = page.locator("#guess-input");
+  await input.fill("Comarca inventada");
+  await page.getByRole("button", { name: /Esbrina/i }).click();
+  await expectKind("submit");
+  await expectKind("error");
+
+  await input.fill("a");
+  await page.waitForSelector(".suggestion");
+  const candidate = await page.evaluate(() => {
+    const routeText = document.querySelector(".map-brief .route")?.textContent || "";
+    return [...document.querySelectorAll(".suggestion")]
+      .map((button) => button.textContent.trim())
+      .find((name) => !routeText.includes(name));
+  });
+  expect(candidate).toBeTruthy();
+  await page.locator(".suggestion", { hasText: candidate }).first().click();
+  await expectKind("neutral");
+  await page.getByRole("button", { name: /Esbrina/i }).click();
+  await input.fill(candidate);
+  await page.getByRole("button", { name: /Esbrina/i }).click();
+  await expectKind("repeat");
+
+  await expect(page.getByRole("button", { name: /Revela un pas/i })).toBeEnabled();
+  for (let index = 0; index < 14; index += 1) {
+    if (await page.locator(".modal").isVisible().catch(() => false)) break;
+    await page.getByRole("button", { name: /Revela un pas/i }).click();
+    await expectKind("powerup");
+    await page.waitForSelector("path.comarca.is-reveal[data-comarca-name]");
+    const revealName = await page
+      .locator("path.comarca.is-reveal[data-comarca-name]")
+      .first()
+      .getAttribute("data-comarca-name");
+    expect(revealName).toBeTruthy();
+    await input.fill(revealName);
+    await page.getByRole("button", { name: /Esbrina/i }).click();
+  }
+
+  await expect(page.locator(".modal")).toBeVisible({ timeout: 3000 });
+  await expectKind("correct");
+  await expectKind("win");
+  const uniqueKinds = [...new Set(await playedKinds())];
+  expect(uniqueKinds).toEqual(
+    expect.arrayContaining([
+      "click",
+      "open",
+      "close",
+      "toggle",
+      "submit",
+      "correct",
+      "repeat",
+      "neutral",
+      "error",
+      "countdown",
+      "powerup",
+      "win"
+    ])
+  );
+});
+
 test("la navegacio mobil te nomes reptes a capcalera i accions a baix", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript(() => {
@@ -323,11 +449,63 @@ test("la navegacio mobil te nomes reptes a capcalera i accions a baix", async ({
   const bottomLabels = await page
     .locator(".bottom-nav .bottom-nav-label")
     .evaluateAll((items) => items.map((item) => item.textContent.trim()));
-  expect(bottomLabels).toEqual(["Joc", "Nova partida", "Calendari", "Opcions"]);
+  expect(bottomLabels).toEqual(["Calendari", "Nova partida", "Opcions"]);
+  expect(bottomLabels).not.toContain("Joc");
   await expect(page.locator(".bottom-nav-icon:visible")).toHaveCount(0);
   await expect(page.locator(".options-launch-button")).toBeHidden();
+  await expect(page.locator(".bottom-nav-new-game")).toBeVisible();
+  const bottomNavMetrics = await page.evaluate(() => {
+    const calendar = document
+      .querySelector(".bottom-nav")
+      ?.querySelector("button:nth-of-type(1)")
+      ?.getBoundingClientRect();
+    const newGame = document.querySelector(".bottom-nav-new-game")?.getBoundingClientRect();
+    const options = document
+      .querySelector(".bottom-nav")
+      ?.querySelector("button:nth-of-type(3)")
+      ?.getBoundingClientRect();
+    return {
+      calendarWidth: Math.round(calendar?.width || 0),
+      newGameWidth: Math.round(newGame?.width || 0),
+      optionsWidth: Math.round(options?.width || 0),
+      newGameHeight: Math.round(newGame?.height || 0)
+    };
+  });
+  expect(bottomNavMetrics.newGameWidth).toBeGreaterThan(bottomNavMetrics.calendarWidth);
+  expect(bottomNavMetrics.newGameWidth).toBeGreaterThan(bottomNavMetrics.optionsWidth);
+  expect(bottomNavMetrics.newGameHeight).toBeGreaterThanOrEqual(44);
 
   await page.locator(".bottom-nav").getByRole("button", { name: /Nova partida/i }).click();
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "explore");
   expect(await page.evaluate(() => localStorage.getItem("rumb-difficulty"))).toBe("pixapi");
+});
+
+test("la barra mobil no talla les accions a amplades petites", async ({ page }) => {
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await gotoHome(page);
+    await page.waitForSelector("svg.map");
+    const metrics = await page.evaluate(() =>
+      [...document.querySelectorAll(".bottom-nav button")].map((button) => {
+        const label = button.querySelector(".bottom-nav-label");
+        const buttonBox = button.getBoundingClientRect();
+        const labelBox = label.getBoundingClientRect();
+        return {
+          text: label.textContent.trim(),
+          buttonWidth: Math.round(buttonBox.width),
+          labelWidth: Math.round(labelBox.width),
+          nowrap: getComputedStyle(label).whiteSpace
+        };
+      })
+    );
+    expect(metrics.map((entry) => entry.text)).toEqual([
+      "Calendari",
+      "Nova partida",
+      "Opcions"
+    ]);
+    expect(metrics.every((entry) => entry.nowrap === "nowrap")).toBeTruthy();
+    expect(
+      metrics.every((entry) => entry.labelWidth <= entry.buttonWidth - 8)
+    ).toBeTruthy();
+  }
 });

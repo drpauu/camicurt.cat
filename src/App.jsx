@@ -1857,6 +1857,17 @@ export default function App() {
       return text;
     };
   }, [language]);
+  const playManifestSfx = useCallback(
+    (kind, volumeMul = 1) => {
+      if (!audioManifest?.sfx?.[kind]) return;
+      if (!audioManagerRef.current) return;
+      if (!sfxEnabled || masterVolume <= 0 || sfxVolume <= 0) return;
+      const volume = clampVolumeValue(masterVolume * sfxVolume * volumeMul);
+      if (volume <= 0) return;
+      audioManagerRef.current.playSfx(kind, activeTheme, volume);
+    },
+    [activeTheme, audioManifest, masterVolume, sfxEnabled, sfxVolume]
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1961,12 +1972,13 @@ export default function App() {
     if (!optionsOpen || typeof window === "undefined") return undefined;
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
+        playManifestSfx("close", 0.75);
         setOptionsOpen(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [optionsOpen]);
+  }, [optionsOpen, playManifestSfx]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -2267,6 +2279,11 @@ export default function App() {
     if (!isMapReady || isComplete || isFailed || isCountdownActive) return;
     focusGuessInput();
   }, [isMapReady, isComplete, isFailed, isCountdownActive, startId, targetId]);
+
+  useEffect(() => {
+    if (!isTimedMode || !isCountdownActive || countdownValue === null) return;
+    playManifestSfx("countdown", 0.55);
+  }, [isTimedMode, isCountdownActive, countdownValue, playManifestSfx]);
 
   useEffect(() => {
     if (!isTimedMode || !isCountdownActive) return;
@@ -3084,6 +3101,9 @@ export default function App() {
   }
 
   function handleSfxToggle(nextEnabled) {
+    if (sfxEnabled || nextEnabled) {
+      playManifestSfx("toggle", 0.55);
+    }
     setSfxEnabled(nextEnabled);
     if (!nextEnabled) return;
     if (masterVolume <= 0) setMasterVolume(1);
@@ -3555,6 +3575,7 @@ export default function App() {
     if (!powerup) return;
     const usesLeft = powerups[powerupId] ?? 0;
     if (!isExploreMode && usesLeft <= 0) {
+      playManifestSfx("error");
       play("wrong_comarca");
       if (isTimedMode) {
         play("level_lose", { bypassCooldown: true });
@@ -3579,6 +3600,7 @@ export default function App() {
       }
       return;
     }
+    playManifestSfx("powerup", 0.85);
     play("recharge");
     if (powerupId === "reveal-next") {
       const revealId =
@@ -3648,14 +3670,17 @@ export default function App() {
 
     const trimmed = guessValue.trim();
     if (!trimmed) {
+      playManifestSfx("error", 0.65);
       focusGuessInput();
       return;
     }
+    playManifestSfx("submit", 0.65);
 
     const normalized = normalizeName(trimmed);
     const id = normalizedToId.get(normalized);
     if (!id) {
       triggerGuessError();
+      playManifestSfx("error");
       play("wrong_comarca");
       pushGuessFeedback(t("feedbackNoMatch"), "bad");
       focusGuessInput();
@@ -3664,6 +3689,7 @@ export default function App() {
 
     if (id === startId || id === targetId) {
       triggerGuessError();
+      playManifestSfx("error");
       play("wrong_comarca");
       pushGuessFeedback(t("feedbackStartTarget"), "warn");
       focusGuessInput();
@@ -3672,6 +3698,7 @@ export default function App() {
 
     if (guessedSet.has(id)) {
       triggerGuessError();
+      playManifestSfx("repeat");
       play("wrong_comarca");
       pushGuessFeedback(t("feedbackRepeated"), "warn");
       focusGuessInput();
@@ -3691,10 +3718,13 @@ export default function App() {
     const name = comarcaById.get(id)?.properties.name || trimmed;
     setGuessHistory((prev) => [...prev, { id, name }]);
     if (shortestPathSet.has(id)) {
+      playManifestSfx("correct");
       play("correct_comarca");
     } else if (shortestNeighborSet.has(id)) {
+      playManifestSfx("neutral");
       play("almost_comarca");
     } else {
+      playManifestSfx("neutral", 0.75);
       play("wrong_comarca");
     }
     pushGuessFeedback(t("feedbackOk"), "good");
@@ -3722,7 +3752,7 @@ export default function App() {
   }
 
   function handleSuggestionPick(name) {
-    play("ui_select");
+    playManifestSfx("neutral", 0.45);
     setGuessValue(name);
     setIsSuggestionsOpen(false);
     focusGuessInput();
@@ -3758,7 +3788,7 @@ export default function App() {
   }
 
   function handlePlayToday() {
-    play("ui_select");
+    playManifestSfx("click");
     setOptionsOpen(false);
     const key = dayKey;
     const record = getCompletionRecord("daily", key);
@@ -3781,7 +3811,7 @@ export default function App() {
   }
 
   function handlePlayWeekly() {
-    play("ui_select");
+    playManifestSfx("click");
     setOptionsOpen(false);
     const key = weekKey;
     const record = getCompletionRecord("weekly", key);
@@ -3804,7 +3834,7 @@ export default function App() {
   }
 
   function handleStartNext() {
-    play("ui_select");
+    playManifestSfx("click");
     setShowModal(false);
     setResultData(null);
     setIsFailed(false);
@@ -3868,24 +3898,29 @@ export default function App() {
   }
 
   function handleConfigOpen() {
-    play("ui_select");
+    playManifestSfx("open");
     setOptionsOpen(false);
     setConfigOpen(true);
   }
 
   function handleConfigClose() {
-    play("ui_select");
+    playManifestSfx("close", 0.75);
     setConfigOpen(false);
   }
 
   function handleDifficultyPick(difficultyId) {
-    if (!unlockedDifficulties.has(difficultyId)) return;
-    play("ui_select");
+    if (!unlockedDifficulties.has(difficultyId)) {
+      playManifestSfx("error");
+      return;
+    }
+    playManifestSfx("toggle");
     setDifficulty(difficultyId);
   }
 
   function handleCalendarOpen(mode) {
-    play("ui_select");
+    playManifestSfx("open");
+    setOptionsOpen(false);
+    setConfigOpen(false);
     const now = new Date();
     let targetMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     if (mode === "daily") {
@@ -3927,7 +3962,7 @@ export default function App() {
   async function handleCalendarAction(mode, key) {
     const hasCalendarData = calendarDaily.length > 0 || calendarWeekly.length > 0;
     if (!hasCalendarData && calendarStatus !== "ready") return;
-    play("ui_select");
+    playManifestSfx("click");
     const record = getCompletionRecord(mode, key);
     if (record?.winningAttempt) {
       openCompletionModal(record);
@@ -3974,12 +4009,12 @@ export default function App() {
   }
 
   function handleCalendarClose() {
-    play("ui_select");
+    playManifestSfx("close", 0.75);
     setCalendarOpen(false);
   }
 
   function handleModePick(modeId) {
-    play("ui_select");
+    playManifestSfx("toggle");
     setGameMode(modeId);
     if (modeId === "timed") {
       setOptionsOpen(false);
@@ -3987,7 +4022,7 @@ export default function App() {
   }
 
   function handleTitleReset() {
-    play("ui_select");
+    playManifestSfx("click");
     const todayKey = dayKey;
     const todayDone = Boolean(getCompletionRecord("daily", todayKey)?.winningAttempt);
     setShowModal(false);
@@ -4030,6 +4065,7 @@ export default function App() {
 
   function handleReplayStart(mode) {
     if (!isComplete || !startId || !targetId) return;
+    playManifestSfx("click", 0.65);
     const order =
       mode === "shortest"
         ? shortestPath.filter((id) => id !== startId && id !== targetId)
@@ -4246,6 +4282,7 @@ export default function App() {
       .map((pathId) => comarcaById.get(pathId)?.properties.name || pathId);
 
     setIsComplete(true);
+    playManifestSfx("win");
     play("objective_met");
     if (distance === 0) {
       play("level_perfect", { bypassCooldown: true });
@@ -4602,7 +4639,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => {
-                play("ui_select");
+                playManifestSfx("click", 0.55);
                 handleZoomIn();
               }}
               aria-label="Apropar"
@@ -4612,7 +4649,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => {
-                play("ui_select");
+                playManifestSfx("click", 0.55);
                 handleZoomOut();
               }}
               aria-label="Allunyar"
@@ -4622,7 +4659,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => {
-                play("ui_select");
+                playManifestSfx("click", 0.55);
                 handleRecenter();
               }}
             >
@@ -4646,6 +4683,7 @@ export default function App() {
                   d={featureItem.path}
                   className={featureItem.classes}
                   data-comarca-id={featureItem.id}
+                  data-comarca-name={featureItem.name}
                 />
               ))}
               {showInitialsActive ? (
@@ -4752,7 +4790,7 @@ export default function App() {
               type="button"
               className="options-launch-button"
               onClick={() => {
-                play("ui_select");
+                playManifestSfx("open");
                 setOptionsOpen(true);
               }}
               aria-haspopup="dialog"
@@ -4764,7 +4802,13 @@ export default function App() {
       </section>
 
       {optionsOpen ? (
-        <div className="modal-backdrop options-modal-backdrop" onClick={() => setOptionsOpen(false)}>
+        <div
+          className="modal-backdrop options-modal-backdrop"
+          onClick={() => {
+            playManifestSfx("close", 0.75);
+            setOptionsOpen(false);
+          }}
+        >
           <div
             id="options-panel"
             className="modal options-modal"
@@ -4778,7 +4822,10 @@ export default function App() {
               <button
                 type="button"
                 className="icon-button"
-                onClick={() => setOptionsOpen(false)}
+                onClick={() => {
+                  playManifestSfx("close", 0.75);
+                  setOptionsOpen(false);
+                }}
                 aria-label={t("close")}
               >
                 ×
@@ -4869,7 +4916,7 @@ export default function App() {
                   type="button"
                   className="icon-button"
                   onClick={() => {
-                    play("ui_select");
+                    playManifestSfx("click", 0.55);
                     handleCalendarPrevMonth();
                   }}
                   aria-label={t("previous")}
@@ -4881,7 +4928,7 @@ export default function App() {
                   type="button"
                   className="icon-button"
                   onClick={() => {
-                    play("ui_select");
+                    playManifestSfx("click", 0.55);
                     handleCalendarNextMonth();
                   }}
                   aria-label={t("next")}
@@ -4965,6 +5012,7 @@ export default function App() {
                 className="level-select"
                 value={musicTrack}
                 onChange={(event) => {
+                  playManifestSfx("toggle", 0.55);
                   const nextTrack = event.target.value;
                   setMusicTrack(nextTrack);
                   if (musicVolume > 0) {
@@ -5033,7 +5081,10 @@ export default function App() {
               <select
                 className="level-select"
                 value={language}
-                onChange={(event) => setLanguage(event.target.value)}
+                onChange={(event) => {
+                  playManifestSfx("toggle", 0.55);
+                  setLanguage(event.target.value);
+                }}
               >
                 {LANGUAGES.map((lang) => (
                   <option key={lang.id} value={lang.id}>
@@ -5149,26 +5200,6 @@ export default function App() {
       <nav className="bottom-nav" aria-label="Navegació principal">
         <button
           type="button"
-          className={`bottom-nav-item${!calendarOpen && !optionsOpen ? " active" : ""}`}
-          onClick={() => {
-            play("ui_select");
-            setCalendarOpen(false);
-            setOptionsOpen(false);
-            setConfigOpen(false);
-          }}
-        >
-          <span className="bottom-nav-label">Joc</span>
-        </button>
-        <button
-          type="button"
-          className="bottom-nav-item"
-          onClick={handleStartNext}
-          disabled={!isMapReady}
-        >
-          <span className="bottom-nav-label">Nova partida</span>
-        </button>
-        <button
-          type="button"
           className={`bottom-nav-item${calendarOpen ? " active" : ""}`}
           onClick={() => handleCalendarOpen(isWeeklyMode ? "weekly" : "daily")}
           disabled={!isMapReady}
@@ -5177,10 +5208,19 @@ export default function App() {
         </button>
         <button
           type="button"
+          className="bottom-nav-new-game"
+          onClick={handleStartNext}
+          disabled={!isMapReady}
+        >
+          <span className="bottom-nav-label">Nova partida</span>
+        </button>
+        <button
+          type="button"
           className={`bottom-nav-item${optionsOpen ? " active" : ""}`}
           onClick={() => {
-            play("ui_select");
+            playManifestSfx("open");
             setCalendarOpen(false);
+            setConfigOpen(false);
             setOptionsOpen(true);
           }}
         >

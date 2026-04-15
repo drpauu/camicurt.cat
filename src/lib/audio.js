@@ -40,6 +40,8 @@ export function createAudioManager(manifest = {}) {
     const list = theme.sfx?.[kind] || manifest.sfx?.[kind] || [];
     const pool = list.map((file) => {
       const audio = new Audio(resolveAudioUrl(file));
+      audio.dataset.sfxKind = kind;
+      audio.dataset.sfxFile = file;
       audio.preload = "auto";
       return audio;
     });
