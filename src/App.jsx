@@ -870,6 +870,23 @@ function getInitials(value) {
     .join("");
 }
 
+function getInitialFontSize(initials, centroid, bounds) {
+  if (!Array.isArray(centroid) || !Array.isArray(bounds)) return 12;
+  const [[x0, y0], [x1, y1]] = bounds;
+  const [cx, cy] = centroid;
+  if (![x0, y0, x1, y1, cx, cy].every(Number.isFinite)) return 12;
+
+  const letters = Math.max(String(initials || "").length, 1);
+  const horizontalRoom = Math.max(1, Math.min(cx - x0, x1 - cx) * 2 * 0.84);
+  const verticalRoom = Math.max(1, Math.min(cy - y0, y1 - cy) * 2 * 0.82);
+  const desired = Math.min(x1 - x0, y1 - y0) * 0.52;
+  const widthLimit = horizontalRoom / (letters * 0.68);
+  const safeSize = Math.min(desired, widthLimit, verticalRoom, 28);
+
+  if (!Number.isFinite(safeSize)) return 12;
+  return safeSize < 12 ? Math.max(8, safeSize) : Math.max(12, safeSize);
+}
+
 function formatTime(ms) {
   if (!Number.isFinite(ms)) return "—";
   const total = Math.max(ms, 0);
@@ -2709,14 +2726,6 @@ export default function App() {
     return map;
   }, [comarques]);
 
-  const initialsById = useMemo(() => {
-    const map = new Map();
-    comarques.forEach((featureItem) => {
-      map.set(featureItem.properties.id, getInitials(featureItem.properties.name));
-    });
-    return map;
-  }, [comarques]);
-
   const suggestions = useMemo(() => {
     const query = normalizeName(guessValue);
     if (!query) return [];
@@ -2808,12 +2817,20 @@ export default function App() {
     const projection = geoMercator().fitSize([VIEW_WIDTH, VIEW_HEIGHT], collection);
     const generator = geoPath(projection);
 
-    const mapped = comarques.map((featureItem) => ({
-      id: featureItem.properties.id,
-      name: featureItem.properties.name,
-      path: generator(featureItem),
-      centroid: generator.centroid(featureItem)
-    }));
+    const mapped = comarques.map((featureItem) => {
+      const initials = getInitials(featureItem.properties.name);
+      const centroid = generator.centroid(featureItem);
+      const bounds = generator.bounds(featureItem);
+      return {
+        id: featureItem.properties.id,
+        name: featureItem.properties.name,
+        path: generator(featureItem),
+        centroid,
+        bounds,
+        initials,
+        initialFontSize: getInitialFontSize(initials, centroid, bounds)
+      };
+    });
 
     return {
       paths: mapped,
@@ -3788,37 +3805,39 @@ export default function App() {
 
   function handleStartNext() {
     play("ui_select");
+    setShowModal(false);
+    setResultData(null);
+    setIsFailed(false);
+    setIsComplete(false);
+    setCalendarOpen(false);
+    setOptionsOpen(false);
+    setConfigOpen(false);
+
     if (isDailyMode) {
-      const record = getCompletionRecord("daily", activeDayKey);
-      if (record?.winningAttempt) {
-        openCompletionModal(record);
-        return;
-      }
-    }
-    if (isWeeklyMode) {
-      const record = getCompletionRecord("weekly", activeWeekKey);
-      if (record?.winningAttempt) {
-        openCompletionModal(record);
-        return;
-      }
-    }
-    if (isDailyMode && calendarSelection?.mode === "daily") {
       const entry = calendarDailyMap.get(activeDayKey);
       if (entry?.level) {
+        setCalendarSelection({ mode: "daily", key: activeDayKey });
         applyCalendarLevel(entry.level);
         calendarApplyRef.current = `daily:${activeDayKey}`;
         return;
       }
+      resetGame(false);
+      return;
     }
-    if (isWeeklyMode && calendarSelection?.mode === "weekly") {
+
+    if (isWeeklyMode) {
       const entry = calendarWeeklyMap.get(activeWeekKey);
       if (entry?.level) {
+        setCalendarSelection({ mode: "weekly", key: activeWeekKey });
         applyCalendarLevel(entry.level);
         calendarApplyRef.current = `weekly:${activeWeekKey}`;
         return;
       }
+      resetGame(false);
+      return;
     }
-    resetGame(!isFixedMode);
+
+    resetGame(true);
   }
 
   const handleZoomIn = useCallback(() => {
@@ -4627,6 +4646,7 @@ export default function App() {
                   key={featureItem.id}
                   d={featureItem.path}
                   className={featureItem.classes}
+                  data-comarca-id={featureItem.id}
                 />
               ))}
               {showInitialsActive ? (
@@ -4642,9 +4662,12 @@ export default function App() {
                         x={x}
                         y={y}
                         textAnchor="middle"
+                        dominantBaseline="central"
                         className="initial"
+                        data-comarca-id={featureItem.id}
+                        style={{ fontSize: `${featureItem.initialFontSize}px` }}
                       >
-                        {initialsById.get(featureItem.id)}
+                        {featureItem.initials}
                       </text>
                     );
                   })}
@@ -5127,18 +5150,41 @@ export default function App() {
       <nav className="bottom-nav" aria-label="Navegació principal">
         <button
           type="button"
-          className={`bottom-nav-item${!calendarOpen ? " active" : ""}`}
-          onClick={() => setCalendarOpen(false)}
+          className={`bottom-nav-item${!calendarOpen && !optionsOpen ? " active" : ""}`}
+          onClick={() => {
+            play("ui_select");
+            setCalendarOpen(false);
+            setOptionsOpen(false);
+            setConfigOpen(false);
+          }}
         >
-          <span className="bottom-nav-icon">🎮</span>
           <span className="bottom-nav-label">Joc</span>
         </button>
         <button
           type="button"
           className="bottom-nav-item"
-          onClick={() => setOptionsOpen(true)}
+          onClick={handleStartNext}
+          disabled={!isMapReady}
         >
-          <span className="bottom-nav-icon">⚙️</span>
+          <span className="bottom-nav-label">Nova partida</span>
+        </button>
+        <button
+          type="button"
+          className={`bottom-nav-item${calendarOpen ? " active" : ""}`}
+          onClick={() => handleCalendarOpen(isWeeklyMode ? "weekly" : "daily")}
+          disabled={!isMapReady}
+        >
+          <span className="bottom-nav-label">Calendari</span>
+        </button>
+        <button
+          type="button"
+          className={`bottom-nav-item${optionsOpen ? " active" : ""}`}
+          onClick={() => {
+            play("ui_select");
+            setCalendarOpen(false);
+            setOptionsOpen(true);
+          }}
+        >
           <span className="bottom-nav-label">Opcions</span>
         </button>
       </nav>

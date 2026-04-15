@@ -54,7 +54,7 @@ test("carrega el mapa i la UI base", async ({ page }) => {
   await expect(page.getByRole("button", { name: /Esbrina/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /Opcions/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /Veïnes|VeÃ¯nes/i })).toHaveCount(0);
-  await expect(page.locator(".bottom-nav").getByText(/Calendari/i)).toHaveCount(0);
+  await expect(page.locator(".bottom-nav")).toBeHidden();
   await expect(page.getByText(/Inici:/i)).toBeVisible();
   await expect(page.getByText(/Destí:/i)).toBeVisible();
   await expect(page.getByText(/Norma:/i)).toBeVisible();
@@ -62,6 +62,36 @@ test("carrega el mapa i la UI base", async ({ page }) => {
   await expect(page.getByText(/^Jugada$/i)).toHaveCount(0);
   await expect(page.getByText(/Comarques:/i)).toHaveCount(0);
   await expect(page.getByText(/Òptim:/i)).toHaveCount(0);
+});
+
+test("el comodi d'inicials mostra lletres grans sense sortir del mapa de cada comarca", async ({ page }) => {
+  await gotoHome(page);
+  await page.waitForSelector("svg.map");
+  await page.getByRole("button", { name: /Inicials/i }).click();
+  await page.waitForSelector("text.initial");
+
+  const metrics = await page.evaluate(() => {
+    return [...document.querySelectorAll("text.initial")].map((text) => {
+      const id = text.getAttribute("data-comarca-id");
+      const path = document.querySelector(`path.comarca[data-comarca-id="${id}"]`);
+      const textBox = text.getBBox();
+      const pathBox = path.getBBox();
+      const fontSize = parseFloat(getComputedStyle(text).fontSize);
+      return {
+        id,
+        fontSize,
+        inside:
+          textBox.x >= pathBox.x - 2 &&
+          textBox.y >= pathBox.y - 2 &&
+          textBox.x + textBox.width <= pathBox.x + pathBox.width + 2 &&
+          textBox.y + textBox.height <= pathBox.y + pathBox.height + 2
+      };
+    });
+  });
+
+  expect(metrics.length).toBeGreaterThan(30);
+  expect(Math.max(...metrics.map((entry) => entry.fontSize))).toBeGreaterThan(18);
+  expect(metrics.filter((entry) => !entry.inside)).toEqual([]);
 });
 
 test("inicia el nivell diari", async ({ page }) => {
@@ -236,4 +266,31 @@ test("arrenca amb l'audio silenciat i el volum funciona en mobil", async ({ page
     const sound = JSON.parse(localStorage.getItem("rumb-sound-settings-v1") || "{}");
     return sound.enabled === true && sound.masterVolume === 0.35 && sound.sfxVolume === 1;
   });
+});
+
+test("la navegacio mobil te nomes reptes a capcalera i accions a baix", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    localStorage.setItem("rumb-mode", "explore");
+    localStorage.setItem("rumb-difficulty", "pixapi");
+  });
+  await gotoHome(page);
+  await page.waitForSelector("svg.map");
+
+  await expect(page.locator(".topbar .brand")).toBeHidden();
+  await expect(page.locator(".topbar-new-game")).toBeHidden();
+  await expect(page.locator(".topbar-calendar")).toBeHidden();
+  await expect(page.locator(".topbar").getByRole("button", { name: /^Diari$/i })).toBeVisible();
+  await expect(page.locator(".topbar").getByRole("button", { name: /^Setmanal$/i })).toBeVisible();
+
+  const bottomLabels = await page
+    .locator(".bottom-nav .bottom-nav-label")
+    .evaluateAll((items) => items.map((item) => item.textContent.trim()));
+  expect(bottomLabels).toEqual(["Joc", "Nova partida", "Calendari", "Opcions"]);
+  await expect(page.locator(".bottom-nav-icon:visible")).toHaveCount(0);
+  await expect(page.locator(".options-launch-button")).toBeHidden();
+
+  await page.locator(".bottom-nav").getByRole("button", { name: /Nova partida/i }).click();
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "explore");
+  expect(await page.evaluate(() => localStorage.getItem("rumb-difficulty"))).toBe("pixapi");
 });

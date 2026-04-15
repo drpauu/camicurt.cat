@@ -1497,12 +1497,11 @@ h1 {
 
 .initial {
   fill: var(--text);
-  font-size: 0.55rem;
   font-weight: 600;
   text-transform: uppercase;
   paint-order: stroke;
   stroke: rgba(248, 244, 236, 0.90);
-  stroke-width: 3px;
+  stroke-width: 2.6px;
 }
 
 .comarca {
@@ -1898,52 +1897,22 @@ h1 {
   }
 
   .page {
-    padding: 16px 12px 80px;
+    padding: 12px 12px 86px;
     height: auto;
     min-height: 100vh;
   }
 
-  /* Header: centred title, date, with tab row below */
   .topbar {
-    flex-direction: column;
+    flex-direction: row;
     align-items: stretch;
-    gap: 12px;
+    gap: 0;
     position: relative;
   }
 
   .brand {
-    text-align: center;
-    align-items: center;
-    max-width: 100%;
+    display: none;
   }
 
-  .brand-row {
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .brand-button {
-    min-height: 44px;
-    gap: 10px;
-  }
-
-  .brand-logo {
-    width: 54px;
-    height: 42px;
-    flex-basis: 54px;
-  }
-
-  .brand-logo-image {
-    width: 126px;
-    height: 126px;
-  }
-
-  h1 {
-    font-size: 1.9rem;
-  }
-
-  /* Pill-tab row */
   .topbar-right {
     width: 100%;
     justify-content: stretch;
@@ -1952,23 +1921,18 @@ h1 {
   .topbar-actions {
     display: flex;
     flex-direction: row;
-    gap: 4px;
+    gap: 6px;
     grid-template-columns: unset;
     grid-template-areas: unset;
     background: color-mix(in srgb, var(--text) 7%, transparent);
-    border-radius: 14px;
+    border-radius: 8px;
     padding: 4px;
     width: 100%;
     justify-items: unset;
   }
 
   .topbar-button.topbar-new-game {
-    flex: 1;
-    border-radius: 8px;
-    text-align: center;
-    padding: 9px 10px;
-    font-size: 0.78rem;
-    white-space: nowrap;
+    display: none;
   }
 
   .topbar-challenge {
@@ -1990,17 +1954,7 @@ h1 {
   }
 
   .calendar-icon-button.topbar-calendar {
-    flex: 1;
-    border-radius: 8px;
-    border: none;
-    box-shadow: none;
-    justify-content: center;
-    font-size: 0.8rem;
-    background: transparent;
-    padding: 9px 10px;
-    justify-self: unset;
-    color: var(--muted);
-    white-space: nowrap;
+    display: none;
   }
 
   .streak-card.topbar-streak {
@@ -2085,6 +2039,10 @@ h1 {
     padding: 13px 12px;
   }
 
+  .options-launch-button {
+    display: none;
+  }
+
   .ranking-lists {
     grid-template-columns: 1fr;
   }
@@ -2096,7 +2054,7 @@ h1 {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 64px;
+    height: 66px;
     background: var(--panel);
     border-top: 1px solid var(--border);
     box-shadow: 0 -2px 12px var(--shadow);
@@ -2106,15 +2064,15 @@ h1 {
   .bottom-nav-item {
     flex: 1;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: 0;
     border: none;
     background: transparent;
     color: var(--muted);
     cursor: pointer;
-    padding: 0;
+    padding: 0 4px;
     font-family: inherit;
     transition: color 0.15s;
   }
@@ -2124,14 +2082,16 @@ h1 {
   }
 
   .bottom-nav-icon {
-    font-size: 1.3rem;
-    line-height: 1;
+    display: none;
   }
 
   .bottom-nav-label {
-    font-size: 0.68rem;
-    font-weight: 500;
-    letter-spacing: 0.03em;
+    min-width: 0;
+    font-size: clamp(0.62rem, 2.4vw, 0.75rem);
+    font-weight: 650;
+    letter-spacing: 0;
+    line-height: 1.1;
+    white-space: nowrap;
   }
 }
 
