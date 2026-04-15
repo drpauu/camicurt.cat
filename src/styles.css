@@ -116,29 +116,49 @@ html[data-weather="wind"] body::before {
 
 .topbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: space-between;
   gap: 12px;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .brand {
-  display: grid;
-  gap: 4px;
-  max-width: min(560px, 100%);
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .brand-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: auto auto minmax(180px, 1fr);
+  align-items: end;
+  column-gap: 10px;
+  min-width: 0;
 }
 
 .brand-date {
+  align-self: end;
   color: var(--muted);
   font-size: 0.88rem;
+  line-height: 1;
+  padding-bottom: 7px;
   text-transform: none;
+  white-space: nowrap;
+}
+
+.brand-mode-description {
+  align-self: start;
+  color: var(--text);
+  color: color-mix(in srgb, var(--text) 82%, var(--muted));
+  font-size: 0.86rem;
+  line-height: 1.25;
+  max-width: min(620px, 100%);
+  min-width: 0;
+  padding-top: 2px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .brand-button {
@@ -150,8 +170,10 @@ html[data-weather="wind"] body::before {
   text-align: left;
   display: inline-flex;
   align-items: center;
+  align-self: end;
   gap: 12px;
   min-height: 52px;
+  white-space: nowrap;
 }
 
 .brand-logo {
@@ -175,11 +197,13 @@ html[data-weather="wind"] body::before {
 }
 
 .topbar-right {
+  flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
   justify-content: flex-end;
+  padding-top: 4px;
 }
 
 .topbar-actions {

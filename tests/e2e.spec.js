@@ -26,6 +26,27 @@ test("carrega el mapa i la UI base", async ({ page }) => {
   const logoBox = await page.locator(".brand-logo").boundingBox();
   expect(logoBox?.width).toBeGreaterThanOrEqual(54);
   expect(logoBox?.height).toBeGreaterThanOrEqual(42);
+  await expect(page.locator(".brand-date")).toBeVisible();
+  await expect(page.locator(".brand-mode-description")).toContainText("Mode normal:");
+  const headerAlignment = await page.evaluate(() => {
+    const titleBox = document.querySelector(".brand h1")?.getBoundingClientRect();
+    const dateBox = document.querySelector(".brand-date")?.getBoundingClientRect();
+    const descriptionBox = document
+      .querySelector(".brand-mode-description")
+      ?.getBoundingClientRect();
+    const actionsBox = document.querySelector(".topbar-actions")?.getBoundingClientRect();
+    return {
+      dateTitleBottomDelta:
+        titleBox && dateBox ? Math.abs(titleBox.bottom - dateBox.bottom) : Infinity,
+      descriptionStartsAfterDate:
+        dateBox && descriptionBox ? descriptionBox.left > dateBox.right : false,
+      descriptionBeforeActions:
+        descriptionBox && actionsBox ? descriptionBox.right <= actionsBox.left - 4 : false
+    };
+  });
+  expect(headerAlignment.dateTitleBottomDelta).toBeLessThanOrEqual(10);
+  expect(headerAlignment.descriptionStartsAfterDate).toBeTruthy();
+  expect(headerAlignment.descriptionBeforeActions).toBeTruthy();
   const faviconLinks = await page.$$eval('link[rel~="icon"]', (links) =>
     links.map((link) => ({
       rel: link.getAttribute("rel"),
@@ -101,6 +122,8 @@ test("inicia el nivell diari", async ({ page }) => {
   await gotoHome(page);
   await page.getByRole("button", { name: /^Diari$/i }).click();
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");
+  await expect(page.locator(".brand-mode-description")).toContainText("Mode normal:");
+  await expect(page.locator(".brand-mode-description")).not.toContainText("Mode diari:");
 });
 
 test("inicia el nivell setmanal", async ({ page }) => {
@@ -110,6 +133,19 @@ test("inicia el nivell setmanal", async ({ page }) => {
   await gotoHome(page);
   await page.getByRole("button", { name: /^Setmanal$/i }).click();
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "weekly");
+  await expect(page.locator(".brand-mode-description")).toContainText("Mode normal:");
+});
+
+test("la descripcio de capcalera canvia en mode explora", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("rumb-mode", "normal");
+  });
+  await gotoHome(page);
+  await page.getByRole("button", { name: /Opcions/i }).click();
+  const optionsDialog = page.getByRole("dialog", { name: /Opcions/i });
+  await optionsDialog.getByRole("button", { name: /^Explora$/i }).click();
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "explore");
+  await expect(page.locator(".brand-mode-description")).toContainText("Explora:");
 });
 
 test("contrarellotge tanca opcions i mostra compte enrere des de 5", async ({ page }) => {
@@ -141,6 +177,7 @@ test("contrarellotge tanca opcions i mostra compte enrere des de 5", async ({ pa
   await expect(optionsDialog).toBeVisible();
   await optionsDialog.getByRole("button", { name: /Contrarellotge/i }).click();
   await expect(optionsDialog).toBeHidden();
+  await expect(page.locator(".brand-mode-description")).toContainText("Contrarellotge:");
 
   const countdown = page.locator(".countdown-value");
   await expect(countdown).toHaveText("5");

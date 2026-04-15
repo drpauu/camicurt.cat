@@ -4464,13 +4464,11 @@ export default function App() {
   ]);
   const timeLeftUrgent = isTimedMode && timeLeftMs <= 10000;
   const shouldShowSuggestions = isSuggestionsOpen && suggestions.length > 0;
-  const subtitleKey = isDailyMode
-    ? "descriptionDaily"
-    : isTimedMode
-      ? "descriptionTimed"
-      : isExploreMode
-        ? "descriptionExplore"
-        : "descriptionNormal";
+  const subtitleKey = isTimedMode
+    ? "descriptionTimed"
+    : isExploreMode
+      ? "descriptionExplore"
+      : "descriptionNormal";
   const musicOptions = useMemo(() => {
     if (audioManifest?.music) {
       return Object.entries(audioManifest.music).map(([id, file]) => ({
@@ -4515,6 +4513,7 @@ export default function App() {
               <h1>camicurt.cat</h1>
             </button>
             <span className="brand-date">{todayLabel}</span>
+            <span className="brand-mode-description">{t(subtitleKey)}</span>
           </div>
         </div>
         <div className="topbar-right">
