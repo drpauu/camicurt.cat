@@ -80,15 +80,17 @@ test("carrega el mapa i la UI base", async ({ page }) => {
   await expect(page.getByRole("button", { name: /Calendari/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /Esbrina/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /Opcions/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /VeÃ¯nes|VeÃƒÂ¯nes/i })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Veïnes/i })).toHaveCount(0);
   await expect(page.locator(".bottom-nav")).toBeHidden();
   await expect(page.getByText(/Inici:/i)).toBeVisible();
-  await expect(page.getByText(/DestÃ­:/i)).toBeVisible();
+  await expect(page.getByText(/Destí:/i)).toBeVisible();
   await expect(page.getByText(/Norma:/i)).toBeVisible();
-  await expect(page.getByText(/Sense connexiÃ³/i)).toHaveCount(0);
+  await expect(page.getByText(/Sense connexió/i)).toHaveCount(0);
   await expect(page.getByText(/^Jugada$/i)).toHaveCount(0);
   await expect(page.getByText(/Comarques:/i)).toHaveCount(0);
-  await expect(page.getByText(/Ã’ptim:/i)).toHaveCount(0);
+  await expect(page.getByText(/Òptim:/i)).toHaveCount(0);
+  await expect(page.locator("body")).not.toContainText("Ã");
+  await expect(page.locator("body")).not.toContainText("â€");
 });
 
 test("nova partida genera un repte nou mantenint mode i dificultat", async ({ page }) => {
@@ -240,7 +242,7 @@ test("contrarellotge tanca opcions i mostra compte enrere des de 5", async ({ pa
   expect(values).toEqual(["5", "4", "3", "2", "1"]);
 });
 
-test("obre el modal si el nivell ja estÃ  completat", async ({ page }) => {
+test("obre el modal si el nivell ja està completat", async ({ page }) => {
   const dayKey = getTodayKey();
   await page.addInitScript((key) => {
     const record = {
@@ -252,7 +254,7 @@ test("obre el modal si el nivell ja estÃ  completat", async ({ page }) => {
           attempts: 3,
           timeMs: 12345,
           playerPath: [{ id: "alt-camp", name: "Alt Camp" }],
-          shortestPath: ["Alt Camp", "BarcelonÃ¨s"],
+          shortestPath: ["Alt Camp", "Barcelonès"],
           shortestCount: 2
         }
       ],
@@ -260,10 +262,10 @@ test("obre el modal si el nivell ja estÃ  completat", async ({ page }) => {
         attempts: 3,
         timeMs: 12345,
         playerPath: [{ id: "alt-camp", name: "Alt Camp" }],
-        shortestPath: ["Alt Camp", "BarcelonÃ¨s"],
+        shortestPath: ["Alt Camp", "Barcelonès"],
         shortestCount: 2
       },
-      shortestPath: ["Alt Camp", "BarcelonÃ¨s"],
+      shortestPath: ["Alt Camp", "Barcelonès"],
       shortestCount: 2
     };
     localStorage.setItem(
@@ -276,15 +278,27 @@ test("obre el modal si el nivell ja estÃ  completat", async ({ page }) => {
   await expect(page.locator(".modal")).toBeVisible();
 });
 
-test("la configuraciÃ³ es persisteix", async ({ page }) => {
+test("la configuració es persisteix", async ({ page }) => {
   await gotoHome(page);
   await page.getByRole("button", { name: /Opcions/i }).click();
   const optionsDialog = page.getByRole("dialog", { name: /Opcions/i });
   await expect(optionsDialog.getByRole("button", { name: /^Diari$/i })).toHaveCount(0);
   await expect(optionsDialog.getByRole("button", { name: /^Setmanal$/i })).toHaveCount(0);
   await expect(optionsDialog.getByRole("button", { name: /Calendari/i })).toHaveCount(0);
-  await optionsDialog.getByRole("button", { name: /Configuraci/i }).click();
-  await page.locator(".config-content select").last().selectOption("aranes");
+  await expect(optionsDialog.locator(".difficulty-grid .difficulty-button").first()).toContainText(
+    "Pixapí"
+  );
+  await optionsDialog.getByRole("button", { name: /^Configuració$/i }).click();
+  const configModal = page.locator(".config-modal");
+  await expect(configModal.getByRole("heading", { name: /^Configuració$/i })).toBeVisible();
+  const languageSelect = page.locator(".config-content select").last();
+  await expect(languageSelect).toContainText("Català");
+  await expect(languageSelect).toContainText("Aranès");
+  await expect(languageSelect).toContainText("Gironí");
+  await expect(languageSelect).toContainText("Barceloní");
+  await expect(languageSelect).toContainText("Tarragoní");
+  await expect(languageSelect).toContainText("Lleidatà");
+  await languageSelect.selectOption("aranes");
   await page.getByRole("button", { name: /Tanca/i }).click();
   await page.waitForFunction(() => {
     const raw = localStorage.getItem("rumb-settings-v1");
@@ -302,6 +316,24 @@ test("la configuraciÃ³ es persisteix", async ({ page }) => {
     return raw ? JSON.parse(raw).language : null;
   });
   expect(language).toBe("aranes");
+});
+
+test("els simbols dels controls es renderitzen correctament", async ({ page }) => {
+  await gotoHome(page);
+  await page.waitForSelector("svg.map");
+  await expect(page.getByRole("button", { name: /Allunyar/i })).toHaveText("−");
+
+  await page.getByRole("button", { name: /Opcions/i }).click();
+  const optionsDialog = page.getByRole("dialog", { name: /Opcions/i });
+  await expect(optionsDialog.locator(".icon-button")).toHaveText("×");
+  await optionsDialog.getByRole("button", { name: /Tanca/i }).click();
+
+  await page.getByRole("button", { name: /Calendari/i }).click();
+  const calendarPanel = page.locator(".calendar-panel");
+  await expect(calendarPanel).toBeVisible();
+  await expect(calendarPanel.locator(".calendar-header .icon-button")).toHaveText("×");
+  await expect(calendarPanel.locator(".calendar-month .icon-button").first()).toHaveText("‹");
+  await expect(calendarPanel.locator(".calendar-month .icon-button").last()).toHaveText("›");
 });
 
 test("arrenca amb l'audio silenciat i el volum funciona en mobil", async ({ page }) => {
