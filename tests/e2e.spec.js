@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect } from "@playwright/test";
 
 const getTodayKey = () => {
   const now = new Date();
@@ -27,7 +27,8 @@ test("carrega el mapa i la UI base", async ({ page }) => {
   expect(logoBox?.width).toBeGreaterThanOrEqual(54);
   expect(logoBox?.height).toBeGreaterThanOrEqual(42);
   await expect(page.locator(".brand-date")).toBeVisible();
-  await expect(page.locator(".brand-mode-description")).toContainText("Mode normal:");
+  await expect(page.locator(".brand-mode-description")).toContainText("uneix Inici i Dest");
+  await expect(page.locator(".brand-mode-description")).not.toContainText("Mode normal:");
   const headerAlignment = await page.evaluate(() => {
     const titleBox = document.querySelector(".brand h1")?.getBoundingClientRect();
     const dateBox = document.querySelector(".brand-date")?.getBoundingClientRect();
@@ -79,15 +80,15 @@ test("carrega el mapa i la UI base", async ({ page }) => {
   await expect(page.getByRole("button", { name: /Calendari/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /Esbrina/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /Opcions/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Veïnes|VeÃ¯nes/i })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /VeÃ¯nes|VeÃƒÂ¯nes/i })).toHaveCount(0);
   await expect(page.locator(".bottom-nav")).toBeHidden();
   await expect(page.getByText(/Inici:/i)).toBeVisible();
-  await expect(page.getByText(/Destí:/i)).toBeVisible();
+  await expect(page.getByText(/DestÃ­:/i)).toBeVisible();
   await expect(page.getByText(/Norma:/i)).toBeVisible();
-  await expect(page.getByText(/Sense connexió/i)).toHaveCount(0);
+  await expect(page.getByText(/Sense connexiÃ³/i)).toHaveCount(0);
   await expect(page.getByText(/^Jugada$/i)).toHaveCount(0);
   await expect(page.getByText(/Comarques:/i)).toHaveCount(0);
-  await expect(page.getByText(/Òptim:/i)).toHaveCount(0);
+  await expect(page.getByText(/Ã’ptim:/i)).toHaveCount(0);
 });
 
 test("nova partida genera un repte nou mantenint mode i dificultat", async ({ page }) => {
@@ -171,7 +172,7 @@ test("inicia el nivell diari", async ({ page }) => {
   await gotoHome(page);
   await page.getByRole("button", { name: /^Diari$/i }).click();
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");
-  await expect(page.locator(".brand-mode-description")).toContainText("Mode normal:");
+  await expect(page.locator(".brand-mode-description")).toContainText("uneix Inici i Dest");
   await expect(page.locator(".brand-mode-description")).not.toContainText("Mode diari:");
 });
 
@@ -182,7 +183,7 @@ test("inicia el nivell setmanal", async ({ page }) => {
   await gotoHome(page);
   await page.getByRole("button", { name: /^Setmanal$/i }).click();
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "weekly");
-  await expect(page.locator(".brand-mode-description")).toContainText("Mode normal:");
+  await expect(page.locator(".brand-mode-description")).toContainText("uneix Inici i Dest");
 });
 
 test("la descripcio de capcalera canvia en mode explora", async ({ page }) => {
@@ -194,7 +195,8 @@ test("la descripcio de capcalera canvia en mode explora", async ({ page }) => {
   const optionsDialog = page.getByRole("dialog", { name: /Opcions/i });
   await optionsDialog.getByRole("button", { name: /^Explora$/i }).click();
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "explore");
-  await expect(page.locator(".brand-mode-description")).toContainText("Explora:");
+  await expect(page.locator(".brand-mode-description")).toContainText("juga sense pressa");
+  await expect(page.locator(".brand-mode-description")).not.toContainText("Explora:");
 });
 
 test("contrarellotge tanca opcions i mostra compte enrere des de 5", async ({ page }) => {
@@ -226,7 +228,10 @@ test("contrarellotge tanca opcions i mostra compte enrere des de 5", async ({ pa
   await expect(optionsDialog).toBeVisible();
   await optionsDialog.getByRole("button", { name: /Contrarellotge/i }).click();
   await expect(optionsDialog).toBeHidden();
-  await expect(page.locator(".brand-mode-description")).toContainText("Contrarellotge:");
+  await expect(page.locator(".brand-mode-description")).toContainText(
+    "completa el cam"
+  );
+  await expect(page.locator(".brand-mode-description")).not.toContainText("Contrarellotge:");
 
   const countdown = page.locator(".countdown-value");
   await expect(countdown).toHaveText("5");
@@ -235,7 +240,7 @@ test("contrarellotge tanca opcions i mostra compte enrere des de 5", async ({ pa
   expect(values).toEqual(["5", "4", "3", "2", "1"]);
 });
 
-test("obre el modal si el nivell ja està completat", async ({ page }) => {
+test("obre el modal si el nivell ja estÃ  completat", async ({ page }) => {
   const dayKey = getTodayKey();
   await page.addInitScript((key) => {
     const record = {
@@ -247,7 +252,7 @@ test("obre el modal si el nivell ja està completat", async ({ page }) => {
           attempts: 3,
           timeMs: 12345,
           playerPath: [{ id: "alt-camp", name: "Alt Camp" }],
-          shortestPath: ["Alt Camp", "Barcelonès"],
+          shortestPath: ["Alt Camp", "BarcelonÃ¨s"],
           shortestCount: 2
         }
       ],
@@ -255,10 +260,10 @@ test("obre el modal si el nivell ja està completat", async ({ page }) => {
         attempts: 3,
         timeMs: 12345,
         playerPath: [{ id: "alt-camp", name: "Alt Camp" }],
-        shortestPath: ["Alt Camp", "Barcelonès"],
+        shortestPath: ["Alt Camp", "BarcelonÃ¨s"],
         shortestCount: 2
       },
-      shortestPath: ["Alt Camp", "Barcelonès"],
+      shortestPath: ["Alt Camp", "BarcelonÃ¨s"],
       shortestCount: 2
     };
     localStorage.setItem(
@@ -271,14 +276,14 @@ test("obre el modal si el nivell ja està completat", async ({ page }) => {
   await expect(page.locator(".modal")).toBeVisible();
 });
 
-test("la configuració es persisteix", async ({ page }) => {
+test("la configuraciÃ³ es persisteix", async ({ page }) => {
   await gotoHome(page);
   await page.getByRole("button", { name: /Opcions/i }).click();
   const optionsDialog = page.getByRole("dialog", { name: /Opcions/i });
   await expect(optionsDialog.getByRole("button", { name: /^Diari$/i })).toHaveCount(0);
   await expect(optionsDialog.getByRole("button", { name: /^Setmanal$/i })).toHaveCount(0);
   await expect(optionsDialog.getByRole("button", { name: /Calendari/i })).toHaveCount(0);
-  await page.getByRole("button", { name: /Configuració/i }).click();
+  await optionsDialog.getByRole("button", { name: /Configuraci/i }).click();
   await page.locator(".config-content select").last().selectOption("aranes");
   await page.getByRole("button", { name: /Tanca/i }).click();
   await page.waitForFunction(() => {
@@ -505,6 +510,33 @@ test("la navegacio mobil te nomes reptes a capcalera i accions a baix", async ({
   await expect(page.locator(".topbar-calendar")).toBeHidden();
   await expect(page.locator(".topbar").getByRole("button", { name: /^Diari$/i })).toBeVisible();
   await expect(page.locator(".topbar").getByRole("button", { name: /^Setmanal$/i })).toBeVisible();
+  const mobileBrandMetrics = await page.evaluate(() => {
+    const brand = document.querySelector(".topbar .brand");
+    const button = document.querySelector(".topbar .brand-button");
+    const brandBox = brand?.getBoundingClientRect();
+    const buttonBox = button?.getBoundingClientRect();
+    const brandStyle = brand ? getComputedStyle(brand) : null;
+    return {
+      centerDelta:
+        brandBox && buttonBox
+          ? Math.round(
+              Math.abs(
+                brandBox.left + brandBox.width / 2 - (buttonBox.left + buttonBox.width / 2)
+              )
+            )
+          : Infinity,
+      buttonWidth: Math.round(buttonBox?.width || 0),
+      brandWidth: Math.round(brandBox?.width || 0),
+      background: brandStyle?.backgroundColor || "",
+      borderTopWidth: brandStyle?.borderTopWidth || "",
+      boxShadow: brandStyle?.boxShadow || ""
+    };
+  });
+  expect(mobileBrandMetrics.centerDelta).toBeLessThanOrEqual(3);
+  expect(mobileBrandMetrics.buttonWidth).toBeLessThan(mobileBrandMetrics.brandWidth);
+  expect(mobileBrandMetrics.background).toBe("rgba(0, 0, 0, 0)");
+  expect(mobileBrandMetrics.borderTopWidth).toBe("0px");
+  expect(mobileBrandMetrics.boxShadow).toBe("none");
 
   await page.locator(".topbar .brand-button").click();
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "normal");
@@ -572,3 +604,4 @@ test("la barra mobil no talla les accions a amplades petites", async ({ page }) 
     ).toBeTruthy();
   }
 });
+

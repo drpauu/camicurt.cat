@@ -1940,15 +1940,16 @@ h1 {
     display: block;
     width: 100%;
     max-width: none;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    box-shadow: 0 4px 14px var(--shadow);
-    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
   }
 
   .brand-row {
-    display: block;
+    display: flex;
+    justify-content: center;
   }
 
   .brand-date,
@@ -1957,12 +1958,15 @@ h1 {
   }
 
   .brand-button {
-    width: 100%;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto;
     min-height: auto;
     padding: 0;
     align-items: center;
     gap: 10px;
-    justify-content: flex-start;
+    justify-content: center;
+    text-align: center;
   }
 
   .brand h1 {
