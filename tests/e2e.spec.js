@@ -107,6 +107,33 @@ test("nova partida genera un repte nou mantenint mode i dificultat", async ({ pa
   expect(await page.evaluate(() => localStorage.getItem("rumb-difficulty"))).toBe("pixapi");
 });
 
+test("nova partida surt dels reptes diari i setmanal cap a un nivell normal aleatori", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("rumb-mode", "normal");
+    localStorage.setItem("rumb-difficulty", "pixapi");
+  });
+  await gotoHome(page);
+  await page.waitForSelector("svg.map");
+  const route = page.locator(".map-brief .route");
+
+  await page.getByRole("button", { name: /^Diari$/i }).click();
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");
+  const dailyRoute = (await route.textContent())?.trim();
+  expect(dailyRoute).toBeTruthy();
+  await page.getByRole("button", { name: /Nova partida/i }).click();
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "normal");
+  await expect.poll(async () => (await route.textContent())?.trim()).not.toBe(dailyRoute);
+
+  await page.getByRole("button", { name: /^Setmanal$/i }).click();
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "weekly");
+  const weeklyRoute = (await route.textContent())?.trim();
+  expect(weeklyRoute).toBeTruthy();
+  await page.getByRole("button", { name: /Nova partida/i }).click();
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "normal");
+  await expect.poll(async () => (await route.textContent())?.trim()).not.toBe(weeklyRoute);
+  expect(await page.evaluate(() => localStorage.getItem("rumb-difficulty"))).toBe("pixapi");
+});
+
 test("el comodi d'inicials mostra lletres grans sense sortir del mapa de cada comarca", async ({ page }) => {
   await gotoHome(page);
   await page.waitForSelector("svg.map");
@@ -469,11 +496,18 @@ test("la navegacio mobil te nomes reptes a capcalera i accions a baix", async ({
   await gotoHome(page);
   await page.waitForSelector("svg.map");
 
-  await expect(page.locator(".topbar .brand")).toBeHidden();
+  await expect(page.locator(".topbar .brand")).toBeVisible();
+  await expect(page.locator(".topbar .brand h1")).toHaveText("camicurt.cat");
+  await expect(page.locator(".topbar .brand-logo")).toBeVisible();
+  await expect(page.locator(".brand-date")).toBeHidden();
+  await expect(page.locator(".brand-mode-description")).toBeHidden();
   await expect(page.locator(".topbar-new-game")).toBeHidden();
   await expect(page.locator(".topbar-calendar")).toBeHidden();
   await expect(page.locator(".topbar").getByRole("button", { name: /^Diari$/i })).toBeVisible();
   await expect(page.locator(".topbar").getByRole("button", { name: /^Setmanal$/i })).toBeVisible();
+
+  await page.locator(".topbar .brand-button").click();
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "normal");
 
   const bottomLabels = await page
     .locator(".bottom-nav .bottom-nav-label")
@@ -505,7 +539,7 @@ test("la navegacio mobil te nomes reptes a capcalera i accions a baix", async ({
   expect(bottomNavMetrics.newGameHeight).toBeGreaterThanOrEqual(44);
 
   await page.locator(".bottom-nav").getByRole("button", { name: /Nova partida/i }).click();
-  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "explore");
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "normal");
   expect(await page.evaluate(() => localStorage.getItem("rumb-difficulty"))).toBe("pixapi");
 });
 

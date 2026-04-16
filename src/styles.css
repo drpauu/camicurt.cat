@@ -1929,14 +1929,51 @@ h1 {
   }
 
   .topbar {
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: 1fr;
     align-items: stretch;
-    gap: 0;
+    gap: 8px;
     position: relative;
   }
 
   .brand {
+    display: block;
+    width: 100%;
+    max-width: none;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 4px 14px var(--shadow);
+    padding: 8px 12px;
+  }
+
+  .brand-row {
+    display: block;
+  }
+
+  .brand-date,
+  .brand-mode-description {
     display: none;
+  }
+
+  .brand-button {
+    width: 100%;
+    min-height: auto;
+    padding: 0;
+    align-items: center;
+    gap: 10px;
+    justify-content: flex-start;
+  }
+
+  .brand h1 {
+    font-size: 2.05rem;
+    line-height: 1;
+  }
+
+  .brand-logo {
+    width: 62px;
+    height: 48px;
+    flex-basis: 62px;
   }
 
   .topbar-right {

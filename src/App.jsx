@@ -1751,6 +1751,7 @@ export default function App() {
   const telemetryFlushRef = useRef(false);
   const attemptsFlushRef = useRef(false);
   const completionMigrationRef = useRef(false);
+  const pendingStartNextRef = useRef(null);
 
   const leaderboardEndpoint = import.meta.env.VITE_LEADERBOARD_URL || "";
   const isSupabaseReady = useMemo(
@@ -2348,7 +2349,9 @@ export default function App() {
   useEffect(() => {
     if (!comarques.length || !adjacency.size) return;
     if (isCalendarModeActive) return;
-    resetGame();
+    const forceNew = pendingStartNextRef.current;
+    pendingStartNextRef.current = null;
+    resetGame(forceNew ?? false);
   }, [comarques, adjacency, gameMode, activeDifficulty, isCalendarModeActive]);
 
   useEffect(() => {
@@ -3848,27 +3851,11 @@ export default function App() {
     setOptionsOpen(false);
     setConfigOpen(false);
 
-    if (isDailyMode) {
-      const entry = calendarDailyMap.get(activeDayKey);
-      if (entry?.level) {
-        setCalendarSelection({ mode: "daily", key: activeDayKey });
-        applyCalendarLevel(entry.level);
-        calendarApplyRef.current = `daily:${activeDayKey}`;
-        return;
-      }
-      resetGame(false);
-      return;
-    }
-
-    if (isWeeklyMode) {
-      const entry = calendarWeeklyMap.get(activeWeekKey);
-      if (entry?.level) {
-        setCalendarSelection({ mode: "weekly", key: activeWeekKey });
-        applyCalendarLevel(entry.level);
-        calendarApplyRef.current = `weekly:${activeWeekKey}`;
-        return;
-      }
-      resetGame(false);
+    if (isDailyMode || isWeeklyMode) {
+      pendingStartNextRef.current = true;
+      setCalendarSelection(null);
+      calendarApplyRef.current = null;
+      setGameMode("normal");
       return;
     }
 
