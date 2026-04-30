@@ -1,4 +1,90 @@
 ﻿import { test, expect } from "@playwright/test";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { feature, neighbors as topoNeighbors } from "topojson-client";
+import { findShortestPathsWithRule } from "../src/lib/pathfinding.js";
+import { normalizeName } from "../src/lib/names.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const topoPath = path.resolve(__dirname, "..", "public", "catalunya-comarques.topojson");
+const rulesPath = path.resolve(__dirname, "..", "src", "data", "rules.json");
+const RULES = JSON.parse(fs.readFileSync(rulesPath, "utf8"));
+const topology = JSON.parse(fs.readFileSync(topoPath, "utf8"));
+const objectKey = Object.keys(topology.objects)[0];
+const topologyObject = topology.objects[objectKey];
+const comarques = feature(topology, topologyObject).features;
+const comarcaIds = comarques.map((item) => item.properties.id);
+const comarcaNameById = new Map(
+  comarques.map((item) => [item.properties.id, item.properties.name])
+);
+const comarcaIdByName = new Map(
+  comarques.map((item) => [normalizeName(item.properties.name), item.properties.id])
+);
+const adjacency = new Map();
+topoNeighbors(topologyObject.geometries || []).forEach((neighbors, index) => {
+  adjacency.set(
+    comarcaIds[index],
+    new Set(neighbors.map((neighborIndex) => comarcaIds[neighborIndex]))
+  );
+});
+
+const getRouteAndRule = async (page) =>
+  page.evaluate(() => {
+    const routeSpans = [...document.querySelectorAll(".map-brief .route span")].map(
+      (span) => span.textContent || ""
+    );
+    const clean = (value) => value.replace(/^[^:]+:\s*/, "").trim();
+    return {
+      startName: clean(routeSpans[0] || ""),
+      targetName: clean(routeSpans[1] || ""),
+      ruleLabel:
+        (document.querySelector(".map-brief .rule-line")?.textContent || "")
+          .replace(/^[^:]+:\s*/, "")
+          .trim()
+    };
+  });
+
+const resolveOptimalGuessNames = ({ startName, targetName, ruleLabel }) => {
+  const startId = comarcaIdByName.get(normalizeName(startName));
+  const targetId = comarcaIdByName.get(normalizeName(targetName));
+  const rawRule = RULES.find((rule) => rule.text === ruleLabel);
+  const rule = rawRule
+    ? {
+        id: rawRule.id,
+        kind: rawRule.type === "FORBID" ? "avoid" : "mustIncludeAny",
+        label: rawRule.text,
+        comarques: rawRule.comarques || []
+      }
+    : null;
+  const preparedRule = rule
+    ? {
+        ...rule,
+        comarcaIds: (rule.comarques || [])
+          .map((name) => comarcaIdByName.get(normalizeName(name)))
+          .filter(Boolean)
+      }
+    : null;
+  const result = findShortestPathsWithRule(
+    startId,
+    targetId,
+    adjacency,
+    preparedRule,
+    comarcaIds,
+    { maxPaths: 64 }
+  );
+  return result.primaryPath
+    .filter((id) => id !== startId && id !== targetId)
+    .map((id) => comarcaNameById.get(id) || id);
+};
+
+const playGuesses = async (page, names) => {
+  const input = page.locator("#guess-input");
+  for (const name of names) {
+    await input.fill(name);
+    await page.getByRole("button", { name: /Esbrina/i }).click();
+  }
+};
 
 const getTodayKey = () => {
   const now = new Date();
@@ -76,7 +162,7 @@ test("carrega el mapa i la UI base", async ({ page }) => {
   await expect((await page.request.get("/logo/favicon-simple.svg")).ok()).toBeTruthy();
   await expect(page.getByRole("button", { name: /Nova partida/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /^Diari$/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Setmanal$/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Setmanal$/i })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Calendari/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /Esbrina/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /Opcions/i })).toBeVisible();
@@ -110,7 +196,7 @@ test("nova partida genera un repte nou mantenint mode i dificultat", async ({ pa
   expect(await page.evaluate(() => localStorage.getItem("rumb-difficulty"))).toBe("pixapi");
 });
 
-test("nova partida surt dels reptes diari i setmanal cap a un nivell normal aleatori", async ({ page }) => {
+test("nova partida surt del repte diari cap a un nivell normal aleatori", async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem("rumb-mode", "normal");
     localStorage.setItem("rumb-difficulty", "pixapi");
@@ -127,13 +213,6 @@ test("nova partida surt dels reptes diari i setmanal cap a un nivell normal alea
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "normal");
   await expect.poll(async () => (await route.textContent())?.trim()).not.toBe(dailyRoute);
 
-  await page.getByRole("button", { name: /^Setmanal$/i }).click();
-  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "weekly");
-  const weeklyRoute = (await route.textContent())?.trim();
-  expect(weeklyRoute).toBeTruthy();
-  await page.getByRole("button", { name: /Nova partida/i }).click();
-  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "normal");
-  await expect.poll(async () => (await route.textContent())?.trim()).not.toBe(weeklyRoute);
   expect(await page.evaluate(() => localStorage.getItem("rumb-difficulty"))).toBe("pixapi");
 });
 
@@ -178,14 +257,31 @@ test("inicia el nivell diari", async ({ page }) => {
   await expect(page.locator(".brand-mode-description")).not.toContainText("Mode diari:");
 });
 
-test("inicia el nivell setmanal", async ({ page }) => {
+test("completar el nivell diari desbloqueja totes les dificultats", async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem("rumb-mode", "normal");
+    localStorage.setItem("rumb-difficulty", "pixapi");
+    localStorage.setItem("rumb-difficulty-unlocks-v1", JSON.stringify(["pixapi"]));
   });
   await gotoHome(page);
-  await page.getByRole("button", { name: /^Setmanal$/i }).click();
-  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "weekly");
-  await expect(page.locator(".brand-mode-description")).toContainText("uneix Inici i Dest");
+  await page.getByRole("button", { name: /^Diari$/i }).click();
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");
+  await page.waitForSelector(".map-brief .route");
+
+  const route = await getRouteAndRule(page);
+  const guesses = resolveOptimalGuessNames(route);
+  expect(guesses.length).toBeGreaterThan(0);
+  await playGuesses(page, guesses);
+
+  await expect(page.locator(".modal")).toBeVisible();
+  await expect
+    .poll(async () =>
+      JSON.parse(
+        (await page.evaluate(() => localStorage.getItem("rumb-difficulty-unlocks-v1"))) ||
+          "[]"
+      ).sort()
+    )
+    .toEqual(["cap-colla-rutes", "dominguero", "pixapi", "rondinaire"]);
 });
 
 test("la descripcio de capcalera canvia en mode explora", async ({ page }) => {
@@ -263,7 +359,8 @@ test("obre el modal si el nivell ja està completat", async ({ page }) => {
         timeMs: 12345,
         playerPath: [{ id: "alt-camp", name: "Alt Camp" }],
         shortestPath: ["Alt Camp", "Barcelonès"],
-        shortestCount: 2
+        shortestCount: 2,
+        distance: 1
       },
       shortestPath: ["Alt Camp", "Barcelonès"],
       shortestCount: 2
@@ -275,7 +372,60 @@ test("obre el modal si el nivell ja està completat", async ({ page }) => {
   }, dayKey);
   await gotoHome(page);
   await page.getByRole("button", { name: /^Diari$/i }).click();
-  await expect(page.locator(".modal")).toBeVisible();
+  const modal = page.locator(".modal");
+  await expect(modal).toBeVisible();
+  await expect(modal).toContainText("Intents: 3");
+  await expect(modal).toContainText("Temps: 0:12");
+  await expect(modal).toContainText("Camí més curt: 2 comarques");
+  await expect(modal).toContainText("Un camí òptim");
+  await expect(modal).toContainText("Alt Camp");
+  await expect(modal).not.toContainText("Top temps");
+  await expect(modal).not.toContainText("Distribució");
+  await expect(modal).not.toContainText("El teu recorregut");
+  const resetStyles = await modal.locator(".reset").evaluate((button) => {
+    const styles = getComputedStyle(button);
+    return {
+      backgroundColor: styles.backgroundColor,
+      borderRadius: styles.borderRadius,
+      fontWeight: styles.fontWeight
+    };
+  });
+  expect(resetStyles.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+  expect(resetStyles.borderRadius).toBe("8px");
+  expect(Number(resetStyles.fontWeight)).toBeGreaterThanOrEqual(600);
+});
+
+test("el modal no mostra cami optim si la ruta ja es curta", async ({ page }) => {
+  const dayKey = getTodayKey();
+  await page.addInitScript((key) => {
+    const winningAttempt = {
+      attempts: 2,
+      timeMs: 9000,
+      playerPath: [{ id: "alt-camp", name: "Alt Camp" }],
+      shortestPath: ["Alt Camp"],
+      shortestCount: 1,
+      distance: 0
+    };
+    const record = {
+      levelKey: `daily:${key}`,
+      dayKey: key,
+      mode: "daily",
+      attemptsList: [winningAttempt],
+      winningAttempt,
+      shortestPath: ["Alt Camp"],
+      shortestCount: 1
+    };
+    localStorage.setItem(
+      "rumb-completion-records-v1",
+      JSON.stringify({ [`daily:${key}`]: record })
+    );
+  }, dayKey);
+  await gotoHome(page);
+  await page.getByRole("button", { name: /^Diari$/i }).click();
+  const modal = page.locator(".modal");
+  await expect(modal).toBeVisible();
+  await expect(modal).toContainText("Camí més curt: 1 comarques");
+  await expect(modal).not.toContainText("Un camí òptim");
 });
 
 test("la configuració es persisteix", async ({ page }) => {
@@ -541,7 +691,7 @@ test("la navegacio mobil te nomes reptes a capcalera i accions a baix", async ({
   await expect(page.locator(".topbar-new-game")).toBeHidden();
   await expect(page.locator(".topbar-calendar")).toBeHidden();
   await expect(page.locator(".topbar").getByRole("button", { name: /^Diari$/i })).toBeVisible();
-  await expect(page.locator(".topbar").getByRole("button", { name: /^Setmanal$/i })).toBeVisible();
+  await expect(page.locator(".topbar").getByRole("button", { name: /^Setmanal$/i })).toHaveCount(0);
   const mobileBrandMetrics = await page.evaluate(() => {
     const brand = document.querySelector(".topbar .brand");
     const button = document.querySelector(".topbar .brand-button");

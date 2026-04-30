@@ -1,4 +1,4 @@
-name: Generate daily/weekly levels
+name: Generate daily levels
 
 on:
   schedule:
@@ -11,5 +11,5 @@ jobs:
     steps:
       - name: Call Supabase Edge Function
         run: |
-          curl -sS -X POST "https://ahkrdvxcgsshihhsezzr.supabase.co/functions/v1/generate-level" \
+          curl -sS -X POST "https://rhacvjioirfrintkrtwx.supabase.co/functions/v1/generate-level" \
             -H "x-cron-key: ${{ secrets.CRON_KEY }}"

@@ -33,7 +33,6 @@ export function upsertCompletionRecord(records, levelKey, payload) {
     levelId: payload.levelId || current.levelId || null,
     mode: payload.mode || current.mode || null,
     dayKey: payload.dayKey || current.dayKey || null,
-    weekKey: payload.weekKey || current.weekKey || null,
     completedAt: payload.completedAt || current.completedAt || new Date().toISOString(),
     attemptsList,
     winningAttempt,

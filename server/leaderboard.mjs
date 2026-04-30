@@ -10,7 +10,7 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 40;
 const rateMap = new Map();
 
-const VALID_MODES = new Set(["normal", "timed", "explore", "daily", "weekly"]);
+const VALID_MODES = new Set(["normal", "timed", "explore", "daily"]);
 
 function readEntries() {
   try {
@@ -94,7 +94,7 @@ function sanitizeEntry(entry) {
     region: cleanString(entry.region, 40) || null,
     group: normalizeKey(entry.group, 8, /^[0-9]{5}$/) || null,
     groupName: cleanString(entry.groupName, 60) || null,
-    weekKey: normalizeKey(entry.weekKey, 12, /^[0-9]{4}-W[0-9]{2}$/) || null,
+    weekKey: null,
     dayKey: normalizeKey(entry.dayKey, 10, /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) || null,
     coinsEarned: clampNumber(entry.coinsEarned, 0, 9999) ?? 0,
     createdAt: createdAtIso

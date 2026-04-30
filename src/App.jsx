@@ -38,7 +38,6 @@ const ACTIVE_THEME_KEY = "rumb-theme-active-v1";
 const DIFFICULTY_UNLOCKS_KEY = "rumb-difficulty-unlocks-v1";
 const LEVEL_STATS_KEY = "rumb-level-stats-v1";
 const DAILY_RESULTS_KEY = "rumb-daily-results-v1";
-const WEEKLY_RESULTS_KEY = "rumb-weekly-results-v1";
 const CALENDAR_WEEKDAYS = ["dl", "dt", "dc", "dj", "dv", "ds", "dg"];
 const CALENDAR_CACHE_KEY = "rumb-calendar-cache-v1";
 const CALENDAR_CACHE_TTL_MS = 1000 * 60 * 15;
@@ -133,7 +132,6 @@ const PRIMARY_MODES = [
 ];
 
 const DAILY_MIN_INTERNAL = 4;
-const WEEKLY_MIN_INTERNAL = 8;
 const EXPLORE_MIN_INTERNAL = 8;
 
 const POWERUPS = [
@@ -224,16 +222,12 @@ const STRINGS = {
     timeLeft: "Temps restant",
     coins: "Rovellons",
     daily: "Diari",
-    weekly: "Setmanal",
     dailyLevel: "Nivell diari",
-    weeklyLevel: "Nivell setmanal",
     playToday: "Jugar al problema d'avui",
-    playWeekly: "Jugar al problema d'aquesta setmana",
     calendar: "Calendari",
     calendarLoading: "Carregant calendari...",
     calendarEmpty: "Sense nivells",
     calendarPlayDaily: "Jugar diari",
-    calendarPlayWeekly: "Jugar setmanal",
     calendarNoLevel: "Sense nivell",
     previous: "Anterior",
     next: "Següent",
@@ -297,7 +291,6 @@ const STRINGS = {
     buyFor: "Compra per {value}",
     reward: "Premi",
     dailyDone: "Diari completat",
-    weeklyDone: "Setmanal completat",
     noRule: "Sense norma",
     path: "Camí escrit",
     fixedDifficulty: "Dificultat fixa per aquest mode.",
@@ -335,11 +328,8 @@ const STRINGS = {
     timeLeft: "Temps restant",
     coins: "Rovellons",
     daily: "Diari",
-    weekly: "Setmanau",
     dailyLevel: "Nivell diari",
-    weeklyLevel: "Nivell setmanau",
     playToday: "Jugar al problema d'avui",
-    playWeekly: "Jugar al problema d'aquesta setmana",
     calendar: "Calendari",
     completed: "Completat",
     mode: "Mòde",
@@ -367,7 +357,6 @@ const STRINGS = {
     collect: "Recuelh",
     config: "Configuracion",
     calendarPlayDaily: "Jugar diari",
-    calendarPlayWeekly: "Jugar setmanau",
     calendarNoLevel: "Sense nivèl",
     previous: "Anterior",
     next: "Seguent",
@@ -390,7 +379,6 @@ const STRINGS = {
     buyFor: "Crompa per {value}",
     reward: "Prèmi",
     dailyDone: "Diari completat",
-    weeklyDone: "Setmanau completat",
     noRule: "Sense nòrma",
     path: "Camín escrit",
     fixedDifficulty: "Dificultat fixa entà aguest mòde.",
@@ -427,11 +415,8 @@ const STRINGS = {
     timeLeft: "Temps que queda, eh",
     coins: "Rovellons",
     daily: "Diari, noi",
-    weekly: "Setmanal, nano",
     dailyLevel: "Nivell diari",
-    weeklyLevel: "Nivell setmanal",
     playToday: "Jugar al problema d'avui",
-    playWeekly: "Jugar al problema d'aquesta setmana",
     calendar: "Calendari, noi",
     completed: "Fet i ben fet",
     mode: "Mode, noi",
@@ -459,7 +444,6 @@ const STRINGS = {
     collect: "Recull",
     config: "Ajustos de la vida",
     calendarPlayDaily: "Juga diari, noi",
-    calendarPlayWeekly: "Juga setmanal, nano",
     calendarNoLevel: "Sense nivell, apa",
     previous: "Enrere",
     next: "Següent",
@@ -482,7 +466,6 @@ const STRINGS = {
     buyFor: "Pilla per {value}",
     reward: "Premi",
     dailyDone: "Diari fet",
-    weeklyDone: "Setmanal fet",
     noRule: "Sense norma, eh",
     path: "Camí escrit",
     fixedDifficulty: "Dificultat fixa, no toquis res.",
@@ -519,11 +502,8 @@ const STRINGS = {
     timeLeft: "Temps que queda, bro",
     coins: "Rovellons",
     daily: "Diari, bro",
-    weekly: "Setmanal, bro",
     dailyLevel: "Nivell diari",
-    weeklyLevel: "Nivell setmanal",
     playToday: "Jugar al problema d'avui",
-    playWeekly: "Jugar al problema d'aquesta setmana",
     calendar: "Calendari, bro",
     completed: "Fet, bro",
     mode: "Mode, bro",
@@ -551,7 +531,6 @@ const STRINGS = {
     collect: "Pilla",
     config: "Config, bro",
     calendarPlayDaily: "Juga diari, bro",
-    calendarPlayWeekly: "Juga setmanal, bro",
     calendarNoLevel: "Res avui, bro",
     previous: "Enrere",
     next: "Següent",
@@ -574,7 +553,6 @@ const STRINGS = {
     buyFor: "Compra per {value}",
     reward: "Premi",
     dailyDone: "Diari fet",
-    weeklyDone: "Setmanal fet",
     noRule: "Sense norma, tio",
     path: "Camí escrit",
     fixedDifficulty: "Dificultat fixa, no maregis",
@@ -611,11 +589,8 @@ const STRINGS = {
     timeLeft: "Temps que queda, xe",
     coins: "Rovellons",
     daily: "Diari, xe",
-    weekly: "Setmanal, xe",
     dailyLevel: "Nivell diari",
-    weeklyLevel: "Nivell setmanal",
     playToday: "Jugar al problema d'avui",
-    playWeekly: "Jugar al problema d'aquesta setmana",
     calendar: "Calendari, xe",
     completed: "Fet i llest",
     mode: "Mode, xe",
@@ -643,7 +618,6 @@ const STRINGS = {
     collect: "Recull",
     config: "Configuració, xe",
     calendarPlayDaily: "Juga diari, xe",
-    calendarPlayWeekly: "Juga setmanal, xe",
     calendarNoLevel: "No n'hi ha, xe",
     previous: "Enrere",
     next: "Següent",
@@ -666,7 +640,6 @@ const STRINGS = {
     buyFor: "Compra per {value}",
     reward: "Premi",
     dailyDone: "Diari fet",
-    weeklyDone: "Setmanal fet",
     noRule: "Sense norma, xe",
     path: "Camí escrit",
     fixedDifficulty: "Dificultat fixa, no toquis",
@@ -702,11 +675,8 @@ const STRINGS = {
     timeLeft: "Temps que queda, lo",
     coins: "Rovellons",
     daily: "Diari, lo",
-    weekly: "Setmanal, lo",
     dailyLevel: "Nivell diari",
-    weeklyLevel: "Nivell setmanal",
     playToday: "Jugar al problema d'avui",
-    playWeekly: "Jugar al problema d'aquesta setmana",
     calendar: "Calendari, lo",
     completed: "Fet i dat",
     mode: "Mode, lo",
@@ -734,7 +704,6 @@ const STRINGS = {
     collect: "Recull",
     config: "Configuració, lo",
     calendarPlayDaily: "Juga diari, lo",
-    calendarPlayWeekly: "Juga setmanal, lo",
     calendarNoLevel: "No n'hi ha, lo",
     previous: "Enrere",
     next: "Següent",
@@ -757,7 +726,6 @@ const STRINGS = {
     buyFor: "Compra per {value}",
     reward: "Premi",
     dailyDone: "Diari fet",
-    weeklyDone: "Setmanal fet",
     noRule: "Sense norma, lo",
     path: "Camí escrit",
     fixedDifficulty: "Dificultat fixa, no maregis",
@@ -990,29 +958,6 @@ function normalizeDayKey(value) {
   return null;
 }
 
-function normalizeWeekKey(value) {
-  if (!value) return null;
-  if (value instanceof Date) return getWeekKey(value);
-  if (typeof value === "string") {
-    const match = value.match(/^(\d{4})-W(\d{1,2})$/);
-    if (match) return `${match[1]}-W${match[2].padStart(2, "0")}`;
-    const parsed = new Date(value);
-    if (!Number.isNaN(parsed.valueOf())) return getWeekKey(parsed);
-    return value;
-  }
-  return null;
-}
-
-function getWeekKey(date = new Date()) {
-  const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNr = (target.getUTCDay() + 6) % 7;
-  target.setUTCDate(target.getUTCDate() - dayNr + 3);
-  const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
-  const diff = target - firstThursday;
-  const week = 1 + Math.round(diff / 604800000);
-  return `${target.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
-}
-
 function buildMonthGrid(date) {
   const first = new Date(date.getFullYear(), date.getMonth(), 1);
   const startOffset = (first.getDay() + 6) % 7;
@@ -1028,22 +973,6 @@ function buildMonthGrid(date) {
       label: current.getDate()
     };
   });
-}
-
-function buildWeeksForYear(year) {
-  const base = new Date(Date.UTC(year, 0, 4));
-  const day = (base.getUTCDay() + 6) % 7;
-  base.setUTCDate(base.getUTCDate() - day);
-  const weeks = [];
-  for (let i = 0; i < 53; i += 1) {
-    const current = new Date(base);
-    current.setUTCDate(base.getUTCDate() + i * 7);
-    const key = getWeekKey(current);
-    if (!weeks.find((entry) => entry.key === key)) {
-      weeks.push({ key, date: current });
-    }
-  }
-  return weeks;
 }
 
 function formatDayLabel(dayKey) {
@@ -1078,49 +1007,6 @@ function formatFullDayLabel(dayKey) {
     timeZone: "Europe/Madrid"
   });
   return `${weekday} ${day} de ${month} del ${year}`;
-}
-
-function getWeekRange(weekKey) {
-  if (!weekKey) return null;
-  const [yearPart, weekPart] = weekKey.split("-W");
-  const year = Number(yearPart);
-  const week = Number(weekPart);
-  if (!year || !week) return null;
-  const jan4 = new Date(Date.UTC(year, 0, 4));
-  const dayOfWeek = (jan4.getUTCDay() + 6) % 7;
-  const monday = new Date(Date.UTC(year, 0, 4 - dayOfWeek + (week - 1) * 7));
-  const sunday = new Date(monday);
-  sunday.setUTCDate(monday.getUTCDate() + 6);
-  return { start: monday, end: sunday };
-}
-
-function formatWeekLabel(weekKey) {
-  const range = getWeekRange(weekKey);
-  if (!range) return weekKey || "";
-  const startDay = range.start.toLocaleDateString("ca-ES", {
-    day: "numeric",
-    timeZone: "Europe/Madrid"
-  });
-  const endDay = range.end.toLocaleDateString("ca-ES", {
-    day: "numeric",
-    timeZone: "Europe/Madrid"
-  });
-  const startMonth = range.start.toLocaleDateString("ca-ES", {
-    month: "long",
-    timeZone: "Europe/Madrid"
-  });
-  const endMonth = range.end.toLocaleDateString("ca-ES", {
-    month: "long",
-    timeZone: "Europe/Madrid"
-  });
-  const endYear = range.end.toLocaleDateString("ca-ES", {
-    year: "numeric",
-    timeZone: "Europe/Madrid"
-  });
-  if (startMonth === endMonth) {
-    return `del ${startDay} al ${endDay} de ${endMonth} ${endYear}`;
-  }
-  return `del ${startDay} de ${startMonth} al ${endDay} de ${endMonth} ${endYear}`;
 }
 
 function serializeAdjacency(adjacencyMap) {
@@ -1166,7 +1052,10 @@ function readCalendarCache() {
     const parsed = JSON.parse(raw);
     if (!parsed?.updatedAt) return null;
     if (Date.now() - parsed.updatedAt > CALENDAR_CACHE_TTL_MS) return null;
-    return parsed;
+    return {
+      ...parsed,
+      daily: Array.isArray(parsed.daily) ? parsed.daily : []
+    };
   } catch {
     return null;
   }
@@ -1185,17 +1074,16 @@ function writeCalendarCache(payload) {
 }
 
 function readRuleHistory() {
-  if (typeof window === "undefined") return { daily: [], weekly: [] };
+  if (typeof window === "undefined") return { daily: [] };
   const raw = localStorage.getItem(RULE_HISTORY_KEY);
-  if (!raw) return { daily: [], weekly: [] };
+  if (!raw) return { daily: [] };
   try {
     const parsed = JSON.parse(raw);
     return {
-      daily: Array.isArray(parsed?.daily) ? parsed.daily : [],
-      weekly: Array.isArray(parsed?.weekly) ? parsed.weekly : []
+      daily: Array.isArray(parsed?.daily) ? parsed.daily : []
     };
   } catch {
-    return { daily: [], weekly: [] };
+    return { daily: [] };
   }
 }
 
@@ -1209,17 +1097,16 @@ function writeRuleHistory(history) {
 }
 
 function readRuleAssignments() {
-  if (typeof window === "undefined") return { daily: {}, weekly: {} };
+  if (typeof window === "undefined") return { daily: {} };
   const raw = localStorage.getItem(RULE_ASSIGNMENTS_KEY);
-  if (!raw) return { daily: {}, weekly: {} };
+  if (!raw) return { daily: {} };
   try {
     const parsed = JSON.parse(raw);
     return {
-      daily: parsed?.daily && typeof parsed.daily === "object" ? parsed.daily : {},
-      weekly: parsed?.weekly && typeof parsed.weekly === "object" ? parsed.weekly : {}
+      daily: parsed?.daily && typeof parsed.daily === "object" ? parsed.daily : {}
     };
   } catch {
-    return { daily: {}, weekly: {} };
+    return { daily: {} };
   }
 }
 
@@ -1676,17 +1563,6 @@ export default function App() {
       return {};
     }
   });
-  const [weeklyResults, setWeeklyResults] = useState(() => {
-    if (typeof window === "undefined") return {};
-    const raw = localStorage.getItem(WEEKLY_RESULTS_KEY);
-    if (!raw) return {};
-    try {
-      const parsed = JSON.parse(raw);
-      return parsed && typeof parsed === "object" ? parsed : {};
-    } catch {
-      return {};
-    }
-  });
   const [calendarMode, setCalendarMode] = useState("daily");
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => {
@@ -1694,7 +1570,6 @@ export default function App() {
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [calendarDaily, setCalendarDaily] = useState([]);
-  const [calendarWeekly, setCalendarWeekly] = useState([]);
   const [calendarStatus, setCalendarStatus] = useState("idle");
   const [calendarLoaded, setCalendarLoaded] = useState(false);
   const [calendarSelection, setCalendarSelection] = useState(null);
@@ -1744,9 +1619,9 @@ export default function App() {
   const playerIdRef = useRef(getPlayerId());
   const supabaseUserIdRef = useRef(null);
   const calendarApplyRef = useRef(null);
-  const calendarAutoSetRef = useRef({ daily: false, weekly: false });
+  const calendarAutoSetRef = useRef({ daily: false });
   const calendarLoadingRef = useRef(false);
-  const calendarCountsRef = useRef({ daily: 0, weekly: 0 });
+  const calendarCountsRef = useRef({ daily: 0 });
   const calendarMonthRef = useRef(calendarMonth);
   const telemetryFlushRef = useRef(false);
   const attemptsFlushRef = useRef(false);
@@ -1760,16 +1635,14 @@ export default function App() {
   );
   const isExploreMode = gameMode === "explore";
   const isTimedMode = gameMode === "timed";
-  const isWeeklyMode = gameMode === "weekly";
   const isDailyMode = gameMode === "daily";
-  const isFixedMode = isDailyMode || isWeeklyMode;
-  const shouldLoadCalendar = calendarOpen || isDailyMode || isWeeklyMode;
+  const isFixedMode = isDailyMode;
+  const shouldLoadCalendar = calendarOpen || isDailyMode;
   const activeDifficulty = isFixedMode ? "cap-colla-rutes" : difficulty;
   const difficultyConfig = useMemo(() => {
     return DIFFICULTIES.find((entry) => entry.id === activeDifficulty) || DIFFICULTIES[0];
   }, [activeDifficulty]);
   const timeLeftMs = Math.max(timeLimitMs - elapsedMs - timePenaltyMs, 0);
-  const weekKey = useMemo(() => getWeekKey(), []);
   const dayKey = useMemo(() => getDayKey(), []);
   const centroidMap = useMemo(() => buildCentroidMap(comarques), [comarques]);
   const isMapReady = comarques.length > 0;
@@ -1812,27 +1685,17 @@ export default function App() {
   const calendarDailyMap = useMemo(() => {
     return new Map(calendarDaily.map((entry) => [entry.date, entry]));
   }, [calendarDaily]);
-  const calendarWeeklyMap = useMemo(() => {
-    return new Map(calendarWeekly.map((entry) => [entry.weekKey, entry]));
-  }, [calendarWeekly]);
   const activeDayKey =
     gameMode === "daily" && calendarSelection?.mode === "daily"
       ? calendarSelection.key
       : dayKey;
-  const activeWeekKey =
-    gameMode === "weekly" && calendarSelection?.mode === "weekly"
-      ? calendarSelection.key
-      : weekKey;
   const activeCalendarEntry = useMemo(() => {
     if (!calendarSelection) return null;
     if (calendarSelection.mode === "daily") {
       return calendarDailyMap.get(calendarSelection.key) || null;
     }
-    if (calendarSelection.mode === "weekly") {
-      return calendarWeeklyMap.get(calendarSelection.key) || null;
-    }
     return null;
-  }, [calendarSelection, calendarDailyMap, calendarWeeklyMap]);
+  }, [calendarSelection, calendarDailyMap]);
   const isCalendarModeActive = Boolean(
     calendarSelection &&
       calendarSelection.mode === gameMode &&
@@ -1991,19 +1854,9 @@ export default function App() {
   }, [dailyResults]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (Object.keys(weeklyResults).length > 30) {
-      setWeeklyResults((prev) => trimResults(prev, 30));
-      return;
-    }
-    localStorage.setItem(WEEKLY_RESULTS_KEY, JSON.stringify(weeklyResults));
-  }, [weeklyResults]);
-
-  useEffect(() => {
     if (completionMigrationRef.current) return;
     const hasRecords = completionRecords && Object.keys(completionRecords).length > 0;
-    const hasLegacy =
-      Object.keys(dailyResults).length > 0 || Object.keys(weeklyResults).length > 0;
+    const hasLegacy = Object.keys(dailyResults).length > 0;
     if (hasRecords || !hasLegacy) {
       completionMigrationRef.current = true;
       return;
@@ -2018,18 +1871,9 @@ export default function App() {
         attempt: result
       });
     });
-    Object.entries(weeklyResults).forEach(([key, result]) => {
-      next = upsertCompletionRecord(next, `weekly:${key}`, {
-        mode: "weekly",
-        weekKey: key,
-        shortestPath: result.shortestPath || [],
-        shortestCount: result.shortestCount || 0,
-        attempt: result
-      });
-    });
     completionMigrationRef.current = true;
     setCompletionRecords(next);
-  }, [completionRecords, dailyResults, weeklyResults]);
+  }, [completionRecords, dailyResults]);
 
   useEffect(() => {
     saveCompletionRecords(completionRecords);
@@ -2402,23 +2246,17 @@ export default function App() {
       }
       calendarLoadingRef.current = true;
       const cached = readCalendarCache();
-      const hasCache = Boolean(cached?.daily?.length || cached?.weekly?.length);
+      const hasCache = Boolean(cached?.daily?.length);
       if (hasCache && isMounted) {
         setCalendarDaily(cached.daily || []);
-        setCalendarWeekly(cached.weekly || []);
       }
       setCalendarStatus(hasCache ? "refreshing" : "loading");
       try {
         const now = new Date();
         const start = new Date(now);
         start.setFullYear(now.getFullYear() - 2);
-        const end = new Date(now);
-        end.setFullYear(now.getFullYear() + 2);
         const startKey = getLocalDayKey(start);
-        const endKey = getLocalDayKey(end);
-        const startWeekKey = getWeekKey(start);
-        const endWeekKey = getWeekKey(end);
-
+        const endKey = getLocalDayKey(now);
         const dailyRes = await withRetry(
           () =>
             supabase
@@ -2430,26 +2268,10 @@ export default function App() {
           { retries: 2, backoffMs: 500 }
         );
         if (dailyRes.error) throw dailyRes.error;
-        const weeklyRes = await withRetry(
-          () =>
-            supabase
-              .from("calendar_weekly")
-              .select("week_key, level_id")
-              .gte("week_key", startWeekKey)
-              .lte("week_key", endWeekKey)
-              .order("week_key", { ascending: false }),
-          { retries: 2, backoffMs: 500 }
-        );
-        if (weeklyRes.error) throw weeklyRes.error;
 
         const dailyRows = Array.isArray(dailyRes.data) ? dailyRes.data : [];
-        const weeklyRows = Array.isArray(weeklyRes.data) ? weeklyRes.data : [];
         const levelIds = [
-          ...new Set(
-            [...dailyRows, ...weeklyRows]
-              .map((row) => row.level_id)
-              .filter(Boolean)
-          )
+          ...new Set(dailyRows.map((row) => row.level_id).filter(Boolean))
         ];
 
         const levelsById = new Map();
@@ -2482,23 +2304,11 @@ export default function App() {
             };
           })
           .filter(Boolean);
-        const weeklyEntries = weeklyRows
-          .map((row) => {
-            const weekKeyValue = normalizeWeekKey(row.week_key);
-            if (!weekKeyValue) return null;
-            return {
-              weekKey: weekKeyValue,
-              levelId: row.level_id,
-              level: levelsById.get(row.level_id) || null
-            };
-          })
-          .filter(Boolean);
         if (isMounted) {
           setCalendarDaily(dailyEntries);
-          setCalendarWeekly(weeklyEntries);
           setCalendarStatus("ready");
           setCalendarLoaded(true);
-          writeCalendarCache({ daily: dailyEntries, weekly: weeklyEntries });
+          writeCalendarCache({ daily: dailyEntries });
         }
       } catch {
         if (isMounted) {
@@ -2518,7 +2328,7 @@ export default function App() {
   }, [isSupabaseReady, shouldLoadCalendar, calendarLoaded]);
 
   useEffect(() => {
-    if (gameMode === "daily" || gameMode === "weekly") return;
+    if (gameMode === "daily") return;
     if (calendarSelection) {
       setCalendarSelection(null);
       calendarApplyRef.current = null;
@@ -2532,10 +2342,8 @@ export default function App() {
   useEffect(() => {
     if (!calendarLoaded) return;
     const prevDailyCount = calendarCountsRef.current.daily;
-    const prevWeeklyCount = calendarCountsRef.current.weekly;
     calendarCountsRef.current = {
-      daily: calendarDaily.length,
-      weekly: calendarWeekly.length
+      daily: calendarDaily.length
     };
     const monthRef = calendarMonthRef.current;
     if (calendarMode === "daily" && !calendarAutoSetRef.current.daily) {
@@ -2562,31 +2370,7 @@ export default function App() {
         }
       }
     }
-    if (calendarMode === "weekly" && !calendarAutoSetRef.current.weekly) {
-      const latestWeek = calendarWeekly[0]?.weekKey;
-      if (latestWeek) {
-        const year = Number(latestWeek.slice(0, 4));
-        if (!Number.isNaN(year)) {
-          setCalendarMonth(new Date(year, 0, 1));
-        }
-      }
-      calendarAutoSetRef.current.weekly = true;
-    }
-    if (
-      calendarMode === "weekly" &&
-      prevWeeklyCount === 0 &&
-      calendarWeekly.length > 0 &&
-      monthRef
-    ) {
-      const latestWeek = calendarWeekly[0]?.weekKey;
-      if (latestWeek) {
-        const year = Number(latestWeek.slice(0, 4));
-        if (!Number.isNaN(year)) {
-          setCalendarMonth(new Date(year, 0, 1));
-        }
-      }
-    }
-  }, [calendarLoaded, calendarMode, calendarDaily, calendarWeekly]);
+  }, [calendarLoaded, calendarMode, calendarDaily]);
 
   useEffect(() => {
     if (unlockedDifficulties.has(difficulty)) return;
@@ -3003,7 +2787,7 @@ export default function App() {
       target_id: targetId,
       rule_id: activeRule?.id || null,
       day_key: isDailyMode ? activeDayKey : null,
-      week_key: isWeeklyMode ? activeWeekKey : null,
+      week_key: null,
       created_at: new Date().toISOString(),
       payload,
       ...meta
@@ -3199,7 +2983,7 @@ export default function App() {
           target_id: target,
           rule_id: rule?.id || null,
           day_key: isDailyMode ? activeDayKey : null,
-          week_key: isWeeklyMode ? activeWeekKey : null
+          week_key: null
         }
       );
     }
@@ -3241,16 +3025,12 @@ export default function App() {
     const baseSeed =
       gameMode === "daily"
         ? `${todayKey}-${activeDifficulty}`
-        : gameMode === "weekly"
-          ? `${weekKey}-${activeDifficulty}`
-          : null;
+        : null;
     const seed = baseSeed && !forceNew ? baseSeed : null;
     const rng = seed ? mulberry32(hashString(seed)) : Math.random;
     const minInternal = isDailyMode
       ? DAILY_MIN_INTERNAL
-      : isWeeklyMode
-        ? WEEKLY_MIN_INTERNAL
-        : isExploreMode
+      : isExploreMode
           ? EXPLORE_MIN_INTERNAL
           : difficultyConfig.minInternal || 4;
     const minLength = minInternal + 2;
@@ -3266,7 +3046,7 @@ export default function App() {
       const hasGeo = tags.includes("geo");
       return difficultyLevel === "expert" && (hasCultural || hasGeo);
     });
-    const pool = isDailyMode || isWeeklyMode
+    const pool = isDailyMode
       ? highPool.length
         ? highPool
         : rulePool.length
@@ -3275,8 +3055,8 @@ export default function App() {
       : rulePool.length
         ? rulePool
         : RULE_DEFS;
-    const fixedMode = isDailyMode || isWeeklyMode;
-    const fixedKey = isDailyMode ? activeDayKey : isWeeklyMode ? activeWeekKey : null;
+    const fixedMode = isDailyMode;
+    const fixedKey = isDailyMode ? activeDayKey : null;
     const previousPairs =
       forceNew && !fixedMode && startId && targetId
         ? new Set([`${startId}:${targetId}`, `${targetId}:${startId}`])
@@ -3285,7 +3065,7 @@ export default function App() {
     if (!isExploreMode && fixedMode && fixedKey) {
       const assignments = readRuleAssignments();
       const history = readRuleHistory();
-      const modeKey = isDailyMode ? "daily" : "weekly";
+      const modeKey = "daily";
       const assignedId = assignments[modeKey]?.[fixedKey];
       fixedRuleDef =
         pool.find((def) => def.id === assignedId) ||
@@ -3539,7 +3319,7 @@ export default function App() {
       const payload = {
         level_type: gameMode,
         date: gameMode === "daily" ? todayKey : null,
-        week_key: gameMode === "weekly" ? weekKey : null,
+        week_key: null,
         difficulty_id: activeDifficulty,
         rule_id: selectedRule?.id || null,
         start_id: start,
@@ -3562,7 +3342,7 @@ export default function App() {
         target_id: target,
         rule_id: selectedRule?.id || null,
         day_key: gameMode === "daily" ? todayKey : null,
-        week_key: gameMode === "weekly" ? weekKey : null
+        week_key: null
       }
     );
   }
@@ -3767,32 +3547,35 @@ export default function App() {
   }
 
   function handleCalendarPick(mode, key) {
+    if (mode === "daily" && key > dayKey) {
+      playManifestSfx("error");
+      return;
+    }
     const record = getCompletionRecord(mode, key);
     if (record?.winningAttempt) {
       openCompletionModal(record);
       return;
     }
-    const entry =
-      mode === "daily" ? calendarDailyMap.get(key) : calendarWeeklyMap.get(key);
+    const entry = calendarDailyMap.get(key);
     calendarApplyRef.current = null;
-    setCalendarMode(mode);
+    setCalendarMode("daily");
     if (!entry?.level) {
       setCalendarSelection(null);
-      if (gameMode !== mode) {
-        setGameMode(mode);
+      if (gameMode !== "daily") {
+        setGameMode("daily");
       } else {
         resetGame();
       }
       return;
     }
-    setCalendarSelection({ mode, key });
-    if (gameMode !== mode) {
-      setGameMode(mode);
+    setCalendarSelection({ mode: "daily", key });
+    if (gameMode !== "daily") {
+      setGameMode("daily");
       return;
     }
     const result = record?.winningAttempt || null;
     applyCalendarLevel(entry.level, { result, showResult: Boolean(result) });
-    calendarApplyRef.current = `${mode}:${key}`;
+    calendarApplyRef.current = `daily:${key}`;
   }
 
   function handlePlayToday() {
@@ -3818,29 +3601,6 @@ export default function App() {
     }
   }
 
-  function handlePlayWeekly() {
-    playManifestSfx("click");
-    setOptionsOpen(false);
-    const key = weekKey;
-    const record = getCompletionRecord("weekly", key);
-    if (record?.winningAttempt) {
-      openCompletionModal(record);
-      return;
-    }
-    setCalendarSelection({ mode: "weekly", key });
-    if (gameMode !== "weekly") {
-      setGameMode("weekly");
-      return;
-    }
-    const entry = calendarWeeklyMap.get(key);
-    if (entry?.level) {
-      applyCalendarLevel(entry.level);
-      calendarApplyRef.current = `weekly:${key}`;
-    } else if (entry?.levelId) {
-      handleCalendarAction("weekly", key);
-    }
-  }
-
   function handleStartNext() {
     playManifestSfx("click");
     setShowModal(false);
@@ -3851,7 +3611,7 @@ export default function App() {
     setOptionsOpen(false);
     setConfigOpen(false);
 
-    if (isDailyMode || isWeeklyMode) {
+    if (isDailyMode) {
       pendingStartNextRef.current = true;
       setCalendarSelection(null);
       calendarApplyRef.current = null;
@@ -3911,37 +3671,23 @@ export default function App() {
     setDifficulty(difficultyId);
   }
 
-  function handleCalendarOpen(mode) {
+  function handleCalendarOpen() {
     playManifestSfx("open");
     setOptionsOpen(false);
     setConfigOpen(false);
     const now = new Date();
     let targetMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    if (mode === "daily") {
-      if (!calendarDailyMap.has(dayKey)) {
-        const latestDay = calendarDaily[0]?.date;
-        if (latestDay) {
-          const parsed = new Date(`${latestDay}T00:00:00`);
-          if (!Number.isNaN(parsed.valueOf())) {
-            targetMonth = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
-          }
+    if (!calendarDailyMap.has(dayKey)) {
+      const latestDay = calendarDaily[0]?.date;
+      if (latestDay) {
+        const parsed = new Date(`${latestDay}T00:00:00`);
+        if (!Number.isNaN(parsed.valueOf())) {
+          targetMonth = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
         }
       }
-      setCalendarMonth(targetMonth);
-      setCalendarMode("daily");
-    } else {
-      if (!calendarWeeklyMap.has(weekKey)) {
-        const latestWeek = calendarWeekly[0]?.weekKey;
-        if (latestWeek) {
-          const year = Number(latestWeek.slice(0, 4));
-          if (!Number.isNaN(year)) {
-            targetMonth = new Date(year, 0, 1);
-          }
-        }
-      }
-      setCalendarMonth(targetMonth);
-      setCalendarMode("weekly");
     }
+    setCalendarMonth(targetMonth);
+    setCalendarMode("daily");
     setCalendarOpen(true);
   }
 
@@ -3950,21 +3696,29 @@ export default function App() {
   }
 
   function handleCalendarNextMonth() {
-    setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+    setCalendarMonth((prev) => {
+      const next = new Date(prev.getFullYear(), prev.getMonth() + 1, 1);
+      const now = new Date();
+      const max = new Date(now.getFullYear(), now.getMonth(), 1);
+      return next > max ? prev : next;
+    });
   }
 
   async function handleCalendarAction(mode, key) {
-    const hasCalendarData = calendarDaily.length > 0 || calendarWeekly.length > 0;
+    if (mode === "daily" && key > dayKey) {
+      playManifestSfx("error");
+      return;
+    }
+    const hasCalendarData = calendarDaily.length > 0;
     if (!hasCalendarData && calendarStatus !== "ready") return;
     playManifestSfx("click");
-    const record = getCompletionRecord(mode, key);
+    const record = getCompletionRecord("daily", key);
     if (record?.winningAttempt) {
       openCompletionModal(record);
       setCalendarOpen(false);
       return;
     }
-    const entry =
-      mode === "daily" ? calendarDailyMap.get(key) : calendarWeeklyMap.get(key);
+    const entry = calendarDailyMap.get(key);
     if (!entry?.level && !entry?.levelId) return;
     let level = entry.level;
     if (!level && entry.levelId) {
@@ -3988,17 +3742,11 @@ export default function App() {
     }
     if (!level) return;
     if (!entry.level && level) {
-      if (mode === "daily") {
-        setCalendarDaily((prev) =>
-          prev.map((item) => (item.date === key ? { ...item, level } : item))
-        );
-      } else {
-        setCalendarWeekly((prev) =>
-          prev.map((item) => (item.weekKey === key ? { ...item, level } : item))
-        );
-      }
+      setCalendarDaily((prev) =>
+        prev.map((item) => (item.date === key ? { ...item, level } : item))
+      );
     }
-    handleCalendarPick(mode, key);
+    handleCalendarPick("daily", key);
     setCalendarOpen(false);
   }
 
@@ -4073,7 +3821,6 @@ export default function App() {
   const getLeaderboardKey = (item) => {
     if (!item) return "";
     if (item.mode === "daily") return item.dayKey ? `daily:${item.dayKey}` : "";
-    if (item.mode === "weekly") return item.weekKey ? `weekly:${item.weekKey}` : "";
     const ruleId = item.ruleId || "none";
     return `${item.mode}:${item.difficulty}:${item.startId}:${item.targetId}:${ruleId}`;
   };
@@ -4205,17 +3952,23 @@ export default function App() {
 
     const levelKey = isDailyMode
       ? `daily:${activeDayKey}`
-      : isWeeklyMode
-        ? `weekly:${activeWeekKey}`
-        : `${gameMode}:${activeDifficulty}:${startId || "?"}:${targetId || "?"}:${ruleId || "none"}`;
+      : `${gameMode}:${activeDifficulty}:${startId || "?"}:${targetId || "?"}:${ruleId || "none"}`;
 
+    const allDifficultyIds = DIFFICULTIES.map((entry) => entry.id);
+    const missingDailyUnlocks = allDifficultyIds.some(
+      (difficultyId) => !unlockedDifficulties.has(difficultyId)
+    );
+    const shouldUnlockAllDifficulties = isDailyMode && missingDailyUnlocks;
     const nextDifficulty =
       distance === 0 && gameMode === "normal"
         ? getNextDifficultyId(activeDifficulty)
         : null;
     const shouldUnlock =
-      Boolean(nextDifficulty) && !unlockedDifficulties.has(nextDifficulty);
-    if (shouldUnlock && nextDifficulty) {
+      shouldUnlockAllDifficulties ||
+      (Boolean(nextDifficulty) && !unlockedDifficulties.has(nextDifficulty));
+    if (shouldUnlockAllDifficulties) {
+      setUnlockedDifficulties(new Set(allDifficultyIds));
+    } else if (shouldUnlock && nextDifficulty) {
       setUnlockedDifficulties((prev) => new Set([...prev, nextDifficulty]));
     }
 
@@ -4266,7 +4019,7 @@ export default function App() {
       startId,
       targetId,
       region: regionId,
-      weekKey: isWeeklyMode ? activeWeekKey : null,
+      weekKey: null,
       dayKey: isDailyMode ? activeDayKey : null,
       createdAt: new Date().toISOString()
     };
@@ -4347,17 +4100,12 @@ export default function App() {
         ? calendarDailyMap.get(activeDayKey)?.level?.id ||
           calendarDailyMap.get(activeDayKey)?.levelId ||
           null
-        : isWeeklyMode
-          ? calendarWeeklyMap.get(activeWeekKey)?.level?.id ||
-            calendarWeeklyMap.get(activeWeekKey)?.levelId ||
-            null
-          : null;
+        : null;
       setCompletionRecords((prev) =>
         upsertCompletionRecord(prev, levelKey, {
           levelId,
           mode: gameMode,
           dayKey: isDailyMode ? activeDayKey : null,
-          weekKey: isWeeklyMode ? activeWeekKey : null,
           shortestPath: shortestNames,
           shortestCount,
           attempt: resultPayload
@@ -4365,9 +4113,6 @@ export default function App() {
       );
       if (isDailyMode) {
         setDailyResults((prev) => ({ ...prev, [activeDayKey]: resultPayload }));
-      }
-      if (isWeeklyMode) {
-        setWeeklyResults((prev) => ({ ...prev, [activeWeekKey]: resultPayload }));
       }
       setResultData(resultPayload);
       setShowModal(true);
@@ -4390,7 +4135,7 @@ export default function App() {
         start_id: entry.startId,
         target_id: entry.targetId,
         region: entry.region,
-        week_key: entry.weekKey,
+        week_key: null,
         day_key: entry.dayKey,
         created_at: entry.createdAt
       });
@@ -4428,9 +4173,7 @@ export default function App() {
   const currentName = currentId ? comarcaById.get(currentId)?.properties.name : null;
   const targetName = targetId ? comarcaById.get(targetId)?.properties.name : null;
   const dailyRecord = getCompletionRecord("daily", dayKey);
-  const weeklyRecord = getCompletionRecord("weekly", weekKey);
   const isDailyCompleted = Boolean(dailyRecord?.winningAttempt);
-  const isWeeklyCompleted = Boolean(weeklyRecord?.winningAttempt);
   const shortestPathSet = useMemo(() => new Set(shortestPath), [shortestPath]);
   const shortestNeighborSet = useMemo(
     () => buildNeighborSet(shortestPath, adjacency),
@@ -4480,13 +4223,10 @@ export default function App() {
   ]);
   const currentLevelKey = useMemo(() => {
     if (isDailyMode) return `daily:${activeDayKey}`;
-    if (isWeeklyMode) return `weekly:${activeWeekKey}`;
     return `${gameMode}:${activeDifficulty}:${startId || "?"}:${targetId || "?"}:${activeRule?.id || "none"}`;
   }, [
     isDailyMode,
-    isWeeklyMode,
     activeDayKey,
-    activeWeekKey,
     gameMode,
     activeDifficulty,
     startId,
@@ -4522,11 +4262,17 @@ export default function App() {
     () => buildMonthGrid(calendarMonth),
     [calendarMonth]
   );
+  const canShowNextCalendarMonth = useMemo(() => {
+    const now = new Date();
+    const maxMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const nextMonth = new Date(
+      calendarMonth.getFullYear(),
+      calendarMonth.getMonth() + 1,
+      1
+    );
+    return nextMonth <= maxMonth;
+  }, [calendarMonth]);
   const streakTierLabel = useMemo(() => getStreakTier(displayStreak), [displayStreak]);
-  const gaussianViz = useMemo(() => {
-    if (!resultData?.timeStats) return null;
-    return buildGaussianViz(resultData.timeStats, resultData.timeMs);
-  }, [resultData]);
 
   return (
     <ThemeProvider themeId={activeTheme} weatherState={weatherState}>
@@ -4568,17 +4314,8 @@ export default function App() {
             </button>
             <button
               type="button"
-              className={`topbar-challenge ${isWeeklyMode ? "active" : ""}`}
-              onClick={handlePlayWeekly}
-              disabled={!isMapReady}
-              aria-pressed={isWeeklyMode}
-            >
-              {t("weekly")}
-            </button>
-            <button
-              type="button"
               className="calendar-icon-button topbar-calendar"
-              onClick={() => handleCalendarOpen("daily")}
+              onClick={handleCalendarOpen}
               aria-label={t("calendar")}
             >
               <span className="calendar-icon" aria-hidden="true" />
@@ -4925,6 +4662,7 @@ export default function App() {
                     playManifestSfx("click", 0.55);
                     handleCalendarNextMonth();
                   }}
+                  disabled={!canShowNextCalendarMonth}
                   aria-label={t("next")}
                 >
                   {"\u203a"}
@@ -4943,17 +4681,18 @@ export default function App() {
                   : calendarMonthDays.map((day) => {
                       const dailyEntry = calendarDailyMap.get(day.key) || null;
                       const isToday = day.key === dayKey;
+                      const isFuture = day.key > dayKey;
                       const isDoneDaily = Boolean(
                         getCompletionRecord("daily", day.key)?.winningAttempt
                       );
-                      const hasDailyLevel = Boolean(dailyEntry?.levelId);
+                      const hasDailyLevel = Boolean(dailyEntry?.levelId) && !isFuture;
                       const dayDotClass = hasDailyLevel
                         ? isDoneDaily
                           ? "calendar-dot done"
                           : "calendar-dot active"
                         : "calendar-dot empty";
                       const dayLabel = `${formatFullDayLabel(day.key)}${
-                        hasDailyLevel ? "" : ` \u00b7 ${t("calendarNoLevel")}`
+                        hasDailyLevel || isFuture ? "" : ` \u00b7 ${t("calendarNoLevel")}`
                       }`;
                       return (
                         <button
@@ -4963,7 +4702,7 @@ export default function App() {
                             isToday ? "today" : ""
                           } ${isDoneDaily ? "done" : ""} ${
                             hasDailyLevel ? "has-level" : "disabled"
-                          }`}
+                          } ${isFuture ? "future" : ""}`}
                           onClick={() => handleCalendarAction("daily", day.key)}
                           disabled={!hasDailyLevel}
                           aria-label={dayLabel}
@@ -5101,88 +4840,21 @@ export default function App() {
             <p className="modal-subtitle">
               {t("time")}: {formatTime(resultData.timeMs)}
             </p>
-            {!isFailed ? (
-              <div className="modal-section">
-                <div className="modal-metrics">
-                  <div className="stat-row">
-                    <span className="label">{t("topTime")}</span>
-                    <span className="value">
-                      {formatTopPercent(resultData.topTimePercent)}
-                    </span>
-                  </div>
-                  <div className="stat-row">
-                    <span className="label">{t("topAttempts")}</span>
-                    <span className="value">
-                      {formatTopPercent(resultData.topAttemptsPercent)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-            {!isFailed && gaussianViz ? (
-              <div className="modal-section">
-                <span className="label">{t("distribution")}</span>
-                <div className="gauss-chart">
-                  <svg
-                    width={gaussianViz.width}
-                    height={gaussianViz.height}
-                    viewBox={`0 0 ${gaussianViz.width} ${gaussianViz.height}`}
-                  >
-                    <path className="gauss-path" d={gaussianViz.path} />
-                    <line
-                      className="gauss-marker"
-                      x1={gaussianViz.markerX}
-                      x2={gaussianViz.markerX}
-                      y1="0"
-                      y2={gaussianViz.height}
-                    />
-                  </svg>
-                  <div className="gauss-labels">
-                    <span>{formatTime(Math.round(gaussianViz.min))}</span>
-                    <span>{formatTime(Math.round(gaussianViz.max))}</span>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-            {isFailed && (resultData.ruleExplanation || resultData.ruleComarques?.length) ? (
-              <div className="modal-section">
-                <span className="label">{t("rule")}</span>
-                {resultData.ruleExplanation ? (
-                  <p className="modal-subtitle">{resultData.ruleExplanation}</p>
-                ) : null}
-                {resultData.ruleComarques?.length ? (
-                  <p className="modal-subtitle">
-                    Comarques: {resultData.ruleComarques.join(", ")}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
             <div className="modal-section">
-              <span className="label">{t("yourPath")}</span>
-              <ul className="path-list">
-                {resultData.playerPath.map((entry, index) => (
-                  <li key={`player-${entry.id}-${index}`} className="guess-item">
-                    {entry.name}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="modal-section">
-              <span className="label">{t("correctPath")}</span>
               <p className="modal-subtitle">
                 {t("shortestCount", { value: resultData.shortestCount })}
               </p>
-              {resultData.optimalPathCount > 1 ? (
-                <p className="modal-subtitle">
-                  {t("optimalAlternatives", { value: resultData.optimalPathCount })}
-                </p>
-              ) : null}
+            </div>
+            {!isFailed && resultData.distance > 0 ? (
+            <div className="modal-section">
+              <span className="label">Un camí òptim</span>
               <ol className="shortest-list">
                 {resultData.shortestPath.map((name, index) => (
                   <li key={`short-${name}-${index}`}>{name}</li>
                 ))}
               </ol>
             </div>
+            ) : null}
             <div className="modal-actions">
               <button className="reset" type="button" onClick={handleStartNext}>
                 {t("newGame")}
@@ -5195,7 +4867,7 @@ export default function App() {
         <button
           type="button"
           className={`bottom-nav-item${calendarOpen ? " active" : ""}`}
-          onClick={() => handleCalendarOpen(isWeeklyMode ? "weekly" : "daily")}
+          onClick={handleCalendarOpen}
           disabled={!isMapReady}
         >
           <span className="bottom-nav-label">Calendari</span>

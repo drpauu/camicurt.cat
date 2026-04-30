@@ -10,14 +10,22 @@
     "build:map": "node scripts/build-topojson.mjs",
     "leaderboard": "node server/leaderboard.mjs",
     "level:daily": "node scripts/generate-level.mjs daily",
-    "level:weekly": "node scripts/generate-level.mjs weekly",
     "level:2025": "node scripts/generate-level.mjs backfill-2025",
+    "level:2026": "node scripts/generate-level.mjs backfill-year 2026",
     "level:dates": "node scripts/generate-level.mjs backfill-dates",
+    "level:bank": "node scripts/generate-level.mjs bank",
+    "level:bank:add": "node scripts/generate-level.mjs bank-add 10000",
+    "level:bank:sql": "node scripts/generate-level.mjs bank-sql",
+    "level:bank:sql:chunks": "node scripts/generate-level.mjs bank-sql-chunks",
+    "calendar:assign": "node scripts/generate-level.mjs assign-year",
+    "calendar:assign:2026": "node scripts/generate-level.mjs assign-year 2026",
+    "calendar:health": "node scripts/check-daily-calendar-health.mjs",
     "audio:generate": "node scripts/generate-audio-placeholders.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.89.0",
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.105.1",
     "canvas-confetti": "^1.9.3",
     "d3-geo": "^3.1.1",
     "d3-selection": "^3.0.0",
@@ -27,9 +35,9 @@
     "topojson-client": "^3.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.46.0",
     "@vitejs/plugin-react": "^4.3.1",
     "mapshaper": "^0.6.72",
-    "@playwright/test": "^1.46.0",
     "vite": "^5.4.2"
   }
 }

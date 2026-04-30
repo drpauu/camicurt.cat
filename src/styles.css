@@ -610,60 +610,6 @@ textarea:focus-visible {
   cursor: not-allowed;
 }
 
-.calendar-week-list {
-  display: grid;
-  gap: 8px;
-  max-height: none;
-  height: 100%;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.calendar-week {
-  display: grid;
-  gap: 6px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 8px;
-  position: relative;
-}
-
-.calendar-week.disabled {
-  opacity: 0.6;
-}
-
-.calendar-week.current {
-  border-color: var(--accent);
-}
-
-.calendar-week.done {
-  border-color: rgba(61, 138, 86, 0.45);
-}
-
-.calendar-week.skeleton {
-  background: color-mix(in srgb, var(--text) 3%, transparent);
-  border-color: transparent;
-  min-height: 48px;
-}
-
-.calendar-week-button {
-  border: none;
-  background: transparent;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-  padding: 0;
-  gap: 8px;
-}
-
-.calendar-week-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
 .eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.2em;
@@ -1330,17 +1276,19 @@ h1 {
 }
 
 .reset {
-  background: var(--accent-strong);
+  background: var(--accent);
   color: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 10px 12px;
+  font-family: inherit;
+  font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: background 0.15s;
 }
 
 .reset:hover {
-  opacity: 0.88;
+  background: var(--accent-hover);
 }
 
 .path-list {
@@ -1829,11 +1777,6 @@ h1 {
 }
 
 .modal-section {
-  display: grid;
-  gap: 8px;
-}
-
-.modal-metrics {
   display: grid;
   gap: 8px;
 }

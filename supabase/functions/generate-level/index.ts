@@ -40,7 +40,6 @@ function getRuleTags(def: any) {
 
 const difficultyId = "cap-colla-rutes";
 const DAILY_MIN_INTERNAL = 4;
-const WEEKLY_MIN_INTERNAL = 8;
 
 function normalizeName(value: string) {
   return String(value ?? "")
@@ -518,16 +517,6 @@ function buildLevel({
   };
 }
 
-function getWeekKey(date: Date) {
-  const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNr = (target.getUTCDay() + 6) % 7;
-  target.setUTCDate(target.getUTCDate() - dayNr + 3);
-  const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
-  const diff = target.getTime() - firstThursday.getTime();
-  const week = 1 + Math.round(diff / 604800000);
-  return `${target.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
-}
-
 function getMadridParts(date = new Date()) {
   const formatter = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/Madrid",
@@ -601,8 +590,6 @@ Deno.serve(async (req) => {
   const madrid = getMadridParts();
   const dayKey = getDayKeyFromParts(madrid);
   const localDate = new Date(Date.UTC(madrid.year, madrid.month - 1, madrid.day));
-  const weekKey = getWeekKey(localDate);
-  const isMonday = madrid.weekday === "Mon";
   const shouldRunNow = madrid.hour === 0 && madrid.minute >= 0 && madrid.minute <= 4;
 
   if (!force && !shouldRunNow && !mode) {
@@ -640,27 +627,22 @@ Deno.serve(async (req) => {
   });
   const rulePool = highPool.length ? highPool : RULE_DEFS;
 
-  async function fetchRecentRuleIds(mode: "daily" | "weekly", limit: number) {
-    const column = mode === "weekly" ? "week_key" : "date";
+  async function fetchRecentRuleIds(mode: "daily", limit: number) {
     const { data, error } = await supabase
       .from("levels")
       .select("rule_id")
       .eq("level_type", mode)
-      .order(column, { ascending: false })
+      .order("date", { ascending: false })
       .limit(limit);
     if (error) return [];
     return (data || []).map((row: { rule_id: string | null }) => row.rule_id).filter(Boolean);
   }
 
   const dailyHistory = await fetchRecentRuleIds("daily", RULE_HISTORY_LIMIT);
-  const weeklyHistory = await fetchRecentRuleIds("weekly", RULE_HISTORY_LIMIT);
 
   const shouldRunDaily = force || mode === "daily" || (!mode && shouldRunNow);
-  const shouldRunWeekly = force || mode === "weekly" || (!mode && shouldRunNow && isMonday);
   let runDaily = shouldRunDaily;
-  let runWeekly = shouldRunWeekly;
   let dailyGate: string | null = null;
-  let weeklyGate: string | null = null;
 
   async function checkAndMarkRun(runKey: string) {
     const existing = await supabase
@@ -689,15 +671,6 @@ Deno.serve(async (req) => {
         dailyGate = gate.reason || "ja_executat";
       } else if (gate.warning) {
         dailyGate = gate.warning;
-      }
-    }
-    if (runWeekly) {
-      const gate = await checkAndMarkRun(`weekly:${weekKey}`);
-      if (!gate.allowed) {
-        runWeekly = false;
-        weeklyGate = gate.reason || "ja_executat";
-      } else if (gate.warning) {
-        weeklyGate = gate.warning;
       }
     }
   }
@@ -733,93 +706,32 @@ Deno.serve(async (req) => {
     });
 
     const insertLevel = await supabase
-      .from("levels")
-      .insert({
-        level_type: "daily",
-        date: forDayKey,
-        week_key: null,
-        difficulty_id: difficultyId,
-        rule_id: levelData.rule_id,
-        start_id: levelData.start_id,
-        target_id: levelData.target_id,
-        shortest_path: levelData.shortest_path,
-        avoid_ids: levelData.avoid_ids,
-        must_pass_ids: levelData.must_pass_ids
+      .rpc("create_daily_level", {
+        p_date: forDayKey,
+        p_difficulty_id: difficultyId,
+        p_rule_id: levelData.rule_id,
+        p_start_id: levelData.start_id,
+        p_target_id: levelData.target_id,
+        p_shortest_path: levelData.shortest_path,
+        p_avoid_ids: levelData.avoid_ids,
+        p_must_pass_ids: levelData.must_pass_ids
       })
-      .select("id")
       .single();
 
     if (insertLevel.error) {
       return { created: false, reason: insertLevel.error.message };
     }
 
-    const levelId = insertLevel.data.id;
-    const insertCalendar = await supabase
-      .from("calendar_daily")
-      .insert({ date: forDayKey, level_id: levelId });
-    if (insertCalendar.error) return { created: false, reason: insertCalendar.error.message };
-
-    return { created: true, levelId };
-  }
-
-  async function createWeeklyLevel(forWeekKey: string) {
-    const existing = await supabase
-      .from("calendar_weekly")
-      .select("week_key")
-      .eq("week_key", forWeekKey)
-      .maybeSingle();
-    if (existing.data) return { created: false, reason: "ja_existeix" };
-    if (existing.error) return { created: false, reason: existing.error.message };
-
-    const seed = `${forWeekKey}-${difficultyId}`;
-    const rng = mulberry32(hashString(seed));
-    const ruleDef =
-      pickRuleForKey(rulePool, forWeekKey, weeklyHistory, mulberry32) || rulePool[0];
-    if (ruleDef && !weeklyHistory.includes(ruleDef.id)) {
-      weeklyHistory.push(ruleDef.id);
-      if (weeklyHistory.length > RULE_HISTORY_LIMIT) {
-        weeklyHistory.splice(0, weeklyHistory.length - RULE_HISTORY_LIMIT);
-      }
-    }
-    const levelData = buildLevel({
-      rng,
-      ids,
-      names,
-      normalizedToId,
-      centroidMap,
-      adjacency: adjacencyMap,
-      minInternal: WEEKLY_MIN_INTERNAL,
-      rulePool: ruleDef ? [ruleDef] : rulePool
-    });
-
-    const insertLevel = await supabase
-      .from("levels")
-      .insert({
-        level_type: "weekly",
-        date: null,
-        week_key: forWeekKey,
-        difficulty_id: difficultyId,
-        rule_id: levelData.rule_id,
-        start_id: levelData.start_id,
-        target_id: levelData.target_id,
-        shortest_path: levelData.shortest_path,
-        avoid_ids: levelData.avoid_ids,
-        must_pass_ids: levelData.must_pass_ids
-      })
-      .select("id")
-      .single();
-
-    if (insertLevel.error) {
-      return { created: false, reason: insertLevel.error.message };
-    }
-
-    const levelId = insertLevel.data.id;
-    const insertCalendar = await supabase
-      .from("calendar_weekly")
-      .insert({ week_key: forWeekKey, level_id: levelId });
-    if (insertCalendar.error) return { created: false, reason: insertCalendar.error.message };
-
-    return { created: true, levelId };
+    const result = insertLevel.data as {
+      created: boolean;
+      level_id: string | null;
+      reason: string | null;
+    };
+    return {
+      created: Boolean(result.created),
+      reason: result.reason || undefined,
+      levelId: result.level_id || undefined
+    };
   }
 
   async function ensureDailyRange(startDate: Date, days: number) {
@@ -864,73 +776,19 @@ Deno.serve(async (req) => {
     return { todayResult, createdKeys, total: keys.length };
   }
 
-  async function ensureWeeklyRange(startDate: Date, weeks: number) {
-    const keys = Array.from({ length: weeks }, (_, index) =>
-      getWeekKey(addDays(startDate, index * 7))
-    );
-    const uniqueKeys = [...new Set(keys)];
-    const existing = await supabase
-      .from("calendar_weekly")
-      .select("week_key")
-      .in("week_key", uniqueKeys);
-    if (existing.error) {
-      return {
-        currentResult: { created: false, reason: existing.error.message },
-        createdKeys: [],
-        total: uniqueKeys.length
-      };
-    }
-    const existingSet = new Set((existing.data || []).map((row) => row.week_key));
-    const createdKeys: string[] = [];
-    let currentResult: { created: boolean; reason?: string; levelId?: string } | null = null;
-
-    for (const key of uniqueKeys) {
-      if (existingSet.has(key)) {
-        if (key === weekKey) {
-          currentResult = { created: false, reason: "ja_existeix" };
-        }
-        continue;
-      }
-      const result = await createWeeklyLevel(key);
-      if (key === weekKey) {
-        currentResult = result;
-      }
-      if (result.created) {
-        createdKeys.push(key);
-      }
-    }
-
-    if (!currentResult) {
-      currentResult = { created: false, reason: "ja_existeix" };
-    }
-
-    return { currentResult, createdKeys, total: uniqueKeys.length };
-  }
-
   const dailyBatch = runDaily
     ? await ensureDailyRange(addDays(localDate, -20), 21)
     : null;
-  const weeklyBatch = runWeekly
-    ? await ensureWeeklyRange(addDays(localDate, -21), 4)
-    : null;
 
   const dailyResult = dailyBatch?.todayResult ?? null;
-  const weeklyResult = weeklyBatch?.currentResult ?? null;
 
   console.log("cron-result", {
     dayKey,
-    weekKey,
     ranDaily: Boolean(runDaily),
-    ranWeekly: Boolean(runWeekly),
     dailyGate,
-    weeklyGate,
     dailyResult,
-    weeklyResult,
     dailyBatch: dailyBatch
       ? { created: dailyBatch.createdKeys.length, total: dailyBatch.total }
-      : null,
-    weeklyBatch: weeklyBatch
-      ? { created: weeklyBatch.createdKeys.length, total: weeklyBatch.total }
       : null
   });
 
@@ -938,13 +796,9 @@ Deno.serve(async (req) => {
     JSON.stringify({
       ok: true,
       ranDaily: Boolean(runDaily),
-      ranWeekly: Boolean(runWeekly),
       dailyGate,
-      weeklyGate,
       dailyResult,
-      weeklyResult,
-      dailyBatch,
-      weeklyBatch
+      dailyBatch
     }),
     { headers: { "Content-Type": "application/json" } }
   );

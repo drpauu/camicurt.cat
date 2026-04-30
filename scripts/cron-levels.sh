@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODE="${1:-}"
 
-if [[ "$MODE" != "daily" && "$MODE" != "weekly" ]]; then
-  echo "Usage: scripts/cron-levels.sh daily|weekly" >&2
+if [[ "$MODE" != "daily" ]]; then
+  echo "Usage: scripts/cron-levels.sh daily" >&2
   exit 1
 fi
 
