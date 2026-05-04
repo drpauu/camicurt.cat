@@ -133,6 +133,12 @@ const PRIMARY_MODES = [
 
 const DAILY_MIN_INTERNAL = 4;
 const EXPLORE_MIN_INTERNAL = 8;
+const ATTEMPT_MARGIN_BY_DIFFICULTY = {
+  pixapi: 4,
+  dominguero: 3,
+  rondinaire: 1,
+  "cap-colla-rutes": 0
+};
 
 const POWERUPS = [
   {
@@ -332,13 +338,15 @@ const STRINGS = {
     dailyCompletedTitle: "Repte diari completat",
     routeReviewed: "Ruta revisada",
     routeFromTo: "De {start} a {target}",
-    starsText: "{value}/3 estrelles",
     accuracyText: "{value}% precisió",
     foundOptimalText: "Has trobat el camí òptim amb {value} comarques.",
     foundSuboptimalText:
       "Has trobat {found} comarques; l'òptim en tenia {optimal}.",
     failedLearningText:
       "El temps s'ha acabat; fixa l'inici, el destí i torna a provar la connexió.",
+    attemptsOut: "Intents esgotats",
+    attemptLimitLearningText:
+      "Has fet {attempts}/{max} intents; el camí curt en demanava menys.",
     dailyProgressText: "{done}/{total} reptes diaris completats",
     difficultyProgressText: "{done}/{total} dificultats desbloquejades",
     allDifficultiesUnlocked: "Totes les dificultats desbloquejades",
@@ -1250,6 +1258,13 @@ function getNextDifficultyId(currentId) {
   return DIFFICULTIES[index + 1].id;
 }
 
+function getMaxAttemptsForDifficulty(difficultyId, shortestCount) {
+  const optimal = Math.max(Number(shortestCount) || 0, 0);
+  if (!optimal) return null;
+  const margin = ATTEMPT_MARGIN_BY_DIFFICULTY[difficultyId] ?? 2;
+  return Math.max(optimal + margin, 1);
+}
+
 function formatRuleDifficulty(value) {
   if (value === "easy") return "Fàcil";
   if (value === "medium") return "Mitjà";
@@ -1267,25 +1282,12 @@ function hashString(value) {
   return Math.abs(hash);
 }
 
-function getResultStars(result) {
-  if (result?.failed) return 0;
-  const distance = Number(result?.distance) || 0;
-  const hintsUsed = Number(result?.hintsUsed) || 0;
-  let stars = 3;
-  if (distance > 0) stars -= 1;
-  if (distance > 1) stars -= 1;
-  if (hintsUsed > 0) stars -= 1;
-  return Math.max(1, Math.min(stars, 3));
-}
-
 function getRouteAccuracy(result) {
   if (result?.failed) return 0;
   const optimal = Math.max(Number(result?.shortestCount) || 0, 0);
-  const distance = Math.max(Number(result?.distance) || 0, 0);
-  const rawFound = Number(result?.foundCount) || 0;
-  const found = Math.max(rawFound, optimal + distance, optimal);
-  if (!optimal || !found) return 100;
-  return Math.max(0, Math.min(100, Math.round((optimal / found) * 100)));
+  const attempts = Math.max(Number(result?.attempts) || 0, optimal);
+  if (!optimal || !attempts) return 100;
+  return Math.max(0, Math.min(100, Math.round((optimal / attempts) * 100)));
 }
 
 function pickResultReward(result) {
@@ -2230,6 +2232,7 @@ export default function App() {
         prev || {
           failed: true,
           attempts,
+          maxAttempts,
           timeMs: elapsedMs,
           playerPath: guessHistory,
           ruleLabel: activeRule?.label || "Sense norma",
@@ -2280,6 +2283,10 @@ export default function App() {
     if (calendarApplyRef.current === key) return;
     const record = getCompletionRecord(calendarSelection.mode, calendarSelection.key);
     const result = record?.winningAttempt || null;
+    if (!result && gameMode === "daily" && (attempts > 0 || guessHistory.length > 0)) {
+      calendarApplyRef.current = key;
+      return;
+    }
     applyCalendarLevel(activeCalendarEntry.level, {
       result,
       showResult: Boolean(result)
@@ -2289,7 +2296,9 @@ export default function App() {
     calendarSelection,
     activeCalendarEntry,
     gameMode,
-    completionRecords
+    completionRecords,
+    attempts,
+    guessHistory.length
   ]);
 
   useEffect(() => {
@@ -2330,54 +2339,44 @@ export default function App() {
         const now = new Date();
         const start = new Date(now);
         start.setFullYear(now.getFullYear() - 2);
-        const end = new Date(now);
-        end.setFullYear(now.getFullYear() + 2);
         const startKey = getLocalDayKey(start);
-        const endKey = getLocalDayKey(end);
+        const endKey = getLocalDayKey(now);
         const dailyRes = await withRetry(
           () =>
             supabase
-              .from("calendar_daily")
-              .select("date, level_id")
+              .from("daily_calendar_public")
+              .select(
+                "date, level_id, start_id, target_id, shortest_path, rule_id, avoid_ids, must_pass_ids, difficulty_id"
+              )
               .gte("date", startKey)
               .lte("date", endKey)
-              .order("date", { ascending: false }),
+              .order("date", { ascending: false })
+              .range(0, 1499),
           { retries: 2, backoffMs: 500 }
         );
         if (dailyRes.error) throw dailyRes.error;
 
         const dailyRows = Array.isArray(dailyRes.data) ? dailyRes.data : [];
-        const levelIds = [
-          ...new Set(dailyRows.map((row) => row.level_id).filter(Boolean))
-        ];
-
-        const levelsById = new Map();
-        if (levelIds.length) {
-          const levelsRes = await withRetry(
-            () =>
-              supabase
-                .from("levels")
-                .select(
-                  "id, start_id, target_id, shortest_path, rule_id, avoid_ids, must_pass_ids, difficulty_id"
-                )
-                .in("id", levelIds),
-            { retries: 2, backoffMs: 500 }
-          );
-          if (!levelsRes.error) {
-            (levelsRes.data || []).forEach((level) => {
-              levelsById.set(level.id, level);
-            });
-          }
-        }
-
         const dailyEntries = dailyRows
           .map((row) => {
             const dateKey = normalizeDayKey(row.date);
             if (!dateKey) return null;
+            const level = row.level_id
+              ? {
+                  id: row.level_id,
+                  start_id: row.start_id,
+                  target_id: row.target_id,
+                  shortest_path: row.shortest_path,
+                  rule_id: row.rule_id,
+                  avoid_ids: row.avoid_ids,
+                  must_pass_ids: row.must_pass_ids,
+                  difficulty_id: row.difficulty_id
+                }
+              : null;
             return {
               date: dateKey,
               levelId: row.level_id,
-              level: levelsById.get(row.level_id) || null
+              level
             };
           })
           .filter(Boolean);
@@ -2648,6 +2647,19 @@ export default function App() {
     });
   }, [activeRule, startId, targetId, adjacency, allowedSet, guessedSet]);
 
+  const optimalCount = useMemo(
+    () => (shortestPath.length ? Math.max(shortestPath.length - 2, 0) : null),
+    [shortestPath]
+  );
+  const currentPathCount = useMemo(
+    () => (pathInGuesses.length ? Math.max(pathInGuesses.length - 2, 0) : null),
+    [pathInGuesses]
+  );
+  const maxAttempts = useMemo(() => {
+    if (isExploreMode || optimalCount === null) return null;
+    return getMaxAttemptsForDifficulty(activeDifficulty, optimalCount);
+  }, [activeDifficulty, isExploreMode, optimalCount]);
+
   function resolveShortestPaths(start, target, rule, fallbackPath = []) {
     const allIds = comarques.map((featureItem) => featureItem.properties.id);
     const fallback = Array.isArray(fallbackPath) ? fallbackPath : [];
@@ -2795,6 +2807,22 @@ export default function App() {
     if (!pathInGuesses.length || !ruleStatus.satisfied) return;
     finishGame(pathInGuesses);
   }, [isComplete, isFailed, pathInGuesses, ruleStatus]);
+
+  useEffect(() => {
+    if (isComplete || isFailed || isExploreMode || !maxAttempts) return;
+    if (attempts < maxAttempts) return;
+    if (pathInGuesses.length && ruleStatus.satisfied) return;
+    finishFailedByAttemptLimit(attempts, guessHistory, pathInGuesses);
+  }, [
+    isComplete,
+    isFailed,
+    isExploreMode,
+    maxAttempts,
+    attempts,
+    guessHistory,
+    pathInGuesses,
+    ruleStatus
+  ]);
 
   useEffect(() => {
     if (!replayMode || !replayOrder.length) return;
@@ -3586,6 +3614,53 @@ export default function App() {
     }, 1600);
   }
 
+  function finishFailedByAttemptLimit(nextAttempts, nextGuessHistory, nextPath = []) {
+    if (isComplete || isFailed) return;
+    const totalTime = startedAt ? Date.now() - startedAt : elapsedMs;
+    const shortestCount = shortestPath.length ? Math.max(shortestPath.length - 2, 0) : 0;
+    const foundCount = nextPath.length ? Math.max(nextPath.length - 2, 0) : 0;
+    const shortestNames = shortestPath
+      .filter((id) => id !== startId && id !== targetId)
+      .map((pathId) => comarcaById.get(pathId)?.properties.name || pathId);
+    playManifestSfx("error");
+    play("level_lose", { bypassCooldown: true });
+    setIsFailed(true);
+    setShowModal(true);
+    setCompletionCelebrating(false);
+    setResultData({
+      failed: true,
+      failureReason: "attempts",
+      attempts: nextAttempts,
+      maxAttempts,
+      timeMs: totalTime,
+      playerPath: nextGuessHistory,
+      shortestPath: shortestNames,
+      shortestCount,
+      foundCount,
+      distance: Math.max(foundCount - shortestCount, 0),
+      startName: startId ? comarcaById.get(startId)?.properties.name || "" : "",
+      targetName: targetId ? comarcaById.get(targetId)?.properties.name || "" : "",
+      ruleLabel: activeRule?.label || "Sense norma",
+      ruleDifficulty: activeRule?.difficulty || null,
+      ruleExplanation: activeRule?.explanation || "",
+      ruleComarques: activeRule?.comarques || [],
+      hintsUsed,
+      mode: gameMode,
+      difficulty: activeDifficulty,
+      dayKey: isDailyMode ? activeDayKey : null,
+      streak: displayStreak
+    });
+    enqueueTelemetry("level_fail", {
+      reason: "attempt_limit",
+      attempts: nextAttempts,
+      maxAttempts,
+      timeMs: totalTime,
+      shortestCount,
+      foundCount,
+      ruleDifficulty: activeRule?.difficulty || null
+    });
+  }
+
   function handleGuessSubmit(event) {
     event.preventDefault();
     if (!startId || !targetId || isComplete || isFailed) return;
@@ -3631,13 +3706,14 @@ export default function App() {
       setStartedAt(Date.now());
     }
 
+    const name = comarcaById.get(id)?.properties.name || trimmed;
+
     setAttempts((prev) => prev + 1);
     setCurrentId(id);
     setGuessValue("");
     setIsSuggestionsOpen(false);
     lastGuessRef.current = id;
 
-    const name = comarcaById.get(id)?.properties.name || trimmed;
     setGuessHistory((prev) => [...prev, { id, name }]);
     if (shortestPathSet.has(id)) {
       playManifestSfx("correct");
@@ -4265,6 +4341,7 @@ export default function App() {
 
     const baseResultPayload = {
       attempts,
+      maxAttempts,
       timeMs: totalTime,
       playerPath: guessHistory,
       shortestPath: shortestNames,
@@ -4383,9 +4460,11 @@ export default function App() {
   const startName = startId ? comarcaById.get(startId)?.properties.name : null;
   const currentName = currentId ? comarcaById.get(currentId)?.properties.name : null;
   const targetName = targetId ? comarcaById.get(targetId)?.properties.name : null;
+  const usedCount = guessedIds.length;
   const completionSummary = useMemo(() => {
     if (!resultData) return null;
     const failed = Boolean(resultData.failed || isFailed);
+    const failedByAttempts = resultData.failureReason === "attempts";
     const resultMode = resultData.mode || gameMode;
     const resultStart = resultData.startName || startName || "";
     const resultTarget = resultData.targetName || targetName || "";
@@ -4409,8 +4488,11 @@ export default function App() {
       shortestCount,
       distance
     };
+    const resultMaxAttempts = Number(resultData.maxAttempts) || null;
     const title = failed
-      ? t("timeOut")
+      ? failedByAttempts
+        ? t("attemptsOut")
+        : t("timeOut")
       : resultMode === "daily"
         ? t("dailyCompletedTitle")
         : t("routeCompletedTitle");
@@ -4419,7 +4501,12 @@ export default function App() {
         ? t("routeFromTo", { start: resultStart, target: resultTarget })
         : t("routeReviewed");
     const routeLearning = failed
-      ? t("failedLearningText")
+      ? failedByAttempts
+        ? t("attemptLimitLearningText", {
+            attempts: resultData.attempts || 0,
+            max: resultMaxAttempts || resultData.attempts || 0
+          })
+        : t("failedLearningText")
       : distance > 0
         ? t("foundSuboptimalText", {
             found: displayFoundCount,
@@ -4433,45 +4520,16 @@ export default function App() {
         : "");
     const learningText =
       !failed && ruleInsight ? `${routeLearning} ${ruleInsight}` : routeLearning;
-    const availableDailyCount = calendarDaily.filter(
-      (entry) => entry.levelId && entry.date <= dayKey
-    ).length;
-    const completedDailyCount = calendarDaily.filter(
-      (entry) =>
-        entry.levelId &&
-        entry.date <= dayKey &&
-        completionRecords[`daily:${entry.date}`]?.winningAttempt
-    ).length;
-    const currentDailyAlreadyCounted =
-      resultData.dayKey &&
-      Boolean(completionRecords[`daily:${resultData.dayKey}`]?.winningAttempt);
-    const adjustedDailyCount =
-      resultMode === "daily" && resultData.dayKey && !currentDailyAlreadyCounted
-        ? completedDailyCount + 1
-        : completedDailyCount;
-    const progressText =
-      resultMode === "daily"
-        ? t("dailyProgressText", {
-            done: Math.min(
-              adjustedDailyCount,
-              Math.max(availableDailyCount, adjustedDailyCount, 1)
-            ),
-            total: Math.max(availableDailyCount, adjustedDailyCount, 1)
-          })
-        : t("difficultyProgressText", {
-            done: Math.min(unlockedDifficulties.size, DIFFICULTIES.length),
-            total: DIFFICULTIES.length
-          });
-    const stars = getResultStars(normalizedResult);
     const accuracy = getRouteAccuracy(normalizedResult);
     return {
       title,
       subtitle,
       learningText,
-      progressText,
-      rewardText: failed ? t("repeatLevel") : pickResultReward(normalizedResult),
-      starsText: t("starsText", { value: stars }),
+      rewardText: failed ? "" : pickResultReward(normalizedResult),
       accuracyText: t("accuracyText", { value: accuracy }),
+      attemptsText: resultMaxAttempts
+        ? `${t("attempts")}: ${resultData.attempts || 0}/${resultMaxAttempts}`
+        : `${t("attempts")}: ${resultData.attempts || 0}`,
       showOptimalPath: !failed && distance > 0 && resultData.shortestPath?.length,
       primaryLabel: failed ? t("repeatLevel") : t("nextMap"),
       primaryAction: failed ? "repeat" : "next"
@@ -4482,11 +4540,7 @@ export default function App() {
     gameMode,
     startName,
     targetName,
-    t,
-    calendarDaily,
-    dayKey,
-    completionRecords,
-    unlockedDifficulties
+    t
   ]);
   const dailyRecord = getCompletionRecord("daily", dayKey);
   const isDailyCompleted = Boolean(dailyRecord?.winningAttempt);
@@ -4507,11 +4561,6 @@ export default function App() {
       return { ...entry, status };
     });
   }, [guessHistory, shortestPathSet, shortestNeighborSet]);
-  const usedCount = guessedIds.length;
-  const optimalCount = shortestPath.length ? Math.max(shortestPath.length - 2, 0) : null;
-  const currentPathCount = pathInGuesses.length
-    ? Math.max(pathInGuesses.length - 2, 0)
-    : null;
   const actionStatus = useMemo(() => {
     if (isComplete) return t("statusSolved");
     if (isFailed) return t("statusFailed");
@@ -4606,8 +4655,9 @@ export default function App() {
             <button
               type="button"
               className="brand-button"
-              onClick={handleTitleReset}
-              aria-label="Reinicia camicurt.cat"
+              onClick={handlePlayToday}
+              aria-label={t("playToday")}
+              title={t("playToday")}
             >
               <BrandLogo />
               <h1>camicurt.cat</h1>
@@ -4676,10 +4726,10 @@ export default function App() {
             {startName && targetName ? (
               <>
                 <div className="route">
-                  <span>
+                  <span className="route-point route-start">
                     <strong>{t("start")}:</strong> {startName}
                   </span>
-                  <span>
+                  <span className="route-point route-target">
                     <strong>{t("target")}:</strong> {targetName}
                   </span>
                 </div>
@@ -4815,6 +4865,14 @@ export default function App() {
             {guessFeedback ? (
               <div className="action-feedback muted" role="status" aria-live="polite">
                 {guessFeedback.text}
+              </div>
+            ) : null}
+            {maxAttempts ? (
+              <div className="attempt-limit" aria-label={t("attempts")}>
+                <span>{t("attempts")}</span>
+                <strong>
+                  {attempts}/{maxAttempts}
+                </strong>
               </div>
             ) : null}
             <div className="side-powerups">
@@ -5179,25 +5237,21 @@ export default function App() {
             </div>
 
             <div className="result-score-row" aria-label={t("stats")}>
-              <span className="result-score-pill">{completionSummary.starsText}</span>
               <span className="result-score-pill">{completionSummary.accuracyText}</span>
+              <span className="result-score-pill">{completionSummary.attemptsText}</span>
               <span className="result-score-pill">
-                {t("time")}: {formatTime(resultData.timeMs)} · {t("attempts")}:{" "}
-                {resultData.attempts}
+                {t("time")}: {formatTime(resultData.timeMs)}
               </span>
             </div>
 
             <div className="modal-section result-learning">
               <span className="label">{t("learningLabel")}</span>
               <p className="modal-subtitle">{completionSummary.learningText}</p>
-            </div>
-
-            <div className="modal-section result-progress">
-              <span className="label">{t("progressLabel")}</span>
-              <p className="modal-subtitle">{completionSummary.progressText}</p>
-              <p className="modal-subtitle result-reward">
-                {completionSummary.rewardText}
-              </p>
+              {completionSummary.rewardText ? (
+                <p className="modal-subtitle result-reward">
+                  {completionSummary.rewardText}
+                </p>
+              ) : null}
             </div>
 
             {completionSummary.showOptimalPath ? (

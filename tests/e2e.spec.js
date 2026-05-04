@@ -267,9 +267,13 @@ test("completar el nivell diari desbloqueja totes les dificultats", async ({ pag
     localStorage.setItem("rumb-difficulty-unlocks-v1", JSON.stringify(["pixapi"]));
   });
   await gotoHome(page);
+  await page.waitForSelector(".map-brief .route");
+  const normalRoute = (await page.locator(".map-brief .route").textContent())?.trim();
   await page.getByRole("button", { name: /^Diari$/i }).click();
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");
-  await page.waitForSelector(".map-brief .route");
+  await expect
+    .poll(async () => (await page.locator(".map-brief .route").textContent())?.trim())
+    .not.toBe(normalRoute);
 
   const route = await getRouteAndRule(page);
   const guesses = resolveOptimalGuessNames(route);
@@ -381,7 +385,6 @@ test("obre el modal si el nivell ja està completat", async ({ page }) => {
   await expect(modal).toContainText(/(De .+ a .+|Ruta revisada)/);
   await expect(modal).toContainText("Intents: 3");
   await expect(modal).toContainText("Temps: 0:12");
-  await expect(modal).toContainText("2/3 estrelles");
   await expect(modal).toContainText("67% precisió");
   await expect(modal).toContainText("Has trobat 3 comarques; l'òptim en tenia 2.");
   await expect(modal).toContainText("Un camí òptim");
@@ -392,6 +395,8 @@ test("obre el modal si el nivell ja està completat", async ({ page }) => {
   await expect(modal).not.toContainText("Top temps");
   await expect(modal).not.toContainText("Distribució");
   await expect(modal).not.toContainText("El teu recorregut");
+  await expect(modal).not.toContainText("estrelles");
+  await expect(modal).not.toContainText("Progrés");
   const resetStyles = await modal.locator(".reset.result-primary").evaluate((button) => {
     const styles = getComputedStyle(button);
     return {
@@ -409,7 +414,7 @@ test("el modal no mostra cami optim si la ruta ja es curta", async ({ page }) =>
   const dayKey = getTodayKey();
   await page.addInitScript((key) => {
     const winningAttempt = {
-      attempts: 2,
+      attempts: 1,
       timeMs: 9000,
       playerPath: [{ id: "alt-camp", name: "Alt Camp" }],
       shortestPath: ["Alt Camp"],
@@ -435,9 +440,10 @@ test("el modal no mostra cami optim si la ruta ja es curta", async ({ page }) =>
   const modal = page.locator(".modal");
   await expect(modal).toBeVisible();
   await expect(modal).toContainText("Repte diari completat");
-  await expect(modal).toContainText("3/3 estrelles");
+  await expect(modal).toContainText("100% precisió");
   await expect(modal).toContainText("Has trobat el camí òptim amb 1 comarques.");
   await expect(modal).not.toContainText("Un camí òptim");
+  await expect(modal).not.toContainText("estrelles");
 });
 
 test("el modal de resultat no talla accions a amplades petites", async ({ page }) => {
@@ -471,7 +477,7 @@ test("el modal de resultat no talla accions a amplades petites", async ({ page }
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 });
     await gotoHome(page);
-    await page.getByRole("button", { name: /^Diari$/i }).click();
+    await page.locator(".topbar .brand-button").click();
     const modal = page.locator(".result-modal");
     await expect(modal).toBeVisible();
     await expect(modal.getByRole("button", { name: /Següent mapa/i })).toBeVisible();
@@ -762,7 +768,7 @@ test("la navegacio mobil te nomes reptes a capcalera i accions a baix", async ({
   await expect(page.locator(".brand-mode-description")).toBeHidden();
   await expect(page.locator(".topbar-new-game")).toBeHidden();
   await expect(page.locator(".topbar-calendar")).toBeHidden();
-  await expect(page.locator(".topbar").getByRole("button", { name: /^Diari$/i })).toBeVisible();
+  await expect(page.locator(".topbar").getByRole("button", { name: /^Diari$/i })).toHaveCount(0);
   await expect(page.locator(".topbar").getByRole("button", { name: /^Setmanal$/i })).toHaveCount(0);
   const mobileBrandMetrics = await page.evaluate(() => {
     const brand = document.querySelector(".topbar .brand");
@@ -793,7 +799,7 @@ test("la navegacio mobil te nomes reptes a capcalera i accions a baix", async ({
   expect(mobileBrandMetrics.boxShadow).toBe("none");
 
   await page.locator(".topbar .brand-button").click();
-  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "normal");
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");
 
   const bottomLabels = await page
     .locator(".bottom-nav .bottom-nav-label")
@@ -856,6 +862,34 @@ test("la barra mobil no talla les accions a amplades petites", async ({ page }) 
     expect(
       metrics.every((entry) => entry.labelWidth <= entry.buttonWidth - 8)
     ).toBeTruthy();
+    const mapBriefMetrics = await page.evaluate(() => {
+      const map = document.querySelector(".map-wrap")?.getBoundingClientRect();
+      const prompt = document.querySelector(".map-brief")?.getBoundingClientRect();
+      const controls = document.querySelector(".map-controls")?.getBoundingClientRect();
+      const overlapsControls =
+        prompt && controls
+          ? !(
+              prompt.right <= controls.left ||
+              prompt.left >= controls.right ||
+              prompt.bottom <= controls.top ||
+              prompt.top >= controls.bottom
+            )
+          : true;
+      return {
+        promptLeft: Math.round(prompt?.left || 0),
+        promptRight: Math.round(prompt?.right || 0),
+        mapLeft: Math.round(map?.left || 0),
+        mapRight: Math.round(map?.right || 0),
+        mapWidth: Math.round(map?.width || 0),
+        overlapsControls
+      };
+    });
+    expect(mapBriefMetrics.promptLeft).toBeGreaterThanOrEqual(mapBriefMetrics.mapLeft);
+    expect(mapBriefMetrics.promptRight).toBeLessThanOrEqual(
+      mapBriefMetrics.mapLeft + Math.round(mapBriefMetrics.mapWidth * 0.56)
+    );
+    expect(mapBriefMetrics.promptRight).toBeLessThanOrEqual(mapBriefMetrics.mapRight);
+    expect(mapBriefMetrics.overlapsControls).toBeFalsy();
   }
 });
 

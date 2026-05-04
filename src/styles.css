@@ -713,6 +713,25 @@ h1 {
   min-height: 20px;
 }
 
+.attempt-limit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.attempt-limit strong {
+  color: var(--accent-strong);
+  font-size: 1rem;
+}
+
 .options-card {
   gap: 10px;
 }
@@ -1532,6 +1551,20 @@ h1 {
   gap: 6px 14px;
 }
 
+.route-point {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.route-start {
+  color: var(--accent-strong);
+}
+
+.route-target {
+  color: var(--error);
+}
+
 .rule-line {
   line-height: 1.35;
 }
@@ -1928,8 +1961,7 @@ h1 {
   text-align: center;
 }
 
-.result-learning,
-.result-progress {
+.result-learning {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
@@ -2116,12 +2148,11 @@ h1 {
   }
 
   .topbar-right {
-    width: 100%;
-    justify-content: stretch;
+    display: none;
   }
 
   .topbar-actions {
-    display: flex;
+    display: none;
     flex-direction: row;
     gap: 6px;
     grid-template-columns: unset;
@@ -2138,21 +2169,7 @@ h1 {
   }
 
   .topbar-challenge {
-    flex: 1;
-    border-radius: 8px;
-    border: none;
-    box-shadow: none;
-    text-align: center;
-    font-size: 0.8rem;
-    background: transparent;
-    padding: 9px 8px;
-    color: var(--muted);
-    white-space: nowrap;
-  }
-
-  .topbar-challenge.active {
-    background: var(--panel);
-    color: var(--text);
+    display: none;
   }
 
   .calendar-icon-button.topbar-calendar {
@@ -2214,8 +2231,28 @@ h1 {
   }
 
   .prompt {
-    max-width: calc(100% - 24px);
-    right: 12px;
+    top: 10px;
+    left: 10px;
+    right: auto;
+    max-width: min(46%, 180px);
+    padding: 8px;
+    font-size: 0.78rem;
+    gap: 5px;
+  }
+
+  .route {
+    display: grid;
+    gap: 3px;
+  }
+
+  .route-point {
+    display: flex;
+    gap: 3px;
+  }
+
+  .rule-line {
+    font-size: 0.72rem;
+    line-height: 1.25;
   }
 
   .map-controls {
