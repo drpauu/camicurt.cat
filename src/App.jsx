@@ -161,6 +161,14 @@ const POWERUPS = [
   }
 ];
 
+const COMPLETION_MODAL_DELAY_MS = 520;
+
+const RESULT_REWARD_MESSAGES = [
+  "Mapa reforçat.",
+  "Connexió clara.",
+  "Ruta fresca per al següent repte."
+];
+
 const MUSIC_TRACKS = [
   {
     id: "segadors",
@@ -313,6 +321,28 @@ const STRINGS = {
     off: "Off",
     congrats: "Felicitats per completar el nivell!",
     timeOut: "Temps esgotat",
+    nextMap: "Següent mapa",
+    repeatLevel: "Repetir nivell",
+    viewMap: "Veure mapa",
+    resultLabel: "Resultat",
+    learningLabel: "Aprenentatge",
+    progressLabel: "Progrés",
+    rewardLabel: "Recompensa",
+    routeCompletedTitle: "Ruta completada",
+    dailyCompletedTitle: "Repte diari completat",
+    routeReviewed: "Ruta revisada",
+    routeFromTo: "De {start} a {target}",
+    starsText: "{value}/3 estrelles",
+    accuracyText: "{value}% precisió",
+    foundOptimalText: "Has trobat el camí òptim amb {value} comarques.",
+    foundSuboptimalText:
+      "Has trobat {found} comarques; l'òptim en tenia {optimal}.",
+    failedLearningText:
+      "El temps s'ha acabat; fixa l'inici, el destí i torna a provar la connexió.",
+    dailyProgressText: "{done}/{total} reptes diaris completats",
+    difficultyProgressText: "{done}/{total} dificultats desbloquejades",
+    allDifficultiesUnlocked: "Totes les dificultats desbloquejades",
+    newDifficultyUnlocked: "Nova dificultat: {value}",
     achievementsAllTitle: "Felicitats!",
     achievementsAllBody:
       "Has completat tots els assoliments. Ara et toca ser cap de colla de rutes.",
@@ -1009,6 +1039,10 @@ function formatFullDayLabel(dayKey) {
   return `${weekday} ${day} de ${month} del ${year}`;
 }
 
+function getLatestUnlockedCalendarDay(entries, maxDayKey) {
+  return entries.find((entry) => entry.date <= maxDayKey)?.date || "";
+}
+
 function serializeAdjacency(adjacencyMap) {
   return [...adjacencyMap.entries()].map(([id, neighbors]) => [id, [...neighbors]]);
 }
@@ -1231,6 +1265,43 @@ function hashString(value) {
     hash |= 0;
   }
   return Math.abs(hash);
+}
+
+function getResultStars(result) {
+  if (result?.failed) return 0;
+  const distance = Number(result?.distance) || 0;
+  const hintsUsed = Number(result?.hintsUsed) || 0;
+  let stars = 3;
+  if (distance > 0) stars -= 1;
+  if (distance > 1) stars -= 1;
+  if (hintsUsed > 0) stars -= 1;
+  return Math.max(1, Math.min(stars, 3));
+}
+
+function getRouteAccuracy(result) {
+  if (result?.failed) return 0;
+  const optimal = Math.max(Number(result?.shortestCount) || 0, 0);
+  const distance = Math.max(Number(result?.distance) || 0, 0);
+  const rawFound = Number(result?.foundCount) || 0;
+  const found = Math.max(rawFound, optimal + distance, optimal);
+  if (!optimal || !found) return 100;
+  return Math.max(0, Math.min(100, Math.round((optimal / found) * 100)));
+}
+
+function pickResultReward(result) {
+  if (result?.unlockLabel) return result.unlockLabel;
+  if (result?.isNewBest) return "Nou record personal.";
+  const seed = [
+    result?.entryId,
+    result?.mode,
+    result?.difficulty,
+    result?.timeMs,
+    result?.attempts
+  ]
+    .filter(Boolean)
+    .join(":");
+  const index = hashString(seed || "result") % RESULT_REWARD_MESSAGES.length;
+  return RESULT_REWARD_MESSAGES[index];
 }
 
 function mulberry32(seed) {
@@ -1480,6 +1551,7 @@ export default function App() {
   const [activeRule, setActiveRule] = useState(null);
   const [resultData, setResultData] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [completionCelebrating, setCompletionCelebrating] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [startedAt, setStartedAt] = useState(null);
   const [gameMode, setGameMode] = useState(() => {
@@ -1612,6 +1684,7 @@ export default function App() {
   const musicStartedRef = useRef(false);
   const guessErrorTimerRef = useRef(null);
   const guessFeedbackTimerRef = useRef(null);
+  const completionModalTimerRef = useRef(null);
   const guessInputRef = useRef(null);
   const lastGuessRef = useRef(null);
   const userZoomedRef = useRef(false);
@@ -1843,6 +1916,8 @@ export default function App() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [optionsOpen, playManifestSfx]);
+
+  useEffect(() => () => clearCompletionModalTimer(), []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -2255,8 +2330,10 @@ export default function App() {
         const now = new Date();
         const start = new Date(now);
         start.setFullYear(now.getFullYear() - 2);
+        const end = new Date(now);
+        end.setFullYear(now.getFullYear() + 2);
         const startKey = getLocalDayKey(start);
-        const endKey = getLocalDayKey(now);
+        const endKey = getLocalDayKey(end);
         const dailyRes = await withRetry(
           () =>
             supabase
@@ -2347,7 +2424,7 @@ export default function App() {
     };
     const monthRef = calendarMonthRef.current;
     if (calendarMode === "daily" && !calendarAutoSetRef.current.daily) {
-      const latestDay = calendarDaily[0]?.date;
+      const latestDay = getLatestUnlockedCalendarDay(calendarDaily, dayKey);
       if (latestDay) {
         const parsed = new Date(`${latestDay}T00:00:00`);
         if (!Number.isNaN(parsed.valueOf())) {
@@ -2362,7 +2439,7 @@ export default function App() {
       calendarDaily.length > 0 &&
       monthRef
     ) {
-      const latestDay = calendarDaily[0]?.date;
+      const latestDay = getLatestUnlockedCalendarDay(calendarDaily, dayKey);
       if (latestDay) {
         const parsed = new Date(`${latestDay}T00:00:00`);
         if (!Number.isNaN(parsed.valueOf())) {
@@ -2370,7 +2447,7 @@ export default function App() {
         }
       }
     }
-  }, [calendarLoaded, calendarMode, calendarDaily]);
+  }, [calendarLoaded, calendarMode, calendarDaily, dayKey]);
 
   useEffect(() => {
     if (unlockedDifficulties.has(difficulty)) return;
@@ -2556,6 +2633,11 @@ export default function App() {
     return findShortestPathInSet(startId, targetId, adjacency, allowedSet);
   }, [startId, targetId, adjacency, allowedSet]);
 
+  const completedPathSet = useMemo(() => {
+    if (!isComplete || !pathInGuesses.length) return new Set();
+    return new Set(pathInGuesses);
+  }, [isComplete, pathInGuesses]);
+
   const ruleStatus = useMemo(() => {
     return evaluateRule(activeRule, {
       startId,
@@ -2661,6 +2743,7 @@ export default function App() {
       const isGuessed = guessedSet.has(featureItem.id);
       const isReplay = replaySet.has(featureItem.id);
       const isPowerReveal = tempRevealId === featureItem.id;
+      const isCompletionPath = completedPathSet.has(featureItem.id);
       const isRevealed = isStart || isTarget || isGuessed || isReplay || isPowerReveal;
       const isNeighbor =
         showNeighborHintActive &&
@@ -2679,6 +2762,7 @@ export default function App() {
         isStart && "is-start",
         isTarget && "is-target",
         isCurrent && "is-current",
+        isCompletionPath && "is-complete-route",
         isNeighbor && "is-neighbor",
         isReplay && "is-replay",
         isPowerReveal && "is-reveal"
@@ -2697,6 +2781,7 @@ export default function App() {
     targetId,
     currentId,
     guessedSet,
+    completedPathSet,
     replaySet,
     tempRevealId,
     showNeighborHintActive,
@@ -2875,6 +2960,23 @@ export default function App() {
     }
   }
 
+  function clearCompletionModalTimer() {
+    if (completionModalTimerRef.current) {
+      clearTimeout(completionModalTimerRef.current);
+      completionModalTimerRef.current = null;
+    }
+  }
+
+  function revealCompletionModalAfterMap() {
+    clearCompletionModalTimer();
+    setCompletionCelebrating(true);
+    completionModalTimerRef.current = setTimeout(() => {
+      completionModalTimerRef.current = null;
+      setCompletionCelebrating(false);
+      setShowModal(true);
+    }, COMPLETION_MODAL_DELAY_MS);
+  }
+
   function handleMusicVolumeInput(event) {
     const nextVolume = clampVolumeValue(Number(event.currentTarget.value));
     setMusicVolume(nextVolume);
@@ -2946,7 +3048,9 @@ export default function App() {
     setIsSuggestionsOpen(false);
     setIsComplete(Boolean(result));
     setIsFailed(Boolean(result?.failed));
+    clearCompletionModalTimer();
     setShowModal(Boolean(result && showResult));
+    setCompletionCelebrating(false);
     setResultData(result || null);
     setShortestPath(nextShortest);
     setShortestPaths(nextShortestPaths);
@@ -2994,16 +3098,44 @@ export default function App() {
     return completionRecords[`${mode}:${key}`] || null;
   }
 
-  function openCompletionModal(record) {
+  function openCompletionModal(record, context = {}) {
     if (!record?.winningAttempt) return;
+    const dayKeyForRecord = record.dayKey || context.key || null;
+    const calendarEntry =
+      context.mode === "daily" || record.mode === "daily"
+        ? calendarDailyMap.get(dayKeyForRecord)
+        : null;
+    const level = calendarEntry?.level || null;
+    const levelRule = level ? buildRuleFromLevel(level, comarcaById, normalizedToId) : null;
+    const levelStartName = level?.start_id
+      ? comarcaById.get(level.start_id)?.properties.name || ""
+      : "";
+    const levelTargetName = level?.target_id
+      ? comarcaById.get(level.target_id)?.properties.name || ""
+      : "";
     const payload = {
       ...record.winningAttempt,
+      mode: record.mode || context.mode || record.winningAttempt.mode || "daily",
+      dayKey: dayKeyForRecord,
+      startName: record.winningAttempt.startName || levelStartName,
+      targetName: record.winningAttempt.targetName || levelTargetName,
+      ruleLabel:
+        record.winningAttempt.ruleLabel || levelRule?.label || record.winningAttempt.rule || "",
+      ruleExplanation:
+        record.winningAttempt.ruleExplanation || levelRule?.explanation || "",
+      ruleComarques:
+        record.winningAttempt.ruleComarques || levelRule?.comarques || [],
       shortestPath: record.shortestPath || record.winningAttempt.shortestPath || [],
       shortestCount:
         typeof record.shortestCount === "number"
           ? record.shortestCount
           : record.winningAttempt.shortestCount || 0
     };
+    if (level) {
+      applyCalendarLevel(level, { result: payload, showResult: false });
+    }
+    clearCompletionModalTimer();
+    setCompletionCelebrating(false);
     setResultData(payload);
     setIsFailed(Boolean(payload.failed));
     setShowModal(true);
@@ -3290,7 +3422,9 @@ export default function App() {
     setIsSuggestionsOpen(false);
     setIsComplete(false);
     setIsFailed(false);
+    clearCompletionModalTimer();
     setShowModal(false);
+    setCompletionCelebrating(false);
     setResultData(null);
     setShortestPath(nextShortest);
     setShortestPaths(nextShortestPaths);
@@ -3553,7 +3687,7 @@ export default function App() {
     }
     const record = getCompletionRecord(mode, key);
     if (record?.winningAttempt) {
-      openCompletionModal(record);
+      openCompletionModal(record, { mode, key });
       return;
     }
     const entry = calendarDailyMap.get(key);
@@ -3584,7 +3718,7 @@ export default function App() {
     const key = dayKey;
     const record = getCompletionRecord("daily", key);
     if (record?.winningAttempt) {
-      openCompletionModal(record);
+      openCompletionModal(record, { mode: "daily", key });
       return;
     }
     setCalendarSelection({ mode: "daily", key });
@@ -3603,6 +3737,8 @@ export default function App() {
 
   function handleStartNext() {
     playManifestSfx("click");
+    clearCompletionModalTimer();
+    setCompletionCelebrating(false);
     setShowModal(false);
     setResultData(null);
     setIsFailed(false);
@@ -3622,6 +3758,59 @@ export default function App() {
     setCalendarSelection(null);
     calendarApplyRef.current = null;
     resetGame(true);
+  }
+
+  function handleRepeatLevel() {
+    if (!startId || !targetId || !shortestPath.length) return;
+    playManifestSfx("repeat", 0.75);
+    clearCompletionModalTimer();
+    setCompletionCelebrating(false);
+    setCurrentId(startId);
+    setGuessHistory([]);
+    setAttempts(0);
+    setHintsUsed(0);
+    setGuessError(false);
+    setGuessFeedback(null);
+    Object.values(hintTimersRef.current).forEach((timer) => clearTimeout(timer));
+    hintTimersRef.current = {};
+    setTempRevealId(null);
+    setTempNeighborHint(false);
+    setTempInitialsHint(false);
+    const basePowerups = getPowerupUses(activeDifficulty);
+    const explorePowerups = Object.fromEntries(
+      POWERUPS.map((powerup) => [powerup.id, 99])
+    );
+    setPowerups(isExploreMode ? explorePowerups : basePowerups);
+    setReplayMode(null);
+    setReplayOrder([]);
+    setReplayIndex(0);
+    setGuessValue("");
+    setIsSuggestionsOpen(false);
+    setIsComplete(false);
+    setIsFailed(false);
+    setShowModal(false);
+    setResultData(null);
+    setElapsedMs(0);
+    setStartedAt(null);
+    setTimePenaltyMs(0);
+    setLastEntryId(null);
+    setCopyStatus("idle");
+    if (isTimedMode) {
+      const internalCount = Math.max(shortestPath.length - 2, 0);
+      setTimeLimitMs(Math.max(15000, internalCount * 5000));
+      beginTimedCountdown();
+    } else {
+      setTimeLimitMs(DEFAULT_TIME_LIMIT_MS);
+      setIsCountdownActive(false);
+      setCountdownValue(null);
+    }
+  }
+
+  function handleViewCompletedMap() {
+    playManifestSfx("close", 0.65);
+    clearCompletionModalTimer();
+    setCompletionCelebrating(false);
+    setShowModal(false);
   }
 
   const handleZoomIn = useCallback(() => {
@@ -3678,7 +3867,7 @@ export default function App() {
     const now = new Date();
     let targetMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     if (!calendarDailyMap.has(dayKey)) {
-      const latestDay = calendarDaily[0]?.date;
+      const latestDay = getLatestUnlockedCalendarDay(calendarDaily, dayKey);
       if (latestDay) {
         const parsed = new Date(`${latestDay}T00:00:00`);
         if (!Number.isNaN(parsed.valueOf())) {
@@ -3698,8 +3887,11 @@ export default function App() {
   function handleCalendarNextMonth() {
     setCalendarMonth((prev) => {
       const next = new Date(prev.getFullYear(), prev.getMonth() + 1, 1);
-      const now = new Date();
-      const max = new Date(now.getFullYear(), now.getMonth(), 1);
+      const latestAssignedDay = calendarDaily[0]?.date || dayKey;
+      const latestAssignedDate = new Date(`${latestAssignedDay}T00:00:00`);
+      const max = Number.isNaN(latestAssignedDate.valueOf())
+        ? prev
+        : new Date(latestAssignedDate.getFullYear(), latestAssignedDate.getMonth(), 1);
       return next > max ? prev : next;
     });
   }
@@ -3714,7 +3906,7 @@ export default function App() {
     playManifestSfx("click");
     const record = getCompletionRecord("daily", key);
     if (record?.winningAttempt) {
-      openCompletionModal(record);
+      openCompletionModal(record, { mode, key });
       setCalendarOpen(false);
       return;
     }
@@ -3924,6 +4116,7 @@ export default function App() {
     const foundCount = path.length ? Math.max(path.length - 2, 0) : 0;
     const distance = Math.max(foundCount - shortestCount, 0);
     const startName = startId ? comarcaById.get(startId)?.properties.name : "";
+    const targetName = targetId ? comarcaById.get(targetId)?.properties.name : "";
     const regionId = startName ? regionByName.get(startName)?.id || null : null;
     const ruleId = activeRule?.id || null;
     const ruleDifficulty = activeRule?.difficulty || null;
@@ -3966,6 +4159,14 @@ export default function App() {
     const shouldUnlock =
       shouldUnlockAllDifficulties ||
       (Boolean(nextDifficulty) && !unlockedDifficulties.has(nextDifficulty));
+    const nextDifficultyLabel = nextDifficulty
+      ? DIFFICULTIES.find((entryItem) => entryItem.id === nextDifficulty)?.label || nextDifficulty
+      : "";
+    const unlockLabel = shouldUnlockAllDifficulties
+      ? t("allDifficultiesUnlocked")
+      : shouldUnlock && nextDifficultyLabel
+        ? t("newDifficultyUnlocked", { value: nextDifficultyLabel })
+        : "";
     if (shouldUnlockAllDifficulties) {
       setUnlockedDifficulties(new Set(allDifficultyIds));
     } else if (shouldUnlock && nextDifficulty) {
@@ -4071,15 +4272,24 @@ export default function App() {
       optimalPathCount,
       foundCount,
       distance,
+      startName,
+      targetName,
       ruleLabel: activeRule?.label || "Sense norma",
       ruleDifficulty,
+      ruleExplanation: activeRule?.explanation || "",
+      ruleComarques: activeRule?.comarques || [],
       hintsUsed,
       bonusMs,
       entryId: entry.id,
       mode: gameMode,
       difficulty: activeDifficulty,
-      streak: nextStreak.count || 0
+      streak: nextStreak.count || 0,
+      unlockLabel,
+      isNewBest: shouldReward
     };
+
+    setResultData(baseResultPayload);
+    revealCompletionModalAfterMap();
 
     enqueueTelemetry("level_complete", {
       attempts,
@@ -4114,8 +4324,9 @@ export default function App() {
       if (isDailyMode) {
         setDailyResults((prev) => ({ ...prev, [activeDayKey]: resultPayload }));
       }
-      setResultData(resultPayload);
-      setShowModal(true);
+      setResultData((prev) =>
+        prev?.entryId === entry.id ? { ...prev, ...resultPayload } : prev
+      );
     });
 
     if (supabaseUserId) {
@@ -4172,6 +4383,111 @@ export default function App() {
   const startName = startId ? comarcaById.get(startId)?.properties.name : null;
   const currentName = currentId ? comarcaById.get(currentId)?.properties.name : null;
   const targetName = targetId ? comarcaById.get(targetId)?.properties.name : null;
+  const completionSummary = useMemo(() => {
+    if (!resultData) return null;
+    const failed = Boolean(resultData.failed || isFailed);
+    const resultMode = resultData.mode || gameMode;
+    const resultStart = resultData.startName || startName || "";
+    const resultTarget = resultData.targetName || targetName || "";
+    const foundCount =
+      typeof resultData.foundCount === "number"
+        ? resultData.foundCount
+        : Array.isArray(resultData.playerPath)
+          ? resultData.playerPath.length
+          : 0;
+    const shortestCount =
+      typeof resultData.shortestCount === "number" ? resultData.shortestCount : 0;
+    const distance =
+      typeof resultData.distance === "number"
+        ? resultData.distance
+        : Math.max(foundCount - shortestCount, 0);
+    const displayFoundCount = Math.max(foundCount, shortestCount + distance);
+    const normalizedResult = {
+      ...resultData,
+      failed,
+      foundCount,
+      shortestCount,
+      distance
+    };
+    const title = failed
+      ? t("timeOut")
+      : resultMode === "daily"
+        ? t("dailyCompletedTitle")
+        : t("routeCompletedTitle");
+    const subtitle =
+      resultStart && resultTarget
+        ? t("routeFromTo", { start: resultStart, target: resultTarget })
+        : t("routeReviewed");
+    const routeLearning = failed
+      ? t("failedLearningText")
+      : distance > 0
+        ? t("foundSuboptimalText", {
+            found: displayFoundCount,
+            optimal: shortestCount
+          })
+        : t("foundOptimalText", { value: shortestCount });
+    const ruleInsight =
+      resultData.ruleExplanation ||
+      (Array.isArray(resultData.ruleComarques) && resultData.ruleComarques.length
+        ? `La pista apuntava a ${resultData.ruleComarques.join(", ")}.`
+        : "");
+    const learningText =
+      !failed && ruleInsight ? `${routeLearning} ${ruleInsight}` : routeLearning;
+    const availableDailyCount = calendarDaily.filter(
+      (entry) => entry.levelId && entry.date <= dayKey
+    ).length;
+    const completedDailyCount = calendarDaily.filter(
+      (entry) =>
+        entry.levelId &&
+        entry.date <= dayKey &&
+        completionRecords[`daily:${entry.date}`]?.winningAttempt
+    ).length;
+    const currentDailyAlreadyCounted =
+      resultData.dayKey &&
+      Boolean(completionRecords[`daily:${resultData.dayKey}`]?.winningAttempt);
+    const adjustedDailyCount =
+      resultMode === "daily" && resultData.dayKey && !currentDailyAlreadyCounted
+        ? completedDailyCount + 1
+        : completedDailyCount;
+    const progressText =
+      resultMode === "daily"
+        ? t("dailyProgressText", {
+            done: Math.min(
+              adjustedDailyCount,
+              Math.max(availableDailyCount, adjustedDailyCount, 1)
+            ),
+            total: Math.max(availableDailyCount, adjustedDailyCount, 1)
+          })
+        : t("difficultyProgressText", {
+            done: Math.min(unlockedDifficulties.size, DIFFICULTIES.length),
+            total: DIFFICULTIES.length
+          });
+    const stars = getResultStars(normalizedResult);
+    const accuracy = getRouteAccuracy(normalizedResult);
+    return {
+      title,
+      subtitle,
+      learningText,
+      progressText,
+      rewardText: failed ? t("repeatLevel") : pickResultReward(normalizedResult),
+      starsText: t("starsText", { value: stars }),
+      accuracyText: t("accuracyText", { value: accuracy }),
+      showOptimalPath: !failed && distance > 0 && resultData.shortestPath?.length,
+      primaryLabel: failed ? t("repeatLevel") : t("nextMap"),
+      primaryAction: failed ? "repeat" : "next"
+    };
+  }, [
+    resultData,
+    isFailed,
+    gameMode,
+    startName,
+    targetName,
+    t,
+    calendarDaily,
+    dayKey,
+    completionRecords,
+    unlockedDifficulties
+  ]);
   const dailyRecord = getCompletionRecord("daily", dayKey);
   const isDailyCompleted = Boolean(dailyRecord?.winningAttempt);
   const shortestPathSet = useMemo(() => new Set(shortestPath), [shortestPath]);
@@ -4263,15 +4579,22 @@ export default function App() {
     [calendarMonth]
   );
   const canShowNextCalendarMonth = useMemo(() => {
-    const now = new Date();
-    const maxMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const latestAssignedDay = calendarDaily[0]?.date || dayKey;
+    const latestAssignedDate = new Date(`${latestAssignedDay}T00:00:00`);
+    const maxMonth = Number.isNaN(latestAssignedDate.valueOf())
+      ? new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1)
+      : new Date(
+          latestAssignedDate.getFullYear(),
+          latestAssignedDate.getMonth(),
+          1
+        );
     const nextMonth = new Date(
       calendarMonth.getFullYear(),
       calendarMonth.getMonth() + 1,
       1
     );
     return nextMonth <= maxMonth;
-  }, [calendarMonth]);
+  }, [calendarDaily, calendarMonth, dayKey]);
   const streakTierLabel = useMemo(() => getStreakTier(displayStreak), [displayStreak]);
 
   return (
@@ -4329,7 +4652,9 @@ export default function App() {
         <div
           className={`map-wrap ${difficultyConfig.fog ? "fog" : ""} ${
             isTimedMode ? "timed-mode" : ""
-          } ${isCountdownActive ? "countdown-active" : ""}`}
+          } ${isCountdownActive ? "countdown-active" : ""} ${
+            completionCelebrating ? "completion-celebrating" : ""
+          }`}
           aria-busy={!isMapReady}
         >
           {isTimedMode ? (
@@ -4685,14 +5010,22 @@ export default function App() {
                       const isDoneDaily = Boolean(
                         getCompletionRecord("daily", day.key)?.winningAttempt
                       );
-                      const hasDailyLevel = Boolean(dailyEntry?.levelId) && !isFuture;
-                      const dayDotClass = hasDailyLevel
-                        ? isDoneDaily
-                          ? "calendar-dot done"
-                          : "calendar-dot active"
-                        : "calendar-dot empty";
+                      const hasAssignedDailyLevel = Boolean(dailyEntry?.levelId);
+                      const hasDailyLevel = hasAssignedDailyLevel && !isFuture;
+                      const isLockedDaily = hasAssignedDailyLevel && isFuture;
+                      const dayDotClass = isLockedDaily
+                        ? "calendar-dot locked"
+                        : hasDailyLevel
+                          ? isDoneDaily
+                            ? "calendar-dot done"
+                            : "calendar-dot active"
+                          : "calendar-dot empty";
                       const dayLabel = `${formatFullDayLabel(day.key)}${
-                        hasDailyLevel || isFuture ? "" : ` \u00b7 ${t("calendarNoLevel")}`
+                        isLockedDaily
+                          ? " \u00b7 bloquejat"
+                          : hasDailyLevel
+                            ? ""
+                            : ` \u00b7 ${t("calendarNoLevel")}`
                       }`;
                       return (
                         <button
@@ -4702,12 +5035,13 @@ export default function App() {
                             isToday ? "today" : ""
                           } ${isDoneDaily ? "done" : ""} ${
                             hasDailyLevel ? "has-level" : "disabled"
-                          } ${isFuture ? "future" : ""}`}
+                          } ${isLockedDaily ? "locked" : ""} ${isFuture ? "future" : ""}`}
                           onClick={() => handleCalendarAction("daily", day.key)}
                           disabled={!hasDailyLevel}
                           aria-label={dayLabel}
                           data-calendar-day={day.key}
                           data-has-level={hasDailyLevel ? "true" : "false"}
+                          data-locked={isLockedDaily ? "true" : "false"}
                         >
                           <span className="calendar-day-label">{day.label}</span>
                           <span className={dayDotClass} />
@@ -4830,34 +5164,89 @@ export default function App() {
         </div>
       ) : null}
 
-      {showModal && resultData ? (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <h2>{isFailed ? t("timeOut") : t("congrats")}</h2>
-            <p className="modal-subtitle">
-              {t("attempts")}: {resultData.attempts}
-            </p>
-            <p className="modal-subtitle">
-              {t("time")}: {formatTime(resultData.timeMs)}
-            </p>
-            <div className="modal-section">
-              <p className="modal-subtitle">
-                {t("shortestCount", { value: resultData.shortestCount })}
+      {showModal && resultData && completionSummary ? (
+        <div className="modal-backdrop result-backdrop">
+          <div
+            className="modal result-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="result-title"
+          >
+            <div className="result-hero">
+              <span className="label">{t("resultLabel")}</span>
+              <h2 id="result-title">{completionSummary.title}</h2>
+              <p className="modal-subtitle">{completionSummary.subtitle}</p>
+            </div>
+
+            <div className="result-score-row" aria-label={t("stats")}>
+              <span className="result-score-pill">{completionSummary.starsText}</span>
+              <span className="result-score-pill">{completionSummary.accuracyText}</span>
+              <span className="result-score-pill">
+                {t("time")}: {formatTime(resultData.timeMs)} · {t("attempts")}:{" "}
+                {resultData.attempts}
+              </span>
+            </div>
+
+            <div className="modal-section result-learning">
+              <span className="label">{t("learningLabel")}</span>
+              <p className="modal-subtitle">{completionSummary.learningText}</p>
+            </div>
+
+            <div className="modal-section result-progress">
+              <span className="label">{t("progressLabel")}</span>
+              <p className="modal-subtitle">{completionSummary.progressText}</p>
+              <p className="modal-subtitle result-reward">
+                {completionSummary.rewardText}
               </p>
             </div>
-            {!isFailed && resultData.distance > 0 ? (
-            <div className="modal-section">
-              <span className="label">Un camí òptim</span>
-              <ol className="shortest-list">
-                {resultData.shortestPath.map((name, index) => (
-                  <li key={`short-${name}-${index}`}>{name}</li>
-                ))}
-              </ol>
-            </div>
+
+            {completionSummary.showOptimalPath ? (
+              <div className="modal-section result-optimal">
+                <span className="label">Un camí òptim</span>
+                <ol className="shortest-list">
+                  {resultData.shortestPath.map((name, index) => (
+                    <li key={`short-${name}-${index}`}>{name}</li>
+                  ))}
+                </ol>
+              </div>
             ) : null}
-            <div className="modal-actions">
-              <button className="reset" type="button" onClick={handleStartNext}>
-                {t("newGame")}
+
+            <div className="modal-actions result-actions">
+              <button
+                className="reset result-primary"
+                type="button"
+                onClick={
+                  completionSummary.primaryAction === "repeat"
+                    ? handleRepeatLevel
+                    : handleStartNext
+                }
+              >
+                {completionSummary.primaryLabel}
+              </button>
+              {completionSummary.primaryAction === "repeat" ? (
+                <button
+                  className="result-secondary"
+                  type="button"
+                  onClick={handleStartNext}
+                >
+                  {t("nextMap")}
+                </button>
+              ) : (
+                <button
+                  className="result-secondary"
+                  type="button"
+                  onClick={handleRepeatLevel}
+                  disabled={!startId || !targetId || !shortestPath.length}
+                >
+                  {t("repeatLevel")}
+                </button>
+              )}
+              <button
+                className="result-secondary"
+                type="button"
+                onClick={handleViewCompletedMap}
+              >
+                {t("viewMap")}
               </button>
             </div>
           </div>

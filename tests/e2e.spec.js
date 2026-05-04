@@ -81,8 +81,11 @@ const resolveOptimalGuessNames = ({ startName, targetName, ruleLabel }) => {
 const playGuesses = async (page, names) => {
   const input = page.locator("#guess-input");
   for (const name of names) {
+    if (await input.isDisabled().catch(() => false)) break;
     await input.fill(name);
     await page.getByRole("button", { name: /Esbrina/i }).click();
+    await expect(input).toHaveValue("", { timeout: 1000 }).catch(() => {});
+    if (await page.locator(".modal").isVisible().catch(() => false)) break;
   }
 };
 
@@ -374,15 +377,22 @@ test("obre el modal si el nivell ja està completat", async ({ page }) => {
   await page.getByRole("button", { name: /^Diari$/i }).click();
   const modal = page.locator(".modal");
   await expect(modal).toBeVisible();
+  await expect(modal).toContainText("Repte diari completat");
+  await expect(modal).toContainText(/(De .+ a .+|Ruta revisada)/);
   await expect(modal).toContainText("Intents: 3");
   await expect(modal).toContainText("Temps: 0:12");
-  await expect(modal).toContainText("Camí més curt: 2 comarques");
+  await expect(modal).toContainText("2/3 estrelles");
+  await expect(modal).toContainText("67% precisió");
+  await expect(modal).toContainText("Has trobat 3 comarques; l'òptim en tenia 2.");
   await expect(modal).toContainText("Un camí òptim");
   await expect(modal).toContainText("Alt Camp");
+  await expect(modal).toContainText("Següent mapa");
+  await expect(modal).toContainText("Repetir nivell");
+  await expect(modal).toContainText("Veure mapa");
   await expect(modal).not.toContainText("Top temps");
   await expect(modal).not.toContainText("Distribució");
   await expect(modal).not.toContainText("El teu recorregut");
-  const resetStyles = await modal.locator(".reset").evaluate((button) => {
+  const resetStyles = await modal.locator(".reset.result-primary").evaluate((button) => {
     const styles = getComputedStyle(button);
     return {
       backgroundColor: styles.backgroundColor,
@@ -424,8 +434,68 @@ test("el modal no mostra cami optim si la ruta ja es curta", async ({ page }) =>
   await page.getByRole("button", { name: /^Diari$/i }).click();
   const modal = page.locator(".modal");
   await expect(modal).toBeVisible();
-  await expect(modal).toContainText("Camí més curt: 1 comarques");
+  await expect(modal).toContainText("Repte diari completat");
+  await expect(modal).toContainText("3/3 estrelles");
+  await expect(modal).toContainText("Has trobat el camí òptim amb 1 comarques.");
   await expect(modal).not.toContainText("Un camí òptim");
+});
+
+test("el modal de resultat no talla accions a amplades petites", async ({ page }) => {
+  const dayKey = getTodayKey();
+  await page.addInitScript((key) => {
+    const winningAttempt = {
+      attempts: 2,
+      timeMs: 9000,
+      playerPath: [{ id: "alt-camp", name: "Alt Camp" }],
+      shortestPath: ["Alt Camp"],
+      shortestCount: 1,
+      distance: 0,
+      mode: "daily",
+      dayKey: key
+    };
+    const record = {
+      levelKey: `daily:${key}`,
+      dayKey: key,
+      mode: "daily",
+      attemptsList: [winningAttempt],
+      winningAttempt,
+      shortestPath: ["Alt Camp"],
+      shortestCount: 1
+    };
+    localStorage.setItem(
+      "rumb-completion-records-v1",
+      JSON.stringify({ [`daily:${key}`]: record })
+    );
+  }, dayKey);
+
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await gotoHome(page);
+    await page.getByRole("button", { name: /^Diari$/i }).click();
+    const modal = page.locator(".result-modal");
+    await expect(modal).toBeVisible();
+    await expect(modal.getByRole("button", { name: /Següent mapa/i })).toBeVisible();
+    const metrics = await page.evaluate(() =>
+      [...document.querySelectorAll(".result-actions button")].map((button) => {
+        const box = button.getBoundingClientRect();
+        return {
+          text: button.textContent.trim(),
+          width: Math.round(box.width),
+          height: Math.round(box.height),
+          scrollWidth: button.scrollWidth,
+          clientWidth: button.clientWidth
+        };
+      })
+    );
+    expect(metrics.map((entry) => entry.text)).toEqual([
+      "Següent mapa",
+      "Repetir nivell",
+      "Veure mapa"
+    ]);
+    expect(metrics.every((entry) => entry.height >= 44)).toBeTruthy();
+    expect(metrics.every((entry) => entry.scrollWidth <= entry.clientWidth + 1)).toBeTruthy();
+    await modal.getByRole("button", { name: /Veure mapa/i }).click();
+  }
 });
 
 test("la configuració es persisteix", async ({ page }) => {
@@ -640,7 +710,9 @@ test("usa les families de sons del manifest en interaccions reals", async ({ pag
   await expect(page.getByRole("button", { name: /Revela un pas/i })).toBeEnabled();
   for (let index = 0; index < 14; index += 1) {
     if (await page.locator(".modal").isVisible().catch(() => false)) break;
-    await page.getByRole("button", { name: /Revela un pas/i }).click();
+    const revealButton = page.getByRole("button", { name: /Revela un pas/i });
+    if (await revealButton.isDisabled().catch(() => false)) break;
+    await revealButton.click();
     await expectKind("powerup");
     await page.waitForSelector("path.comarca.is-reveal[data-comarca-name]");
     const revealName = await page
