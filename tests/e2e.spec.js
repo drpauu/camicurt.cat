@@ -562,6 +562,112 @@ test("els simbols dels controls es renderitzen correctament", async ({ page }) =
   await expect(calendarPanel.locator(".calendar-month .icon-button").last()).toHaveText("›");
 });
 
+test("el calendari habilita dies disponibles des de cache sense esperar xarxa", async ({
+  page
+}) => {
+  const dayKey = getTodayKey();
+  await page.route("**/rest/v1/calendar_daily*", (route) => route.abort("failed"));
+  await page.addInitScript((key) => {
+    localStorage.setItem(
+      "rumb-calendar-cache-v1",
+      JSON.stringify({
+        updatedAt: Date.now(),
+        daily: [{ date: key, levelId: "cached-level", level: null }]
+      })
+    );
+  }, dayKey);
+  await gotoHome(page);
+  await page.getByRole("button", { name: /Calendari/i }).click();
+  const dayButton = page.locator(`[data-calendar-day="${dayKey}"]`);
+  await expect(dayButton).toHaveAttribute("data-has-level", "true");
+  await expect(dayButton).toBeEnabled();
+});
+
+test("el calendari permet clicar disponibilitat abans del detall del nivell", async ({
+  page
+}) => {
+  const dayKey = getTodayKey();
+  let releaseDetail;
+  const detailGate = new Promise((resolve) => {
+    releaseDetail = resolve;
+  });
+  let availabilityRequests = 0;
+  let detailRequests = 0;
+  const supabaseHeaders = {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET, OPTIONS",
+    "access-control-allow-headers": "authorization, apikey, x-client-info, content-type, prefer, range",
+    "access-control-expose-headers": "content-range",
+    "content-range": "0-0/1"
+  };
+
+  await page.route("**/*calendar_daily*", (route) => {
+    if (route.request().method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: supabaseHeaders });
+    }
+    availabilityRequests += 1;
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: supabaseHeaders,
+      body: JSON.stringify([{ date: dayKey, level_id: "level-slow-detail" }])
+    });
+  });
+  await page.route("**/*daily_calendar_public*", async (route) => {
+    if (route.request().method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: supabaseHeaders });
+    }
+    detailRequests += 1;
+    await detailGate;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: supabaseHeaders,
+      body: JSON.stringify([
+        {
+          date: dayKey,
+          level_id: "level-slow-detail",
+          start_id: "baix-camp",
+          target_id: "valles-occidental",
+          shortest_path: [
+            "baix-camp",
+            "alt-camp",
+            "alt-penedes",
+            "baix-llobregat",
+            "valles-occidental"
+          ],
+          rule_id: null,
+          avoid_ids: null,
+          must_pass_ids: null,
+          difficulty_id: "cap-colla-rutes"
+        }
+      ])
+    });
+  });
+  await page.addInitScript((key) => {
+    localStorage.setItem(
+      "rumb-calendar-cache-v1",
+      JSON.stringify({
+        updatedAt: Date.now(),
+        daily: [{ date: key, levelId: "level-slow-detail", level: null }]
+      })
+    );
+  }, dayKey);
+
+  await gotoHome(page);
+  await page.getByRole("button", { name: /Calendari/i }).click();
+  const dayButton = page.locator(`[data-calendar-day="${dayKey}"]`);
+  await expect(dayButton).toHaveAttribute("data-has-level", "true");
+  await expect(dayButton).toBeEnabled();
+  await dayButton.click();
+  await expect(dayButton).toHaveAttribute("data-loading", "true");
+  await expect.poll(() => detailRequests).toBeGreaterThan(0);
+  releaseDetail();
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");
+  await expect(page.locator(".map-brief .route")).toContainText("Baix Camp");
+  await expect(page.locator(".map-brief .route")).toContainText("Vallès Occidental");
+});
+
 test("arrenca amb l'audio silenciat i el volum funciona en mobil", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await gotoHome(page);
@@ -835,8 +941,8 @@ test("la navegacio mobil te nomes reptes a capcalera i accions a baix", async ({
   expect(await page.evaluate(() => localStorage.getItem("rumb-difficulty"))).toBe("pixapi");
 });
 
-test("la barra mobil no talla les accions a amplades petites", async ({ page }) => {
-  for (const width of [320, 390]) {
+test("la barra mobil no talla accions ni solapa el mapa", async ({ page }) => {
+  for (const width of [320, 390, 459]) {
     await page.setViewportSize({ width, height: 844 });
     await gotoHome(page);
     await page.waitForSelector("svg.map");
@@ -865,31 +971,74 @@ test("la barra mobil no talla les accions a amplades petites", async ({ page }) 
     const mapBriefMetrics = await page.evaluate(() => {
       const map = document.querySelector(".map-wrap")?.getBoundingClientRect();
       const prompt = document.querySelector(".map-brief")?.getBoundingClientRect();
+      const svg = document.querySelector("svg.map")?.getBoundingClientRect();
       const controls = document.querySelector(".map-controls")?.getBoundingClientRect();
-      const overlapsControls =
-        prompt && controls
-          ? !(
-              prompt.right <= controls.left ||
-              prompt.left >= controls.right ||
-              prompt.bottom <= controls.top ||
-              prompt.top >= controls.bottom
-            )
-          : true;
+      const markedComarques = [
+        ...document.querySelectorAll(".comarca.is-start, .comarca.is-target")
+      ].map((path) => path.getBoundingClientRect());
+      const overlaps = (a, b) =>
+        Boolean(
+          a &&
+            b &&
+            a.left < b.right &&
+            a.right > b.left &&
+            a.top < b.bottom &&
+            a.bottom > b.top
+        );
       return {
         promptLeft: Math.round(prompt?.left || 0),
         promptRight: Math.round(prompt?.right || 0),
+        promptBottom: Math.round(prompt?.bottom || 0),
+        svgTop: Math.round(svg?.top || 0),
         mapLeft: Math.round(map?.left || 0),
         mapRight: Math.round(map?.right || 0),
-        mapWidth: Math.round(map?.width || 0),
-        overlapsControls
+        overlapsControls: overlaps(prompt, controls),
+        overlapsSvg: overlaps(prompt, svg),
+        overlapsMarkedComarques: markedComarques.some((box) => overlaps(prompt, box))
       };
     });
     expect(mapBriefMetrics.promptLeft).toBeGreaterThanOrEqual(mapBriefMetrics.mapLeft);
-    expect(mapBriefMetrics.promptRight).toBeLessThanOrEqual(
-      mapBriefMetrics.mapLeft + Math.round(mapBriefMetrics.mapWidth * 0.56)
-    );
     expect(mapBriefMetrics.promptRight).toBeLessThanOrEqual(mapBriefMetrics.mapRight);
+    expect(mapBriefMetrics.promptBottom).toBeLessThanOrEqual(mapBriefMetrics.svgTop);
     expect(mapBriefMetrics.overlapsControls).toBeFalsy();
+    expect(mapBriefMetrics.overlapsSvg).toBeFalsy();
+    expect(mapBriefMetrics.overlapsMarkedComarques).toBeFalsy();
   }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await gotoHome(page);
+  await page.waitForSelector("svg.map");
+  let guesses = [];
+  for (let index = 0; index < 6; index += 1) {
+    guesses = resolveOptimalGuessNames(await getRouteAndRule(page));
+    if (guesses.length) break;
+    await page.locator(".bottom-nav").getByRole("button", { name: /Nova partida/i }).click();
+  }
+  expect(guesses.length).toBeGreaterThan(0);
+  await playGuesses(page, guesses);
+  await expect(page.locator(".modal")).toBeVisible();
+  const completedMetrics = await page.evaluate(() => {
+    const prompt = document.querySelector(".map-brief")?.getBoundingClientRect();
+    const completed = [
+      ...document.querySelectorAll(
+        ".comarca.is-start, .comarca.is-target, .comarca.is-complete-route"
+      )
+    ].map((path) => path.getBoundingClientRect());
+    const overlaps = (a, b) =>
+      Boolean(
+        a &&
+          b &&
+          a.left < b.right &&
+          a.right > b.left &&
+          a.top < b.bottom &&
+          a.bottom > b.top
+      );
+    return {
+      completedCount: completed.length,
+      overlapsCompletedRoute: completed.some((box) => overlaps(prompt, box))
+    };
+  });
+  expect(completedMetrics.completedCount).toBeGreaterThan(0);
+  expect(completedMetrics.overlapsCompletedRoute).toBeFalsy();
 });
 

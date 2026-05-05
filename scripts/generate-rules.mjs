@@ -195,26 +195,6 @@ COMARQUES.forEach((comarca) => {
   });
 });
 
-const chunks = [];
-for (let i = 0; i < COMARQUES.length; i += 3) {
-  chunks.push(COMARQUES.slice(i, i + 3).map((item) => item.name));
-}
-
-chunks.forEach((group, index) => {
-  const clue = `grup cultural ${index + 1}`;
-  GROUP_TEMPLATES.forEach((tpl, idx) => {
-    rules.push({
-      id: `group-${index}-${idx}`,
-      text: tpl.text(group, clue),
-      type: tpl.type,
-      comarques: group,
-      difficultyCultural: tpl.difficulty,
-      explanation: tpl.explanation(group),
-      tags: tpl.tags
-    });
-  });
-});
-
 ZONE_GROUPS.forEach((zone, index) => {
   GROUP_TEMPLATES.forEach((tpl, idx) => {
     rules.push({

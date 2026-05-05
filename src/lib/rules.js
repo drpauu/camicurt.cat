@@ -1,6 +1,9 @@
 import RAW_RULES from "../data/rules.json";
+import { isDisabledGroupCulturalRule } from "./disabledRules.js";
 
-export const RULES = Array.isArray(RAW_RULES) ? RAW_RULES : [];
+export const RULES = Array.isArray(RAW_RULES)
+  ? RAW_RULES.filter((rule) => !isDisabledGroupCulturalRule(rule))
+  : [];
 
 function hashString(value) {
   if (typeof value !== "string") return 0;
@@ -26,6 +29,7 @@ export function pickRuleForKey(rules, seedKey, history = [], rngFactory) {
 
 export function normalizeRule(schema) {
   if (!schema) return null;
+  if (isDisabledGroupCulturalRule(schema)) return null;
   const type = schema.type || "REQUIRE";
   const kind =
     type === "FORBID" ? "avoid" : type === "ONE_OF" ? "mustIncludeAny" : "mustIncludeAny";

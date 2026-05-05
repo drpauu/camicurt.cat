@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { geoCentroid } from "d3-geo";
 import { feature, neighbors as topoNeighbors } from "topojson-client";
 import { normalizeName, slugifyName } from "../src/lib/names.js";
+import { isDisabledGroupCulturalRule } from "../src/lib/disabledRules.js";
 import {
   findShortestPath,
   findShortestPathInSet,
@@ -44,6 +45,7 @@ const DIFFICULTY_CONFIGS = [
 
 function normalizeRule(schema) {
   if (!schema) return null;
+  if (isDisabledGroupCulturalRule(schema)) return null;
   const type = schema.type || "REQUIRE";
   const kind = type === "FORBID" ? "avoid" : "mustIncludeAny";
   return {
@@ -96,6 +98,18 @@ function getLevelFingerprint(levelData) {
     (levelData.avoid_ids || []).join(","),
     (levelData.must_pass_ids || []).join(",")
   ].join("|");
+}
+
+function sanitizeDisabledRuleLevelData(levelData, adjacency) {
+  if (!isDisabledGroupCulturalRule(levelData?.rule_id)) return levelData;
+  const shortestPath = findShortestPath(levelData.start_id, levelData.target_id, adjacency);
+  return {
+    ...levelData,
+    rule_id: null,
+    avoid_ids: null,
+    must_pass_ids: null,
+    shortest_path: shortestPath.length ? shortestPath : levelData.shortest_path
+  };
 }
 
 function formatSqlString(value) {
@@ -748,16 +762,17 @@ async function run() {
   }
 
   async function assignDailyFromBank(forDayKey, bankRow) {
+    const levelData = sanitizeDisabledRuleLevelData(bankRow, adjacencyMap);
     const result = await supabase
       .rpc("create_daily_level", {
         p_date: forDayKey,
-        p_difficulty_id: bankRow.difficulty_id,
-        p_rule_id: bankRow.rule_id,
-        p_start_id: bankRow.start_id,
-        p_target_id: bankRow.target_id,
-        p_shortest_path: bankRow.shortest_path,
-        p_avoid_ids: bankRow.avoid_ids,
-        p_must_pass_ids: bankRow.must_pass_ids
+        p_difficulty_id: levelData.difficulty_id,
+        p_rule_id: levelData.rule_id,
+        p_start_id: levelData.start_id,
+        p_target_id: levelData.target_id,
+        p_shortest_path: levelData.shortest_path,
+        p_avoid_ids: levelData.avoid_ids,
+        p_must_pass_ids: levelData.must_pass_ids
       })
       .single();
     if (result.error) {

@@ -16,6 +16,7 @@ import {
 import { loadSettings, saveSettings } from "./lib/settings.js";
 import { TOMAS_THEME_ID } from "./lib/themes.js";
 import { RULES, pickRuleForKey, normalizeRule } from "./lib/rules.js";
+import { isDisabledGroupCulturalRule } from "./lib/disabledRules.js";
 import { createAudioManager, loadAudioManifest } from "./lib/audio.js";
 import { useSound } from "./audio/SoundProvider.tsx";
 import {
@@ -41,6 +42,9 @@ const DAILY_RESULTS_KEY = "rumb-daily-results-v1";
 const CALENDAR_WEEKDAYS = ["dl", "dt", "dc", "dj", "dv", "ds", "dg"];
 const CALENDAR_CACHE_KEY = "rumb-calendar-cache-v1";
 const CALENDAR_CACHE_TTL_MS = 1000 * 60 * 15;
+const CALENDAR_AVAILABILITY_COLUMNS = "date, level_id";
+const CALENDAR_DETAIL_COLUMNS =
+  "date, level_id, start_id, target_id, shortest_path, rule_id, avoid_ids, must_pass_ids, difficulty_id";
 const RULE_HISTORY_KEY = "rumb-rule-history-v1";
 const RULE_ASSIGNMENTS_KEY = "rumb-rule-assignments-v1";
 const RULE_HISTORY_LIMIT = 60;
@@ -996,6 +1000,52 @@ function normalizeDayKey(value) {
   return null;
 }
 
+function calendarAvailabilityEntryFromRow(row) {
+  const date = normalizeDayKey(row?.date);
+  if (!date) return null;
+  return {
+    date,
+    levelId: row.level_id || row.levelId || null,
+    level: row.level || null
+  };
+}
+
+function calendarDetailEntryFromRow(row) {
+  const base = calendarAvailabilityEntryFromRow(row);
+  if (!base?.levelId) return base;
+  return {
+    ...base,
+    level: {
+      id: row.level_id || row.levelId,
+      start_id: row.start_id,
+      target_id: row.target_id,
+      shortest_path: row.shortest_path,
+      rule_id: row.rule_id,
+      avoid_ids: row.avoid_ids,
+      must_pass_ids: row.must_pass_ids,
+      difficulty_id: row.difficulty_id
+    }
+  };
+}
+
+function mergeCalendarEntries(currentEntries, incomingEntries) {
+  const byDate = new Map();
+  currentEntries.forEach((entry) => {
+    if (entry?.date) byDate.set(entry.date, entry);
+  });
+  incomingEntries.forEach((entry) => {
+    if (!entry?.date) return;
+    const previous = byDate.get(entry.date) || {};
+    byDate.set(entry.date, {
+      ...previous,
+      ...entry,
+      levelId: entry.levelId || previous.levelId || null,
+      level: entry.level || previous.level || null
+    });
+  });
+  return [...byDate.values()].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+}
+
 function buildMonthGrid(date) {
   const first = new Date(date.getFullYear(), date.getMonth(), 1);
   const startOffset = (first.getDay() + 6) % 7;
@@ -1352,7 +1402,9 @@ function prepareRule(def, ctx) {
 
 function buildRuleFromLevel(level, comarcaById, normalizedToId) {
   if (!level?.rule_id) return null;
+  if (isDisabledGroupCulturalRule(level.rule_id)) return null;
   const base = RULE_DEFS.find((def) => def.id === level.rule_id) || null;
+  if (isDisabledGroupCulturalRule(base)) return null;
   const avoidIds = Array.isArray(level.avoid_ids) ? level.avoid_ids : [];
   const mustPassIds = Array.isArray(level.must_pass_ids) ? level.must_pass_ids : [];
   const kind = base?.kind || (avoidIds.length ? "avoid" : "mustIncludeAny");
@@ -1647,6 +1699,7 @@ export default function App() {
   const [calendarStatus, setCalendarStatus] = useState("idle");
   const [calendarLoaded, setCalendarLoaded] = useState(false);
   const [calendarSelection, setCalendarSelection] = useState(null);
+  const [calendarLoadingDayKey, setCalendarLoadingDayKey] = useState(null);
   const [levelStats, setLevelStats] = useState(() => {
     if (typeof window === "undefined") return {};
     const raw = localStorage.getItem(LEVEL_STATS_KEY);
@@ -1696,6 +1749,7 @@ export default function App() {
   const calendarApplyRef = useRef(null);
   const calendarAutoSetRef = useRef({ daily: false });
   const calendarLoadingRef = useRef(false);
+  const calendarDetailRequestsRef = useRef(new Map());
   const calendarCountsRef = useRef({ daily: 0 });
   const calendarMonthRef = useRef(calendarMonth);
   const telemetryFlushRef = useRef(false);
@@ -1712,7 +1766,7 @@ export default function App() {
   const isTimedMode = gameMode === "timed";
   const isDailyMode = gameMode === "daily";
   const isFixedMode = isDailyMode;
-  const shouldLoadCalendar = calendarOpen || isDailyMode;
+  const shouldLoadCalendar = isSupabaseReady || calendarOpen || isDailyMode;
   const activeDifficulty = isFixedMode ? "cap-colla-rutes" : difficulty;
   const difficultyConfig = useMemo(() => {
     return DIFFICULTIES.find((entry) => entry.id === activeDifficulty) || DIFFICULTIES[0];
@@ -1774,7 +1828,7 @@ export default function App() {
   const isCalendarModeActive = Boolean(
     calendarSelection &&
       calendarSelection.mode === gameMode &&
-      activeCalendarEntry?.level
+      (activeCalendarEntry?.level || activeCalendarEntry?.levelId)
   );
   const displayStreak = useMemo(() => {
     if (!dailyStreak.lastDate) return 0;
@@ -2324,32 +2378,26 @@ export default function App() {
     let isMounted = true;
     async function loadCalendar() {
       const canReadCalendar = Boolean(supabaseEnabled && supabase);
-      if (!canReadCalendar) {
-        if (isMounted) setCalendarStatus("error");
-        return;
-      }
-      calendarLoadingRef.current = true;
       const cached = readCalendarCache();
       const hasCache = Boolean(cached?.daily?.length);
       if (hasCache && isMounted) {
         setCalendarDaily(cached.daily || []);
+        setCalendarStatus("ready");
+        setCalendarLoaded(true);
       }
+      if (!canReadCalendar) {
+        if (isMounted && !hasCache) setCalendarStatus("error");
+        return;
+      }
+      calendarLoadingRef.current = true;
       setCalendarStatus(hasCache ? "refreshing" : "loading");
       try {
-        const now = new Date();
-        const start = new Date(now);
-        start.setFullYear(now.getFullYear() - 2);
-        const startKey = getLocalDayKey(start);
-        const endKey = getLocalDayKey(now);
         const dailyRes = await withRetry(
           () =>
             supabase
-              .from("daily_calendar_public")
-              .select(
-                "date, level_id, start_id, target_id, shortest_path, rule_id, avoid_ids, must_pass_ids, difficulty_id"
-              )
-              .gte("date", startKey)
-              .lte("date", endKey)
+              .from("calendar_daily")
+              .select(CALENDAR_AVAILABILITY_COLUMNS)
+              .lte("date", dayKey)
               .order("date", { ascending: false })
               .range(0, 1499),
           { retries: 2, backoffMs: 500 }
@@ -2358,33 +2406,14 @@ export default function App() {
 
         const dailyRows = Array.isArray(dailyRes.data) ? dailyRes.data : [];
         const dailyEntries = dailyRows
-          .map((row) => {
-            const dateKey = normalizeDayKey(row.date);
-            if (!dateKey) return null;
-            const level = row.level_id
-              ? {
-                  id: row.level_id,
-                  start_id: row.start_id,
-                  target_id: row.target_id,
-                  shortest_path: row.shortest_path,
-                  rule_id: row.rule_id,
-                  avoid_ids: row.avoid_ids,
-                  must_pass_ids: row.must_pass_ids,
-                  difficulty_id: row.difficulty_id
-                }
-              : null;
-            return {
-              date: dateKey,
-              levelId: row.level_id,
-              level
-            };
-          })
+          .map((row) => calendarAvailabilityEntryFromRow(row))
           .filter(Boolean);
+        const mergedEntries = mergeCalendarEntries(cached?.daily || [], dailyEntries);
         if (isMounted) {
-          setCalendarDaily(dailyEntries);
+          setCalendarDaily(mergedEntries);
           setCalendarStatus("ready");
           setCalendarLoaded(true);
-          writeCalendarCache({ daily: dailyEntries });
+          writeCalendarCache({ daily: mergedEntries });
         }
       } catch {
         if (isMounted) {
@@ -2401,7 +2430,12 @@ export default function App() {
     return () => {
       isMounted = false;
     };
-  }, [isSupabaseReady, shouldLoadCalendar, calendarLoaded]);
+  }, [shouldLoadCalendar, calendarLoaded, dayKey]);
+
+  useEffect(() => {
+    if (!calendarLoaded || !calendarDaily.length) return;
+    writeCalendarCache({ daily: calendarDaily });
+  }, [calendarLoaded, calendarDaily]);
 
   useEffect(() => {
     if (gameMode === "daily") return;
@@ -3756,6 +3790,58 @@ export default function App() {
     focusGuessInput();
   }
 
+  async function fetchCalendarDetails(keys) {
+    if (!supabaseEnabled || !supabase) return [];
+    const uniqueKeys = [...new Set(keys)]
+      .map((key) => normalizeDayKey(key))
+      .filter((key) => key && key <= dayKey);
+    const missingKeys = uniqueKeys.filter((key) => {
+      const entry = calendarDailyMap.get(key);
+      return entry?.levelId && !entry.level;
+    });
+    if (!missingKeys.length) return [];
+
+    const requestKey = missingKeys.sort().join("|");
+    const existingRequest = calendarDetailRequestsRef.current.get(requestKey);
+    if (existingRequest) return existingRequest;
+
+    const request = withRetry(
+      () =>
+        supabase
+          .from("daily_calendar_public")
+          .select(CALENDAR_DETAIL_COLUMNS)
+          .in("date", missingKeys)
+          .order("date", { ascending: false })
+          .range(0, missingKeys.length - 1),
+      { retries: 2, backoffMs: 350 }
+    )
+      .then((result) => {
+        if (result.error) throw result.error;
+        const entries = (Array.isArray(result.data) ? result.data : [])
+          .map((row) => calendarDetailEntryFromRow(row))
+          .filter(Boolean);
+        if (entries.length) {
+          setCalendarDaily((prev) => mergeCalendarEntries(prev, entries));
+        }
+        return entries;
+      })
+      .catch(() => [])
+      .finally(() => {
+        calendarDetailRequestsRef.current.delete(requestKey);
+      });
+    calendarDetailRequestsRef.current.set(requestKey, request);
+    return request;
+  }
+
+  async function fetchCalendarDetail(key) {
+    const normalizedKey = normalizeDayKey(key);
+    if (!normalizedKey) return null;
+    const existing = calendarDailyMap.get(normalizedKey);
+    if (existing?.level) return existing.level;
+    const entries = await fetchCalendarDetails([normalizedKey]);
+    return entries.find((entry) => entry.date === normalizedKey)?.level || null;
+  }
+
   function handleCalendarPick(mode, key) {
     if (mode === "daily" && key > dayKey) {
       playManifestSfx("error");
@@ -3770,6 +3856,10 @@ export default function App() {
     calendarApplyRef.current = null;
     setCalendarMode("daily");
     if (!entry?.level) {
+      if (entry?.levelId) {
+        handleCalendarAction("daily", key);
+        return;
+      }
       setCalendarSelection(null);
       if (gameMode !== "daily") {
         setGameMode("daily");
@@ -3987,35 +4077,31 @@ export default function App() {
       return;
     }
     const entry = calendarDailyMap.get(key);
-    if (!entry?.level && !entry?.levelId) return;
+    if (!entry?.levelId) return;
     let level = entry.level;
-    if (!level && entry.levelId) {
-      try {
-        const { data, error } = await withRetry(
-          () =>
-            supabase
-              .from("levels")
-              .select(
-                "id, start_id, target_id, shortest_path, rule_id, avoid_ids, must_pass_ids, difficulty_id"
-              )
-              .eq("id", entry.levelId)
-              .maybeSingle(),
-          { retries: 2, backoffMs: 500 }
-        );
-        if (error) return;
-        level = data || null;
-      } catch {
-        return;
-      }
+    if (!level) {
+      setCalendarLoadingDayKey(key);
+      level = await fetchCalendarDetail(key);
+      setCalendarLoadingDayKey((current) => (current === key ? null : current));
     }
     if (!level) return;
-    if (!entry.level && level) {
-      setCalendarDaily((prev) =>
-        prev.map((item) => (item.date === key ? { ...item, level } : item))
-      );
-    }
-    handleCalendarPick("daily", key);
+    setCalendarDaily((prev) =>
+      mergeCalendarEntries(prev, [
+        {
+          date: key,
+          levelId: entry.levelId,
+          level
+        }
+      ])
+    );
+    setCalendarSelection({ mode: "daily", key });
     setCalendarOpen(false);
+    if (gameMode !== "daily") {
+      setGameMode("daily");
+      return;
+    }
+    applyCalendarLevel(level);
+    calendarApplyRef.current = `daily:${key}`;
   }
 
   function handleCalendarClose() {
@@ -4646,6 +4732,32 @@ export default function App() {
   }, [calendarDaily, calendarMonth, dayKey]);
   const streakTierLabel = useMemo(() => getStreakTier(displayStreak), [displayStreak]);
 
+  useEffect(() => {
+    if (!calendarLoaded || !calendarDaily.length) return;
+    const keys = new Set([dayKey]);
+    if (isDailyMode && activeDayKey) keys.add(activeDayKey);
+    if (calendarOpen) {
+      calendarMonthDays.forEach((day) => {
+        if (day.inMonth && day.key <= dayKey) keys.add(day.key);
+      });
+    }
+    const missingKeys = [...keys].filter((key) => {
+      const entry = calendarDailyMap.get(key);
+      return entry?.levelId && !entry.level;
+    });
+    if (!missingKeys.length) return;
+    fetchCalendarDetails(missingKeys);
+  }, [
+    calendarLoaded,
+    calendarDaily,
+    calendarDailyMap,
+    calendarOpen,
+    calendarMonthDays,
+    dayKey,
+    isDailyMode,
+    activeDayKey
+  ]);
+
   return (
     <ThemeProvider themeId={activeTheme} weatherState={weatherState}>
       <div className="page">
@@ -4707,21 +4819,6 @@ export default function App() {
           }`}
           aria-busy={!isMapReady}
         >
-          {isTimedMode ? (
-            <div className={`map-timer ${timeLeftUrgent ? "urgent" : ""}`}>
-              {startedAt && !isCountdownActive ? formatTime(timeLeftMs) : ""}
-            </div>
-          ) : null}
-          {isTimedMode && isCountdownActive ? (
-            <div className="countdown-overlay" aria-live="polite">
-              <span className="countdown-value">{countdownValue}</span>
-            </div>
-          ) : null}
-          {!isMapReady ? (
-            <div className="map-loading" role="status" aria-live="polite">
-              Carregant mapa...
-            </div>
-          ) : null}
           <div className="prompt map-brief">
             {startName && targetName ? (
               <>
@@ -4741,83 +4838,100 @@ export default function App() {
               <span>Carregant dades...</span>
             )}
           </div>
-          <div className="map-controls">
-            <button
-              type="button"
-              onClick={() => {
-                playManifestSfx("click", 0.55);
-                handleZoomIn();
-              }}
-              aria-label="Apropar"
-            >
-              +
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                playManifestSfx("click", 0.55);
-                handleZoomOut();
-              }}
-              aria-label="Allunyar"
-            >
-              {"\u2212"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                playManifestSfx("click", 0.55);
-                handleRecenter();
-              }}
-            >
-              Recentrar
-            </button>
-          </div>
+          <div className="map-stage">
+            {isTimedMode ? (
+              <div className={`map-timer ${timeLeftUrgent ? "urgent" : ""}`}>
+                {startedAt && !isCountdownActive ? formatTime(timeLeftMs) : ""}
+              </div>
+            ) : null}
+            {isTimedMode && isCountdownActive ? (
+              <div className="countdown-overlay" aria-live="polite">
+                <span className="countdown-value">{countdownValue}</span>
+              </div>
+            ) : null}
+            {!isMapReady ? (
+              <div className="map-loading" role="status" aria-live="polite">
+                Carregant mapa...
+              </div>
+            ) : null}
+            <div className="map-controls">
+              <button
+                type="button"
+                onClick={() => {
+                  playManifestSfx("click", 0.55);
+                  handleZoomIn();
+                }}
+                aria-label="Apropar"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  playManifestSfx("click", 0.55);
+                  handleZoomOut();
+                }}
+                aria-label="Allunyar"
+              >
+                {"\u2212"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  playManifestSfx("click", 0.55);
+                  handleRecenter();
+                }}
+              >
+                Recentrar
+              </button>
+            </div>
 
-          <svg
-            ref={svgRef}
-            className="map"
-            viewBox={viewBox}
-            role="img"
-            aria-label="Mapa de Catalunya"
-            onPointerDown={() => play("map_tap")}
-          >
-            <g ref={gRef}>
-              {outlinePath ? <path className="outline" d={outlinePath} /> : null}
-              {renderPaths.map((featureItem) => (
-                <path
-                  key={featureItem.id}
-                  d={featureItem.path}
-                  className={featureItem.classes}
-                  data-comarca-id={featureItem.id}
-                  data-comarca-name={featureItem.name}
-                />
-              ))}
-              {showInitialsActive ? (
-                <g className="initials">
-                  {paths.map((featureItem) => {
-                    const centroid = featureItem.centroid;
-                    if (!centroid) return null;
-                    const [x, y] = centroid;
-                    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-                    return (
-                      <text
-                        key={`init-${featureItem.id}`}
-                        x={x}
-                        y={y}
-                        textAnchor="middle"
-                        dominantBaseline="central"
-                        className="initial"
-                        data-comarca-id={featureItem.id}
-                        style={{ fontSize: `${featureItem.initialFontSize}px` }}
-                      >
-                        {featureItem.initials}
-                      </text>
-                    );
-                  })}
-                </g>
-              ) : null}
-            </g>
-          </svg>
+            <svg
+              ref={svgRef}
+              className="map"
+              viewBox={viewBox}
+              role="img"
+              aria-label="Mapa de Catalunya"
+              onPointerDown={() => play("map_tap")}
+            >
+              <g ref={gRef}>
+                {outlinePath ? <path className="outline" d={outlinePath} /> : null}
+                {renderPaths.map((featureItem) => (
+                  <path
+                    key={featureItem.id}
+                    d={featureItem.path}
+                    className={featureItem.classes}
+                    data-comarca-id={featureItem.id}
+                    data-comarca-name={featureItem.name}
+                  />
+                ))}
+                {showInitialsActive ? (
+                  <g className="initials">
+                    {paths.map((featureItem) => {
+                      const centroid = featureItem.centroid;
+                      if (!centroid) return null;
+                      const [x, y] = centroid;
+                      if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+                      return (
+                        <text
+                          key={`init-${featureItem.id}`}
+                          x={x}
+                          y={y}
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                          className="initial"
+                          data-comarca-id={featureItem.id}
+                          style={{ fontSize: `${featureItem.initialFontSize}px` }}
+                        >
+                          {featureItem.initials}
+                        </text>
+                      );
+                    })}
+                  </g>
+                ) : null}
+              </g>
+            </svg>
+          </div>
         </div>
 
         <aside className="side-panel">
@@ -5065,6 +5179,7 @@ export default function App() {
                       const dailyEntry = calendarDailyMap.get(day.key) || null;
                       const isToday = day.key === dayKey;
                       const isFuture = day.key > dayKey;
+                      const isLoadingDaily = calendarLoadingDayKey === day.key;
                       const isDoneDaily = Boolean(
                         getCompletionRecord("daily", day.key)?.winningAttempt
                       );
@@ -5082,7 +5197,9 @@ export default function App() {
                         isLockedDaily
                           ? " \u00b7 bloquejat"
                           : hasDailyLevel
-                            ? ""
+                            ? isLoadingDaily
+                              ? " \u00b7 carregant"
+                              : ""
                             : ` \u00b7 ${t("calendarNoLevel")}`
                       }`;
                       return (
@@ -5093,13 +5210,16 @@ export default function App() {
                             isToday ? "today" : ""
                           } ${isDoneDaily ? "done" : ""} ${
                             hasDailyLevel ? "has-level" : "disabled"
-                          } ${isLockedDaily ? "locked" : ""} ${isFuture ? "future" : ""}`}
+                          } ${isLockedDaily ? "locked" : ""} ${
+                            isFuture ? "future" : ""
+                          } ${isLoadingDaily ? "loading" : ""}`}
                           onClick={() => handleCalendarAction("daily", day.key)}
-                          disabled={!hasDailyLevel}
+                          disabled={!hasDailyLevel || isLoadingDaily}
                           aria-label={dayLabel}
                           data-calendar-day={day.key}
                           data-has-level={hasDailyLevel ? "true" : "false"}
                           data-locked={isLockedDaily ? "true" : "false"}
+                          data-loading={isLoadingDaily ? "true" : "false"}
                         >
                           <span className="calendar-day-label">{day.label}</span>
                           <span className={dayDotClass} />

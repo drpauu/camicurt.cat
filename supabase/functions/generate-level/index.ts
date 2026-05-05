@@ -8,9 +8,26 @@ const RULE_DEFS = Array.isArray(rules)
   ? rules.map((rule: any) => normalizeRule(rule)).filter(Boolean)
   : [];
 const RULE_HISTORY_LIMIT = 60;
+const GROUP_CULTURAL_RULE_ID_PATTERN = /^group-\d+-[01]$/;
+const GROUP_CULTURAL_TEXT_PATTERN = /grup cultural/i;
+
+function isDisabledGroupCulturalRule(ruleOrId: any) {
+  if (!ruleOrId) return false;
+  const id =
+    typeof ruleOrId === "string"
+      ? ruleOrId
+      : ruleOrId.id || ruleOrId.rule_id || "";
+  const text =
+    typeof ruleOrId === "string" ? "" : ruleOrId.text || ruleOrId.label || "";
+  return (
+    GROUP_CULTURAL_RULE_ID_PATTERN.test(String(id)) ||
+    GROUP_CULTURAL_TEXT_PATTERN.test(String(text))
+  );
+}
 
 function normalizeRule(schema: any) {
   if (!schema) return null;
+  if (isDisabledGroupCulturalRule(schema)) return null;
   const type = schema.type || "REQUIRE";
   const kind = type === "FORBID" ? "avoid" : "mustIncludeAny";
   return {
