@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, resolveLocale } from "./locales.js";
+
 const SETTINGS_KEY = "rumb-settings-v1";
 const ACTIVE_THEME_KEY = "rumb-theme-active-v1";
 const MUSIC_SETTINGS_KEY = "rumb-music-settings-v1";
@@ -6,7 +8,7 @@ const LANGUAGE_KEY = "rumb-language-v1";
 
 export const DEFAULT_SETTINGS = {
   theme: "default",
-  language: "ca",
+  language: DEFAULT_LOCALE,
   musicEnabled: false,
   musicVolume: 0,
   musicTrack: "segadors",
@@ -37,7 +39,7 @@ export function loadSettings() {
       const parsed = JSON.parse(raw);
       return {
         theme: coerceString(parsed.theme, DEFAULT_SETTINGS.theme),
-        language: coerceString(parsed.language, DEFAULT_SETTINGS.language),
+        language: resolveLocale(coerceString(parsed.language, DEFAULT_SETTINGS.language)),
         musicEnabled: coerceBoolean(parsed.musicEnabled, DEFAULT_SETTINGS.musicEnabled),
         musicVolume: coerceNumber(parsed.musicVolume, DEFAULT_SETTINGS.musicVolume),
         musicTrack: coerceString(parsed.musicTrack, DEFAULT_SETTINGS.musicTrack),
@@ -82,7 +84,7 @@ export function loadSettings() {
 
   return {
     theme: coerceString(theme, DEFAULT_SETTINGS.theme),
-    language: coerceString(language, DEFAULT_SETTINGS.language),
+    language: resolveLocale(coerceString(language, DEFAULT_SETTINGS.language)),
     musicEnabled,
     musicVolume,
     musicTrack,
@@ -95,7 +97,7 @@ export function saveSettings(settings) {
   if (typeof window === "undefined") return;
   const payload = {
     theme: coerceString(settings.theme, DEFAULT_SETTINGS.theme),
-    language: coerceString(settings.language, DEFAULT_SETTINGS.language),
+    language: resolveLocale(coerceString(settings.language, DEFAULT_SETTINGS.language)),
     musicEnabled: coerceBoolean(settings.musicEnabled, DEFAULT_SETTINGS.musicEnabled),
     musicVolume: coerceNumber(settings.musicVolume, DEFAULT_SETTINGS.musicVolume),
     musicTrack: coerceString(settings.musicTrack, DEFAULT_SETTINGS.musicTrack),

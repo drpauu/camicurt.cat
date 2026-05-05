@@ -30,9 +30,13 @@ export function pickRuleForKey(rules, seedKey, history = [], rngFactory) {
 export function normalizeRule(schema) {
   if (!schema) return null;
   if (isDisabledRule(schema)) return null;
-  const type = schema.type || "REQUIRE";
+  const type = String(schema.type || "REQUIRE").toUpperCase();
   const kind =
-    type === "FORBID" ? "avoid" : type === "ONE_OF" ? "mustIncludeAny" : "mustIncludeAny";
+    type === "FORBID" || type === "EXCLUDE"
+      ? "avoid"
+      : type === "ONE_OF" || type === "INCLUDE" || type === "REQUIRE"
+        ? "mustIncludeAny"
+        : "mustIncludeAny";
   return {
     id: schema.id,
     kind,

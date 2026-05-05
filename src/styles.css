@@ -1971,7 +1971,7 @@ h1 {
 
 .result-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
 }
 
 .result-actions button {
@@ -2377,15 +2377,18 @@ h1 {
 
   .bottom-nav-label {
     min-width: 0;
-    font-size: clamp(0.68rem, 2.55vw, 0.78rem);
+    max-width: 100%;
+    font-size: clamp(0.64rem, 2.35vw, 0.78rem);
     font-weight: 650;
     letter-spacing: 0;
-    line-height: 1.1;
-    white-space: nowrap;
+    line-height: 1.08;
+    overflow-wrap: anywhere;
+    text-align: center;
+    white-space: normal;
   }
 
   .bottom-nav-new-game .bottom-nav-label {
-    font-size: clamp(0.74rem, 2.85vw, 0.86rem);
+    font-size: clamp(0.68rem, 2.55vw, 0.86rem);
     font-weight: 750;
   }
 }

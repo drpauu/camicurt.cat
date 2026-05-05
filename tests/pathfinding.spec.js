@@ -118,7 +118,7 @@ test("la dificultat es classifica nomes per distancia del cami curt", () => {
 
 test("els seeds del banc guarden difficulty_id segons el shortest_path", () => {
   const sql = fs.readFileSync(
-    path.join(rootDir, "supabase", "seed_level_bank_10000.sql"),
+    path.join(rootDir, "supabase", "seed_level_bank_20000.sql"),
     "utf8"
   );
   const rows = sql
@@ -155,11 +155,11 @@ test("les dades i seeds no tornen a introduir regles deshabilitades", () => {
 
   const checkedPaths = [
     "scripts/generate-rules.mjs",
-    "supabase/seed_level_bank_10000.sql",
+    "supabase/seed_level_bank_20000.sql",
     ...fs
-      .readdirSync(path.join(rootDir, "supabase", "seed_level_bank_10000_chunks"))
+      .readdirSync(path.join(rootDir, "supabase", "seed_level_bank_20000_chunks"))
       .filter((name) => name.endsWith(".sql"))
-      .map((name) => path.join("supabase", "seed_level_bank_10000_chunks", name))
+      .map((name) => path.join("supabase", "seed_level_bank_20000_chunks", name))
   ];
   const disabledPattern = /grup cultural|group-\d+-[01]|-direct-[01]/i;
   const offenders = checkedPaths.filter((relativePath) =>

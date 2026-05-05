@@ -14,6 +14,7 @@ import {
   findShortestPathsWithRule
 } from "./lib/pathfinding.js";
 import { loadSettings, saveSettings } from "./lib/settings.js";
+import { LANGUAGES, resolveLocale, translate } from "./lib/locales.js";
 import { TOMAS_THEME_ID } from "./lib/themes.js";
 import { RULES, pickRuleForKey, normalizeRule } from "./lib/rules.js";
 import { isDisabledRule } from "./lib/disabledRules.js";
@@ -98,7 +99,7 @@ function BrandLogo({ className = "" }) {
 const DIFFICULTIES = [
   {
     id: "pixapi",
-    label: "Pixapí",
+    labelKey: "difficultyPixapi",
     shortLabel: "pixapi",
     minInternal: 0,
     maxInternal: 3,
@@ -107,7 +108,7 @@ const DIFFICULTIES = [
   },
   {
     id: "dominguero",
-    label: "Dominguero",
+    labelKey: "difficultyDominguero",
     shortLabel: "dominguero",
     minInternal: 4,
     maxInternal: 5,
@@ -116,7 +117,7 @@ const DIFFICULTIES = [
   },
   {
     id: "rondinaire",
-    label: "Rondinaire",
+    labelKey: "difficultyRondinaire",
     shortLabel: "rondinaire",
     minInternal: 6,
     maxInternal: 8,
@@ -125,7 +126,7 @@ const DIFFICULTIES = [
   },
   {
     id: "cap-colla-rutes",
-    label: "Cap de colla de rutes",
+    labelKey: "difficultyCapCollaRutes",
     shortLabel: "cap de colla",
     minInternal: 9,
     maxInternal: Infinity,
@@ -152,7 +153,7 @@ const ATTEMPT_MARGIN_BY_DIFFICULTY = {
 const POWERUPS = [
   {
     id: "reveal-next",
-    label: "Revela un pas",
+    labelKey: "powerupRevealNext",
     durationMs: 5000,
     penaltyMs: 4000,
     uses: {
@@ -164,7 +165,7 @@ const POWERUPS = [
   },
   {
     id: "temp-initials",
-    label: "Inicials (5s)",
+    labelKey: "powerupTempInitials",
     durationMs: 5000,
     penaltyMs: 2000,
     uses: {
@@ -208,592 +209,6 @@ const AUDIO_PRELOAD_SFX = [
   "countdown",
   "powerup"
 ];
-
-const LANGUAGES = [
-  { id: "ca", label: "Català" },
-  { id: "aranes", label: "Aranès" },
-  { id: "gironi", label: "Gironí" },
-  { id: "barceloni", label: "Barceloní" },
-  { id: "tarragoni", label: "Tarragoní" },
-  { id: "lleidata", label: "Lleidatà" }
-];
-
-const BASE_DESCRIPTION =
-  "Connecta Inici i Destí amb comarques veïnes, completa una ruta contínua i millora-la pas a pas fins apropar-te al camí òptim.";
-
-const STRINGS = {
-  ca: {
-    start: "Inici",
-    target: "Destí",
-    rule: "Norma",
-    difficulty: "Dificultat",
-    description: BASE_DESCRIPTION,
-    descriptionNormal:
-      "uneix Inici i Destí triant comarques veïnes, completa una ruta vàlida i intenta millorar-la fins acostar-te al camí òptim.",
-    descriptionDaily:
-      "resol el repte fix d'avui amb la mateixa ruta per a tothom, compara intents, temps i apropa't a l'òptim.",
-    descriptionTimed:
-      "completa el camí abans que acabi el compte enrere, evita errors innecessaris i prioritza decisions ràpides per arribar a temps.",
-    descriptionExplore:
-      "juga sense pressa per practicar connexions entre comarques, provar rutes alternatives, entendre el mapa i preparar-te pels modes exigents.",
-    time: "Temps",
-    timeLeft: "Temps restant",
-    coins: "Rovellons",
-    daily: "Diari",
-    dailyLevel: "Nivell diari",
-    playToday: "Jugar al problema d'avui",
-    calendar: "Calendari",
-    calendarLoading: "Carregant calendari...",
-    calendarEmpty: "Sense nivells",
-    calendarPlayDaily: "Jugar diari",
-    calendarNoLevel: "Sense nivell",
-    previous: "Anterior",
-    next: "Següent",
-    close: "Tanca",
-    offline: "Sense connexió",
-    backendOffline: "Sense backend",
-    completed: "Completat",
-    mode: "Mode",
-    normal: "Normal",
-    timed: "Contrarellotge",
-    explore: "Explora",
-    buy: "Compra",
-    locked: "Bloquejat",
-    unlock: "Desbloqueja",
-    powerups: "Comodins",
-    stats: "Estadístiques",
-    attempts: "Intents",
-    bestTime: "Millor temps",
-    bestAttempts: "Record d'intents",
-    perfect: "Perfecte",
-    ranking: "Rànquing",
-    global: "Global",
-    province: "Província",
-    group: "Grup",
-    groupName: "Nom del grup",
-    groupCode: "Codi (5 xifres)",
-    createGroup: "Crea codi",
-    joinGroup: "Uneix-me",
-    achievements: "Assoliments",
-    collect: "Recollir",
-    config: "Configuració",
-    theme: "Tema",
-    music: "Música",
-    sounds: "Sons",
-    soundToggle: "Sons activats",
-    masterVolume: "Volum general",
-    sfxVolume: "Volum d'efectes",
-    language: "Idioma",
-    volume: "Volum",
-    newGame: "Nova partida",
-    challenge: "Repte",
-    action: "Jugada",
-    options: "Opcions",
-    guessLabel: "Escriu una comarca",
-    submit: "Esbrina",
-    usedCount: "Comarques: {value}",
-    optimalCount: "Òptim: {value}",
-    currentCount: "Ruta: {value}",
-    statusReady: "En progrés",
-    statusInProgress: "Ruta incompleta",
-    statusIncomplete: "Falta complir la norma",
-    statusSuboptimal: "Ruta vàlida però no òptima",
-    statusSolved: "Solució trobada",
-    statusFailed: "Temps esgotat",
-    feedbackNoMatch: "No existeix aquesta comarca.",
-    feedbackStartTarget: "No pots usar inici ni destí.",
-    feedbackRepeated: "Comarca repetida.",
-    feedbackOk: "Correcte.",
-    noMatch: "Cap coincidència",
-    levelLocked: "Nivell bloquejat",
-    buyFor: "Compra per {value}",
-    reward: "Premi",
-    dailyDone: "Diari completat",
-    noRule: "Sense norma",
-    path: "Camí escrit",
-    fixedDifficulty: "Dificultat fixa per aquest mode.",
-    yourPath: "El teu recorregut",
-    correctPath: "Resultat correcte",
-    shortestCount: "Camí més curt: {value} comarques",
-    optimalAlternatives: "{value} camins òptims trobats",
-    topTime: "Top temps",
-    topAttempts: "Top intents",
-    topRoute: "Top ruta",
-    distribution: "Distribució del temps",
-    bestTimes: "Millors temps",
-    shortestRoute: "Ruta més curta",
-    fewestAttempts: "Menys intents",
-    loadingRanking: "Carregant rànquing...",
-    noRewards: "Sense premis per recollir.",
-    copy: "Copia",
-    copied: "Copiat",
-    on: "On",
-    off: "Off",
-    congrats: "Felicitats per completar el nivell!",
-    timeOut: "Temps esgotat",
-    nextMap: "Següent mapa",
-    repeatLevel: "Repetir nivell",
-    viewMap: "Veure mapa",
-    resultLabel: "Resultat",
-    learningLabel: "Aprenentatge",
-    progressLabel: "Progrés",
-    rewardLabel: "Recompensa",
-    routeCompletedTitle: "Ruta completada",
-    dailyCompletedTitle: "Repte diari completat",
-    routeReviewed: "Ruta revisada",
-    routeFromTo: "De {start} a {target}",
-    accuracyText: "{value}% precisió",
-    foundOptimalText: "Has trobat el camí òptim amb {value} comarques.",
-    foundSuboptimalText:
-      "Has trobat {found} comarques; l'òptim en tenia {optimal}.",
-    failedLearningText:
-      "El temps s'ha acabat; fixa l'inici, el destí i torna a provar la connexió.",
-    attemptsOut: "Intents esgotats",
-    attemptLimitLearningText:
-      "Has fet {attempts}/{max} intents; el camí curt en demanava menys.",
-    dailyProgressText: "{done}/{total} reptes diaris completats",
-    difficultyProgressText: "{done}/{total} dificultats desbloquejades",
-    allDifficultiesUnlocked: "Totes les dificultats desbloquejades",
-    newDifficultyUnlocked: "Nova dificultat: {value}",
-    achievementsAllTitle: "Felicitats!",
-    achievementsAllBody:
-      "Has completat tots els assoliments. Ara et toca ser cap de colla de rutes.",
-    ok: "D'acord"
-  },
-  aranes: {
-    start: "Inici",
-    target: "Destin",
-    rule: "Nòrma",
-    difficulty: "Dificultat",
-    description: BASE_DESCRIPTION,
-    time: "Temps",
-    timeLeft: "Temps restant",
-    coins: "Rovellons",
-    daily: "Diari",
-    dailyLevel: "Nivell diari",
-    playToday: "Jugar al problema d'avui",
-    calendar: "Calendari",
-    completed: "Completat",
-    mode: "Mòde",
-    normal: "Normau",
-    timed: "Contrarrelòtge",
-    explore: "Explòra",
-    buy: "Crompa",
-    locked: "Bloquejat",
-    unlock: "Desblòqueja",
-    powerups: "Comodins",
-    stats: "Estadistiques",
-    attempts: "Intents",
-    bestTime: "Melhor temps",
-    bestAttempts: "Record d'intents",
-    perfect: "Perfècte",
-    ranking: "Rank",
-    global: "Globau",
-    province: "Província",
-    group: "Grop",
-    groupName: "Nòm deth grop",
-    groupCode: "Còde (5 chifres)",
-    createGroup: "Crea còde",
-    joinGroup: "Jòin-me",
-    achievements: "Assoliments",
-    collect: "Recuelh",
-    config: "Configuracion",
-    calendarPlayDaily: "Jugar diari",
-    calendarNoLevel: "Sense nivèl",
-    previous: "Anterior",
-    next: "Seguent",
-    close: "Tanca",
-    offline: "Sense connexion",
-    backendOffline: "Sense servidor",
-    theme: "Tèma",
-    music: "Musica",
-    sounds: "Sons",
-    soundToggle: "Sons activats",
-    masterVolume: "Volum generau",
-    sfxVolume: "Volum d'efèctes",
-    language: "Lengua",
-    volume: "Vòlum",
-    newGame: "Nau partida",
-    guessLabel: "Escriu ua comarca",
-    submit: "Esbrina",
-    noMatch: "Cap coincidéncia",
-    levelLocked: "Nivell bloquejat",
-    buyFor: "Crompa per {value}",
-    reward: "Prèmi",
-    dailyDone: "Diari completat",
-    noRule: "Sense nòrma",
-    path: "Camín escrit",
-    fixedDifficulty: "Dificultat fixa entà aguest mòde.",
-    yourPath: "Eth tòn recorregut",
-    correctPath: "Resultat corrècte",
-    shortestCount: "Camín mès curt: {value} comarques",
-    topTime: "Top temps",
-    topAttempts: "Top intents",
-    topRoute: "Top ròta",
-    distribution: "Distribucion deth temps",
-    bestTimes: "Melhors temps",
-    shortestRoute: "Ròta mès curta",
-    fewestAttempts: "Menys intents",
-    loadingRanking: "Carregant rank...",
-    noRewards: "Sense prèmis entà recuelh.",
-    copy: "Còpia",
-    copied: "Copiat",
-    on: "On",
-    off: "Off",
-    congrats: "Felicitats per completar eth nivèu!",
-    timeOut: "Temps esgotat",
-    achievementsAllTitle: "Felicitats!",
-    achievementsAllBody:
-      "As completat tots es assoliments. Ara te tòca èster cap de colla de rutes.",
-    ok: "D'acord"
-  },
-  gironi: {
-    start: "Inici, noi de Girona",
-    target: "Destí, nano",
-    rule: "Norma, tu",
-    difficulty: "Dificultat, eh",
-    description: BASE_DESCRIPTION,
-    time: "Temps, nano",
-    timeLeft: "Temps que queda, eh",
-    coins: "Rovellons",
-    daily: "Diari, noi",
-    dailyLevel: "Nivell diari",
-    playToday: "Jugar al problema d'avui",
-    calendar: "Calendari, noi",
-    completed: "Fet i ben fet",
-    mode: "Mode, noi",
-    normal: "Normalet de barri",
-    timed: "Contrarellotge a sac",
-    explore: "Explora-ho tot, va",
-    buy: "Pilla-ho",
-    locked: "Tancat amb pany",
-    unlock: "Desbloqueja-ho",
-    powerups: "Comodins de tralla",
-    stats: "Números i xarrup",
-    attempts: "Intents",
-    bestTime: "Millor temps",
-    bestAttempts: "Record d'intents",
-    perfect: "Perfecte, nano!",
-    ranking: "Rànquing",
-    global: "Global",
-    province: "Província",
-    group: "Colla",
-    groupName: "Nom de la colla",
-    groupCode: "Codi (5 xifres)",
-    createGroup: "Crea codi",
-    joinGroup: "Entra-hi",
-    achievements: "Assoliments",
-    collect: "Recull",
-    config: "Ajustos de la vida",
-    calendarPlayDaily: "Juga diari, noi",
-    calendarNoLevel: "Sense nivell, apa",
-    previous: "Enrere",
-    next: "Següent",
-    close: "Tanca",
-    offline: "Sense xarxa, noi",
-    backendOffline: "Backend caigut, nano",
-    theme: "Tema, noi",
-    music: "Música, eh",
-    sounds: "Sorollets, nano",
-    soundToggle: "Sons activats",
-    masterVolume: "Volum general",
-    sfxVolume: "Volum d'efectes",
-    language: "Parla, noi",
-    volume: "Volum, eh",
-    newGame: "Nova partida, som-hi",
-    guessLabel: "Escriu una comarca, nano",
-    submit: "Esbrina",
-    noMatch: "No hi ha res, nano",
-    levelLocked: "Nivell bloquejat",
-    buyFor: "Pilla per {value}",
-    reward: "Premi",
-    dailyDone: "Diari fet",
-    noRule: "Sense norma, eh",
-    path: "Camí escrit",
-    fixedDifficulty: "Dificultat fixa, no toquis res.",
-    yourPath: "El teu recorregut",
-    correctPath: "Resultat bo de debò",
-    shortestCount: "Camí més curt: {value} comarques",
-    topTime: "Top temps, noi",
-    topAttempts: "Top intents, nano",
-    topRoute: "Top ruta",
-    distribution: "Distribució del temps, noi",
-    bestTimes: "Millors temps",
-    shortestRoute: "Ruta més curta",
-    fewestAttempts: "Menys intents",
-    loadingRanking: "Carregant rànquing, espera...",
-    noRewards: "No hi ha premis per recollir, noi.",
-    copy: "Copia",
-    copied: "Copiat",
-    on: "On",
-    off: "Off",
-    congrats: "Felicitats, ho has petat!",
-    timeOut: "Temps esgotat, nano",
-    achievementsAllTitle: "Felicitats!",
-    achievementsAllBody:
-      "Has completat tots els assoliments. Ara ets cap de colla de rutes, nano.",
-    ok: "D'acord"
-  },
-  barceloni: {
-    start: "Inici, tio",
-    target: "Destí, tronco",
-    rule: "Norma, bro",
-    difficulty: "Dificultat, tio",
-    description: BASE_DESCRIPTION,
-    time: "Temps, bro",
-    timeLeft: "Temps que queda, bro",
-    coins: "Rovellons",
-    daily: "Diari, bro",
-    dailyLevel: "Nivell diari",
-    playToday: "Jugar al problema d'avui",
-    calendar: "Calendari, bro",
-    completed: "Fet, bro",
-    mode: "Mode, bro",
-    normal: "Normalillo",
-    timed: "Contrarellotge a saco",
-    explore: "Explora-ho, killa",
-    buy: "Compra-ho",
-    locked: "Bloquejat, nano",
-    unlock: "Desbloqueja-ho",
-    powerups: "Comodins, bro",
-    stats: "Stats, tio",
-    attempts: "Intents",
-    bestTime: "Millor temps",
-    bestAttempts: "Record d'intents",
-    perfect: "Perfecte, crack",
-    ranking: "Rànquing",
-    global: "Global",
-    province: "Província",
-    group: "Grupet",
-    groupName: "Nom del grup",
-    groupCode: "Codi (5 xifres)",
-    createGroup: "Crea codi",
-    joinGroup: "M'hi apunto",
-    achievements: "Assoliments",
-    collect: "Pilla",
-    config: "Config, bro",
-    calendarPlayDaily: "Juga diari, bro",
-    calendarNoLevel: "Res avui, bro",
-    previous: "Enrere",
-    next: "Següent",
-    close: "Tanca",
-    offline: "Sense wifi, bro",
-    backendOffline: "Backend KO, bro",
-    theme: "Tema, bro",
-    music: "Música, bro",
-    sounds: "Sons, tio",
-    soundToggle: "Sons activats",
-    masterVolume: "Volum general",
-    sfxVolume: "Volum d'efectes",
-    language: "Idioma, bro",
-    volume: "Volum, tio",
-    newGame: "Nova partida, bro",
-    guessLabel: "Escriu una comarca, crack",
-    submit: "Esbrina",
-    noMatch: "No hi ha res, bro",
-    levelLocked: "Nivell bloquejat",
-    buyFor: "Compra per {value}",
-    reward: "Premi",
-    dailyDone: "Diari fet",
-    noRule: "Sense norma, tio",
-    path: "Camí escrit",
-    fixedDifficulty: "Dificultat fixa, no maregis",
-    yourPath: "El teu recorregut",
-    correctPath: "Resultat correcte, bro",
-    shortestCount: "Camí més curt: {value} comarques",
-    topTime: "Top temps, bro",
-    topAttempts: "Top intents, bro",
-    topRoute: "Top ruta",
-    distribution: "Distribució del temps, bro",
-    bestTimes: "Millors temps",
-    shortestRoute: "Ruta més curta",
-    fewestAttempts: "Menys intents",
-    loadingRanking: "Carregant rànquing, tio...",
-    noRewards: "Ara mateix no hi ha premis, bro.",
-    copy: "Copia",
-    copied: "Copiat",
-    on: "On",
-    off: "Off",
-    congrats: "Felicitats, crack!",
-    timeOut: "Temps esgotat, tio",
-    achievementsAllTitle: "Felicitats!",
-    achievementsAllBody:
-      "Has completat tots els assoliments. Ara ets cap de colla de rutes, bro.",
-    ok: "Ok"
-  },
-  tarragoni: {
-    start: "Inici, xiquet",
-    target: "Destí, xiqueta",
-    rule: "Norma, xe",
-    difficulty: "Dificultat, xe",
-    description: BASE_DESCRIPTION,
-    time: "Temps, xe",
-    timeLeft: "Temps que queda, xe",
-    coins: "Rovellons",
-    daily: "Diari, xe",
-    dailyLevel: "Nivell diari",
-    playToday: "Jugar al problema d'avui",
-    calendar: "Calendari, xe",
-    completed: "Fet i llest",
-    mode: "Mode, xe",
-    normal: "Normalet",
-    timed: "Contrarellotge a tota castanya",
-    explore: "Explora-ho, xe",
-    buy: "Compra-ho",
-    locked: "Tancat",
-    unlock: "Desbloqueja-ho",
-    powerups: "Comodins, xe",
-    stats: "Números, xe",
-    attempts: "Intents",
-    bestTime: "Millor temps",
-    bestAttempts: "Record d'intents",
-    perfect: "Perfecte, xiquet",
-    ranking: "Rànquing",
-    global: "Global",
-    province: "Província",
-    group: "Penya",
-    groupName: "Nom de la penya",
-    groupCode: "Codi (5 xifres)",
-    createGroup: "Crea codi",
-    joinGroup: "M'hi fiqui",
-    achievements: "Assoliments",
-    collect: "Recull",
-    config: "Configuració, xe",
-    calendarPlayDaily: "Juga diari, xe",
-    calendarNoLevel: "No n'hi ha, xe",
-    previous: "Enrere",
-    next: "Següent",
-    close: "Tanca",
-    offline: "Sense xarxa, xe",
-    backendOffline: "Backend caigut, xe",
-    theme: "Tema, xe",
-    music: "Música, xe",
-    sounds: "Sons, xe",
-    soundToggle: "Sons activats",
-    masterVolume: "Volum general",
-    sfxVolume: "Volum d'efectes",
-    language: "Idioma, xe",
-    volume: "Volum, xe",
-    newGame: "Nova partida, xe",
-    guessLabel: "Escriu una comarca, xe",
-    submit: "Esbrina",
-    noMatch: "No hi ha res, xiquet",
-    levelLocked: "Nivell bloquejat",
-    buyFor: "Compra per {value}",
-    reward: "Premi",
-    dailyDone: "Diari fet",
-    noRule: "Sense norma, xe",
-    path: "Camí escrit",
-    fixedDifficulty: "Dificultat fixa, no toquis",
-    yourPath: "El teu recorregut",
-    correctPath: "Resultat bo, xe",
-    shortestCount: "Camí més curt: {value} comarques",
-    topTime: "Top temps",
-    topAttempts: "Top intents",
-    topRoute: "Top ruta",
-    bestTimes: "Millors temps",
-    shortestRoute: "Ruta més curta",
-    fewestAttempts: "Menys intents",
-    loadingRanking: "Carregant rànquing, xe...",
-    noRewards: "Ara no hi ha premis, xiquet.",
-    copy: "Copia",
-    copied: "Copiat",
-    on: "On",
-    off: "Off",
-    congrats: "Felicitats, xiquet!",
-    timeOut: "Temps esgotat, xe",
-    achievementsAllTitle: "Felicitats!",
-    achievementsAllBody:
-      "Has completat tots els assoliments. Ara ets cap de colla de rutes, xe.",
-    ok: "D'acord"
-  },
-  lleidata: {
-    start: "Inici, lo",
-    target: "Destí, lo",
-    rule: "Norma, lo",
-    difficulty: "Dificultat, lo",
-    description: BASE_DESCRIPTION,
-    time: "Temps, lo",
-    timeLeft: "Temps que queda, lo",
-    coins: "Rovellons",
-    daily: "Diari, lo",
-    dailyLevel: "Nivell diari",
-    playToday: "Jugar al problema d'avui",
-    calendar: "Calendari, lo",
-    completed: "Fet i dat",
-    mode: "Mode, lo",
-    normal: "Normalet",
-    timed: "Contrarellotge a saco",
-    explore: "Explora-ho, lo",
-    buy: "Compra-ho",
-    locked: "Tancat",
-    unlock: "Desbloqueja-ho",
-    powerups: "Comodins, lo",
-    stats: "Números, lo",
-    attempts: "Intents",
-    bestTime: "Millor temps",
-    bestAttempts: "Record d'intents",
-    perfect: "Perfecte, lo",
-    ranking: "Rànquing",
-    global: "Global",
-    province: "Província",
-    group: "Colla",
-    groupName: "Nom de la colla",
-    groupCode: "Codi (5 xifres)",
-    createGroup: "Crea codi",
-    joinGroup: "M'hi poso",
-    achievements: "Assoliments",
-    collect: "Recull",
-    config: "Configuració, lo",
-    calendarPlayDaily: "Juga diari, lo",
-    calendarNoLevel: "No n'hi ha, lo",
-    previous: "Enrere",
-    next: "Següent",
-    close: "Tanca",
-    offline: "Sense xarxa, lo",
-    backendOffline: "Backend KO, lo",
-    theme: "Tema, lo",
-    music: "Música, lo",
-    sounds: "Sons, lo",
-    soundToggle: "Sons activats",
-    masterVolume: "Volum general",
-    sfxVolume: "Volum d'efectes",
-    language: "Idioma, lo",
-    volume: "Volum, lo",
-    newGame: "Nova partida, lo",
-    guessLabel: "Escriu una comarca, lo",
-    submit: "Esbrina",
-    noMatch: "No n'hi ha cap, lo",
-    levelLocked: "Nivell bloquejat",
-    buyFor: "Compra per {value}",
-    reward: "Premi",
-    dailyDone: "Diari fet",
-    noRule: "Sense norma, lo",
-    path: "Camí escrit",
-    fixedDifficulty: "Dificultat fixa, no maregis",
-    yourPath: "El teu recorregut",
-    correctPath: "Resultat bo, lo",
-    shortestCount: "Camí més curt: {value} comarques",
-    topTime: "Top temps",
-    topAttempts: "Top intents",
-    topRoute: "Top ruta",
-    bestTimes: "Millors temps",
-    shortestRoute: "Ruta més curta",
-    fewestAttempts: "Menys intents",
-    loadingRanking: "Carregant rànquing, lo...",
-    noRewards: "Ara no hi ha premis, lo.",
-    copy: "Copia",
-    copied: "Copiat",
-    on: "On",
-    off: "Off",
-    congrats: "Felicitats, lo!",
-    timeOut: "Temps esgotat, lo",
-    achievementsAllTitle: "Felicitats!",
-    achievementsAllBody:
-      "Has completat tots els assoliments. Ara ets cap de colla de rutes, lo.",
-    ok: "D'acord"
-  }
-};
 
 const REGIONS = [
   {
@@ -1650,7 +1065,7 @@ export default function App() {
   const [musicEnabled, setMusicEnabled] = useState(initialSettings.musicEnabled);
   const [musicVolume, setMusicVolume] = useState(initialSettings.musicVolume);
   const [musicTrack, setMusicTrack] = useState(initialSettings.musicTrack);
-  const [language, setLanguage] = useState(initialSettings.language);
+  const [language, setLanguage] = useState(() => resolveLocale(initialSettings.language));
   const [activeTheme, setActiveTheme] = useState(initialSettings.theme);
   const [configOpen, setConfigOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
@@ -1754,6 +1169,7 @@ export default function App() {
   const playerIdRef = useRef(getPlayerId());
   const supabaseUserIdRef = useRef(null);
   const calendarApplyRef = useRef(null);
+  const calendarResetRef = useRef(null);
   const calendarAutoSetRef = useRef({ daily: false });
   const calendarLoadingRef = useRef(false);
   const calendarDetailRequestsRef = useRef(new Map());
@@ -1851,16 +1267,7 @@ export default function App() {
     return 0;
   }, [dailyStreak]);
   const streakTitle = getStreakTitle(displayStreak);
-  const t = useMemo(() => {
-    const table = STRINGS[language] || STRINGS.ca;
-    return (key, vars = {}) => {
-      let text = table[key] || STRINGS.ca[key] || key;
-      Object.entries(vars).forEach(([token, value]) => {
-        text = text.replace(new RegExp(`\\{${token}\\}`, "g"), String(value));
-      });
-      return text;
-    };
-  }, [language]);
+  const t = useMemo(() => (key, vars = {}) => translate(language, key, vars), [language]);
   const playManifestSfx = useCallback(
     (kind, volumeMul = 1) => {
       if (!audioManifest?.sfx?.[kind]) return;
@@ -2300,7 +1707,7 @@ export default function App() {
           maxAttempts,
           timeMs: elapsedMs,
           playerPath: guessHistory,
-          ruleLabel: activeRule?.label || "Sense norma",
+          ruleLabel: activeRule?.label || t("noRule"),
           ruleDifficulty: activeRule?.difficulty || null,
           ruleExplanation: activeRule?.explanation || "",
           ruleComarques: activeRule?.comarques || [],
@@ -2331,7 +1738,8 @@ export default function App() {
     activeRule,
     activeDifficulty,
     dailyStreak,
-    play
+    play,
+    t
   ]);
 
   useEffect(() => {
@@ -2358,10 +1766,16 @@ export default function App() {
     if (!calendarSelection || !activeCalendarEntry?.level) return;
     if (calendarSelection.mode !== gameMode) return;
     const key = `${calendarSelection.mode}:${calendarSelection.key}`;
-    if (calendarApplyRef.current === key) return;
+    const forceReset = calendarResetRef.current === key;
+    if (calendarApplyRef.current === key && !forceReset) return;
     const record = getCompletionRecord(calendarSelection.mode, calendarSelection.key);
-    const result = record?.winningAttempt || null;
-    if (!result && gameMode === "daily" && (attempts > 0 || guessHistory.length > 0)) {
+    const result = forceReset ? null : record?.winningAttempt || null;
+    if (
+      !forceReset &&
+      !result &&
+      gameMode === "daily" &&
+      (attempts > 0 || guessHistory.length > 0)
+    ) {
       calendarApplyRef.current = key;
       return;
     }
@@ -2369,6 +1783,9 @@ export default function App() {
       result,
       showResult: Boolean(result)
     });
+    if (forceReset) {
+      calendarResetRef.current = null;
+    }
     calendarApplyRef.current = key;
   }, [
     calendarSelection,
@@ -2607,7 +2024,7 @@ export default function App() {
             setUnlockedDifficulties(new Set(playerData.unlocked_difficulties));
           }
           if (typeof playerData.language === "string") {
-            setLanguage(playerData.language);
+            setLanguage(resolveLocale(playerData.language));
           }
           if (typeof playerData.music_enabled === "boolean") {
             setMusicEnabled(playerData.music_enabled);
@@ -3657,7 +3074,7 @@ export default function App() {
             attempts,
             timeMs: elapsedMs,
             playerPath: guessHistory,
-            ruleLabel: activeRule?.label || "Sense norma",
+            ruleLabel: activeRule?.label || t("noRule"),
             ruleDifficulty: activeRule?.difficulty || null,
             shortestPath: [],
             shortestCount: 0,
@@ -3762,7 +3179,7 @@ export default function App() {
       distance: Math.max(foundCount - shortestCount, 0),
       startName: startId ? comarcaById.get(startId)?.properties.name || "" : "",
       targetName: targetId ? comarcaById.get(targetId)?.properties.name || "" : "",
-      ruleLabel: activeRule?.label || "Sense norma",
+      ruleLabel: activeRule?.label || t("noRule"),
       ruleDifficulty: activeRule?.difficulty || null,
       ruleExplanation: activeRule?.explanation || "",
       ruleComarques: activeRule?.comarques || [],
@@ -3967,26 +3384,51 @@ export default function App() {
     calendarApplyRef.current = `daily:${key}`;
   }
 
-  function handlePlayToday() {
+  async function handlePlayToday() {
     playManifestSfx("click");
+    clearCompletionModalTimer();
+    setCompletionCelebrating(false);
+    setShowModal(false);
+    setResultData(null);
+    setIsFailed(false);
+    setIsComplete(false);
     setOptionsOpen(false);
+    setConfigOpen(false);
+    setCalendarOpen(false);
     const key = dayKey;
-    const record = getCompletionRecord("daily", key);
-    if (record?.winningAttempt) {
-      openCompletionModal(record, { mode: "daily", key });
-      return;
+    const selectionKey = `daily:${key}`;
+    const entry = calendarDailyMap.get(key);
+    let level = entry?.level || null;
+    if (!level && entry?.levelId) {
+      setCalendarLoadingDayKey(key);
+      level = await fetchCalendarDetail(key);
+      setCalendarLoadingDayKey((current) => (current === key ? null : current));
     }
+    if (level && entry?.levelId && !entry.level) {
+      setCalendarDaily((prev) =>
+        mergeCalendarEntries(prev, [
+          {
+            date: key,
+            levelId: entry.levelId,
+            level
+          }
+        ])
+      );
+    }
+    calendarResetRef.current = selectionKey;
+    calendarApplyRef.current = null;
+    setCalendarMode("daily");
     setCalendarSelection({ mode: "daily", key });
     if (gameMode !== "daily") {
       setGameMode("daily");
       return;
     }
-    const entry = calendarDailyMap.get(key);
-    if (entry?.level) {
-      applyCalendarLevel(entry.level);
-      calendarApplyRef.current = `daily:${key}`;
-    } else if (entry?.levelId) {
-      handleCalendarAction("daily", key);
+    if (level) {
+      calendarResetRef.current = null;
+      applyCalendarLevel(level);
+      calendarApplyRef.current = selectionKey;
+    } else if (!entry?.levelId) {
+      resetGame();
     }
   }
 
@@ -4453,9 +3895,12 @@ export default function App() {
     const shouldUnlock =
       shouldUnlockAllDifficulties ||
       (Boolean(nextDifficulty) && !unlockedDifficulties.has(nextDifficulty));
-    const nextDifficultyLabel = nextDifficulty
-      ? DIFFICULTIES.find((entryItem) => entryItem.id === nextDifficulty)?.label || nextDifficulty
-      : "";
+    const nextDifficultyEntry = nextDifficulty
+      ? DIFFICULTIES.find((entryItem) => entryItem.id === nextDifficulty)
+      : null;
+    const nextDifficultyLabel = nextDifficultyEntry
+      ? t(nextDifficultyEntry.labelKey)
+      : nextDifficulty || "";
     const unlockLabel = shouldUnlockAllDifficulties
       ? t("allDifficultiesUnlocked")
       : shouldUnlock && nextDifficultyLabel
@@ -4552,7 +3997,7 @@ export default function App() {
         distance,
         shortest: shortestCount,
         found: foundCount,
-        rule: activeRule?.label || "Sense norma"
+        rule: activeRule?.label || t("noRule")
       };
       return [...prev, historyEntry].slice(-20);
     });
@@ -4569,7 +4014,7 @@ export default function App() {
       distance,
       startName,
       targetName,
-      ruleLabel: activeRule?.label || "Sense norma",
+      ruleLabel: activeRule?.label || t("noRule"),
       ruleDifficulty,
       ruleExplanation: activeRule?.explanation || "",
       ruleComarques: activeRule?.comarques || [],
@@ -4727,7 +4172,7 @@ export default function App() {
       !failed &&
       resultDifficulty === HARDEST_DIFFICULTY_ID &&
       referencedComarques.length
-        ? `Comarca de referència: ${referencedComarques.join(", ")}.`
+        ? t("referenceCounty", { value: referencedComarques.join(", ") })
         : "";
     const accuracy = getRouteAccuracy(normalizedResult);
     return {
@@ -4739,8 +4184,7 @@ export default function App() {
         ? `${t("attempts")}: ${resultData.attempts || 0}/${resultMaxAttempts}`
         : `${t("attempts")}: ${resultData.attempts || 0}`,
       showOptimalPath: !failed && distance > 0 && resultData.shortestPath?.length,
-      primaryLabel: failed ? t("repeatLevel") : t("nextMap"),
-      primaryAction: failed ? "repeat" : "next"
+      primaryLabel: t("nextMap")
     };
   }, [
     resultData,
@@ -4951,7 +4395,7 @@ export default function App() {
                 </div>
               </>
             ) : (
-              <span>Carregant dades...</span>
+              <span>{t("loadingData")}</span>
             )}
           </div>
           <div className="map-stage">
@@ -4967,7 +4411,7 @@ export default function App() {
             ) : null}
             {!isMapReady ? (
               <div className="map-loading" role="status" aria-live="polite">
-                Carregant mapa...
+                {t("loadingMap")}
               </div>
             ) : null}
             <div className="map-controls">
@@ -4977,7 +4421,7 @@ export default function App() {
                   playManifestSfx("click", 0.55);
                   handleZoomIn();
                 }}
-                aria-label="Apropar"
+                aria-label={t("zoomIn")}
               >
                 +
               </button>
@@ -4987,7 +4431,7 @@ export default function App() {
                   playManifestSfx("click", 0.55);
                   handleZoomOut();
                 }}
-                aria-label="Allunyar"
+                aria-label={t("zoomOut")}
               >
                 {"\u2212"}
               </button>
@@ -4998,7 +4442,7 @@ export default function App() {
                   handleRecenter();
                 }}
               >
-                Recentrar
+                {t("recenter")}
               </button>
             </div>
 
@@ -5007,7 +4451,7 @@ export default function App() {
               className="map"
               viewBox={viewBox}
               role="img"
-              aria-label="Mapa de Catalunya"
+              aria-label={t("mapAriaLabel")}
               onPointerDown={() => play("map_tap")}
             >
               <g ref={gRef}>
@@ -5123,7 +4567,7 @@ export default function App() {
                       onClick={() => handlePowerupUse(powerup.id)}
                       disabled={disabled}
                     >
-                      <span>{powerup.label}</span>
+                      <span>{t(powerup.labelKey)}</span>
                       <span className="badge">{isExploreMode ? "\u221e" : usesLeft}</span>
                     </button>
                   );
@@ -5217,7 +4661,7 @@ export default function App() {
                         disabled={disabled}
                         aria-pressed={isActive}
                       >
-                        <span>{entry.label}</span>
+                        <span>{t(entry.labelKey)}</span>
                       </button>
                     );
                   })}
@@ -5311,10 +4755,10 @@ export default function App() {
                           : "calendar-dot empty";
                       const dayLabel = `${formatFullDayLabel(day.key)}${
                         isLockedDaily
-                          ? " \u00b7 bloquejat"
+                          ? ` \u00b7 ${t("calendarLockedSuffix")}`
                           : hasDailyLevel
                             ? isLoadingDaily
-                              ? " \u00b7 carregant"
+                              ? ` \u00b7 ${t("calendarLoadingSuffix")}`
                               : ""
                             : ` \u00b7 ${t("calendarNoLevel")}`
                       }`;
@@ -5444,7 +4888,7 @@ export default function App() {
                 value={language}
                 onChange={(event) => {
                   playManifestSfx("toggle", 0.55);
-                  setLanguage(event.target.value);
+                  setLanguage(resolveLocale(event.target.value));
                 }}
               >
                 {LANGUAGES.map((lang) => (
@@ -5489,7 +4933,7 @@ export default function App() {
 
             {completionSummary.showOptimalPath ? (
               <div className="modal-section result-optimal">
-                <span className="label">Un camí òptim</span>
+                <span className="label">{t("optimalPathLabel")}</span>
                 <ol className="shortest-list">
                   {resultData.shortestPath.map((name, index) => (
                     <li key={`short-${name}-${index}`}>{name}</li>
@@ -5502,35 +4946,10 @@ export default function App() {
               <button
                 className="reset result-primary"
                 type="button"
-                onClick={
-                  completionSummary.primaryAction === "repeat"
-                    ? handleRepeatLevel
-                    : handleStartNext
-                }
+                onClick={handleStartNext}
               >
                 {completionSummary.primaryLabel}
               </button>
-              {completionSummary.primaryAction === "repeat" ? (
-                <button
-                  className="result-secondary"
-                  type="button"
-                  onClick={handleStartNext}
-                >
-                  {t("nextMap")}
-                </button>
-              ) : (
-                <button
-                  className="result-secondary"
-                  type="button"
-                  onClick={handleRepeatLevel}
-                  disabled={
-                    !normalizeLevelSnapshot(resultData?.levelSnapshot) &&
-                    (!startId || !targetId || !shortestPath.length)
-                  }
-                >
-                  {t("repeatLevel")}
-                </button>
-              )}
               <button
                 className="result-secondary"
                 type="button"
@@ -5542,14 +4961,14 @@ export default function App() {
           </div>
         </div>
       ) : null}
-      <nav className="bottom-nav" aria-label="Navegació principal">
+      <nav className="bottom-nav" aria-label={t("mainNavigation")}>
         <button
           type="button"
           className={`bottom-nav-item${calendarOpen ? " active" : ""}`}
           onClick={handleCalendarOpen}
           disabled={!isMapReady}
         >
-          <span className="bottom-nav-label">Calendari</span>
+          <span className="bottom-nav-label">{t("calendar")}</span>
         </button>
         <button
           type="button"
@@ -5557,7 +4976,7 @@ export default function App() {
           onClick={handleStartNext}
           disabled={!isMapReady}
         >
-          <span className="bottom-nav-label">Nova partida</span>
+          <span className="bottom-nav-label">{t("newGame")}</span>
         </button>
         <button
           type="button"
@@ -5569,7 +4988,7 @@ export default function App() {
             setOptionsOpen(true);
           }}
         >
-          <span className="bottom-nav-label">Opcions</span>
+          <span className="bottom-nav-label">{t("options")}</span>
         </button>
       </nav>
       </div>

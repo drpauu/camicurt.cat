@@ -125,8 +125,9 @@ function classifyDifficultyByShortestCount(shortestCount: any) {
 function normalizeRule(schema: any) {
   if (!schema) return null;
   if (isDisabledRule(schema)) return null;
-  const type = schema.type || "REQUIRE";
-  const kind = type === "FORBID" ? "avoid" : "mustIncludeAny";
+  const type = String(schema.type || "REQUIRE").toUpperCase();
+  const kind =
+    type === "FORBID" || type === "EXCLUDE" ? "avoid" : "mustIncludeAny";
   return {
     id: schema.id,
     kind,

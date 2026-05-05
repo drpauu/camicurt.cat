@@ -49,9 +49,20 @@ Opcio equivalent:
 SUPABASE_URL=... SERVICE_ROLE_KEY=... npm run level:daily
 ```
 
+PowerShell:
+```
+$env:SUPABASE_URL="https://<project-ref>.supabase.co"
+$env:SUPABASE_SERVICE_ROLE_KEY="<service-role-or-secret-key>"
+npm run level:bank
+npm run calendar:reassign:2026-2028
+```
+
 Notes:
 - `level:daily` assegura els darrers 21 dies (incloent avui).
 - `level:2025` crea tots els nivells diaris del 2025.
+- `level:bank` crea/actualitza 20.000 nivells pregenerats al banc.
+- `level:bank:sql:chunks` genera SQL en lots a `supabase/seed_level_bank_20000_chunks`.
+- `calendar:reassign:2026-2028` reassigna els calendaris diaris de 2026, 2027 i 2028 des del banc.
 - `calendar:health` comprova que el calendari públic té nivell per avui i els darrers 21 dies.
 
 ### Health check

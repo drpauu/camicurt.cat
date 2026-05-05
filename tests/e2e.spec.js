@@ -5,11 +5,16 @@ import { fileURLToPath } from "node:url";
 import { feature, neighbors as topoNeighbors } from "topojson-client";
 import { findShortestPathsWithRule } from "../src/lib/pathfinding.js";
 import { normalizeName } from "../src/lib/names.js";
+import { LANGUAGES, translate } from "../src/lib/locales.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const topoPath = path.resolve(__dirname, "..", "public", "catalunya-comarques.topojson");
 const rulesPath = path.resolve(__dirname, "..", "src", "data", "rules.json");
 const RULES = JSON.parse(fs.readFileSync(rulesPath, "utf8"));
+const EXPECTED_LANGUAGE_LABELS = LANGUAGES.map((language) => language.label);
+const EXPECTED_LANGUAGE_IDS = LANGUAGES.map((language) => language.id);
+const STANDARD_DESCRIPTION =
+  "uneix Inici i Destí triant comarques veïnes, completa una ruta vàlida i intenta millorar-la fins acostar-te al camí òptim.";
 const topology = JSON.parse(fs.readFileSync(topoPath, "utf8"));
 const objectKey = Object.keys(topology.objects)[0];
 const topologyObject = topology.objects[objectKey];
@@ -331,6 +336,22 @@ test("contrarellotge tanca opcions i mostra compte enrere des de 5", async ({ pa
 test("obre el modal si el nivell ja està completat", async ({ page }) => {
   const dayKey = getTodayKey();
   await page.addInitScript((key) => {
+    const level = {
+      id: "daily-completed",
+      start_id: "baix-camp",
+      target_id: "valles-occidental",
+      shortest_path: [
+        "baix-camp",
+        "alt-camp",
+        "alt-penedes",
+        "baix-llobregat",
+        "valles-occidental"
+      ],
+      rule_id: null,
+      avoid_ids: null,
+      must_pass_ids: null,
+      difficulty_id: "cap-colla-rutes"
+    };
     const record = {
       levelKey: `daily:${key}`,
       dayKey: key,
@@ -358,12 +379,22 @@ test("obre el modal si el nivell ja està completat", async ({ page }) => {
       shortestCount: 2
     };
     localStorage.setItem(
+      "rumb-calendar-cache-v1",
+      JSON.stringify({
+        updatedAt: Date.now(),
+        daily: [{ date: key, levelId: level.id, level }]
+      })
+    );
+    localStorage.setItem(
       "rumb-completion-records-v1",
       JSON.stringify({ [`daily:${key}`]: record })
     );
   }, dayKey);
   await gotoHome(page);
-  await page.getByRole("button", { name: /^Diari$/i }).click();
+  await page.getByRole("button", { name: /Calendari/i }).click();
+  const dayButton = page.locator(`[data-calendar-day="${dayKey}"]`);
+  await expect(dayButton).toHaveAttribute("data-has-level", "true");
+  await dayButton.click();
   const modal = page.locator(".modal");
   await expect(modal).toBeVisible();
   await expect(modal).toContainText("Repte diari completat");
@@ -376,7 +407,7 @@ test("obre el modal si el nivell ja està completat", async ({ page }) => {
   await expect(modal).toContainText("Un camí òptim");
   await expect(modal).toContainText("Alt Camp");
   await expect(modal).toContainText("Següent mapa");
-  await expect(modal).toContainText("Repetir nivell");
+  await expect(modal).not.toContainText("Repetir nivell");
   await expect(modal).toContainText("Veure mapa");
   await expect(modal).not.toContainText("Top temps");
   await expect(modal).not.toContainText("Distribució");
@@ -399,6 +430,16 @@ test("obre el modal si el nivell ja està completat", async ({ page }) => {
 test("el modal no mostra cami optim si la ruta ja es curta", async ({ page }) => {
   const dayKey = getTodayKey();
   await page.addInitScript((key) => {
+    const level = {
+      id: "daily-short",
+      start_id: "baix-camp",
+      target_id: "valles-occidental",
+      shortest_path: ["baix-camp", "valles-occidental"],
+      rule_id: null,
+      avoid_ids: null,
+      must_pass_ids: null,
+      difficulty_id: "pixapi"
+    };
     const winningAttempt = {
       attempts: 1,
       timeMs: 9000,
@@ -417,12 +458,20 @@ test("el modal no mostra cami optim si la ruta ja es curta", async ({ page }) =>
       shortestCount: 1
     };
     localStorage.setItem(
+      "rumb-calendar-cache-v1",
+      JSON.stringify({
+        updatedAt: Date.now(),
+        daily: [{ date: key, levelId: level.id, level }]
+      })
+    );
+    localStorage.setItem(
       "rumb-completion-records-v1",
       JSON.stringify({ [`daily:${key}`]: record })
     );
   }, dayKey);
   await gotoHome(page);
-  await page.getByRole("button", { name: /^Diari$/i }).click();
+  await page.getByRole("button", { name: /Calendari/i }).click();
+  await page.locator(`[data-calendar-day="${dayKey}"]`).click();
   const modal = page.locator(".modal");
   await expect(modal).toBeVisible();
   await expect(modal).toContainText("Repte diari completat");
@@ -432,32 +481,26 @@ test("el modal no mostra cami optim si la ruta ja es curta", async ({ page }) =>
   await expect(modal).not.toContainText("estrelles");
 });
 
-test("repetir nivell restaura exactament el nivell del modal", async ({ page }) => {
+test("el boto diari reinicia un nivell completat i conserva el dia en verd", async ({
+  page
+}) => {
   const dayKey = getTodayKey();
   await page.addInitScript((key) => {
-    const snapshot = {
-      mode: "daily",
-      difficulty: "cap-colla-rutes",
-      dayKey: key,
-      startId: "baix-camp",
-      targetId: "valles-occidental",
-      shortestPath: [
+    const level = {
+      id: "daily-reset",
+      start_id: "baix-camp",
+      target_id: "valles-occidental",
+      shortest_path: [
         "baix-camp",
         "alt-camp",
         "alt-penedes",
         "baix-llobregat",
         "valles-occidental"
       ],
-      shortestPaths: [
-        [
-          "baix-camp",
-          "alt-camp",
-          "alt-penedes",
-          "baix-llobregat",
-          "valles-occidental"
-        ]
-      ],
-      rule: null
+      rule_id: null,
+      avoid_ids: null,
+      must_pass_ids: null,
+      difficulty_id: "cap-colla-rutes"
     };
     const winningAttempt = {
       attempts: 4,
@@ -472,9 +515,15 @@ test("repetir nivell restaura exactament el nivell del modal", async ({ page }) 
       startName: "Baix Camp",
       targetName: "Vallès Occidental",
       ruleLabel: "Sense norma",
-      ruleComarques: [],
-      levelSnapshot: snapshot
+      ruleComarques: []
     };
+    localStorage.setItem(
+      "rumb-calendar-cache-v1",
+      JSON.stringify({
+        updatedAt: Date.now(),
+        daily: [{ date: key, levelId: level.id, level }]
+      })
+    );
     localStorage.setItem(
       "rumb-completion-records-v1",
       JSON.stringify({
@@ -493,19 +542,39 @@ test("repetir nivell restaura exactament el nivell del modal", async ({ page }) 
   await gotoHome(page);
   await page.waitForSelector("svg.map");
   await page.getByRole("button", { name: /^Diari$/i }).click();
-  const modal = page.locator(".result-modal");
-  await expect(modal).toBeVisible();
-  await modal.getByRole("button", { name: /Repetir nivell/i }).click();
-  await expect(modal).toBeHidden();
+  await expect(page.locator(".result-modal")).toBeHidden();
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");
   await expect(page.locator(".map-brief .route")).toContainText("Baix Camp");
   await expect(page.locator(".map-brief .route")).toContainText("Vallès Occidental");
   await expect(page.locator(".map-brief .rule-line")).toContainText("Sense norma");
+  await expect(page.locator(".guess-history-item")).toHaveCount(0);
+
+  await page.getByRole("button", { name: /Calendari/i }).click();
+  const dayButton = page.locator(`[data-calendar-day="${dayKey}"]`);
+  await expect(dayButton).toHaveClass(/done/);
+  await expect(dayButton.locator(".calendar-dot")).toHaveClass(/done/);
+  await expect(dayButton.locator(".calendar-dot")).not.toHaveClass(/active/);
 });
 
 test("el modal de resultat no talla accions a amplades petites", async ({ page }) => {
   const dayKey = getTodayKey();
   await page.addInitScript((key) => {
+    const level = {
+      id: "daily-result-actions",
+      start_id: "baix-camp",
+      target_id: "valles-occidental",
+      shortest_path: [
+        "baix-camp",
+        "alt-camp",
+        "alt-penedes",
+        "baix-llobregat",
+        "valles-occidental"
+      ],
+      rule_id: null,
+      avoid_ids: null,
+      must_pass_ids: null,
+      difficulty_id: "cap-colla-rutes"
+    };
     const winningAttempt = {
       attempts: 2,
       timeMs: 9000,
@@ -526,6 +595,13 @@ test("el modal de resultat no talla accions a amplades petites", async ({ page }
       shortestCount: 1
     };
     localStorage.setItem(
+      "rumb-calendar-cache-v1",
+      JSON.stringify({
+        updatedAt: Date.now(),
+        daily: [{ date: key, levelId: level.id, level }]
+      })
+    );
+    localStorage.setItem(
       "rumb-completion-records-v1",
       JSON.stringify({ [`daily:${key}`]: record })
     );
@@ -534,10 +610,12 @@ test("el modal de resultat no talla accions a amplades petites", async ({ page }
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 });
     await gotoHome(page);
-    await page.locator(".topbar .brand-button").click();
+    await page.getByRole("button", { name: /Calendari/i }).click();
+    await page.locator(`[data-calendar-day="${dayKey}"]`).click();
     const modal = page.locator(".result-modal");
     await expect(modal).toBeVisible();
     await expect(modal.getByRole("button", { name: /Següent mapa/i })).toBeVisible();
+    await expect(modal.getByRole("button", { name: /Repetir nivell/i })).toHaveCount(0);
     const metrics = await page.evaluate(() =>
       [...document.querySelectorAll(".result-actions button")].map((button) => {
         const box = button.getBoundingClientRect();
@@ -552,7 +630,6 @@ test("el modal de resultat no talla accions a amplades petites", async ({ page }
     );
     expect(metrics.map((entry) => entry.text)).toEqual([
       "Següent mapa",
-      "Repetir nivell",
       "Veure mapa"
     ]);
     expect(metrics.every((entry) => entry.height >= 44)).toBeTruthy();
@@ -575,20 +652,24 @@ test("la configuració es persisteix", async ({ page }) => {
   const configModal = page.locator(".config-modal");
   await expect(configModal.getByRole("heading", { name: /^Configuració$/i })).toBeVisible();
   const languageSelect = page.locator(".config-content select").last();
-  await expect(languageSelect).toContainText("Català");
-  await expect(languageSelect).toContainText("Aranès");
-  await expect(languageSelect).toContainText("Gironí");
-  await expect(languageSelect).toContainText("Barceloní");
-  await expect(languageSelect).toContainText("Tarragoní");
-  await expect(languageSelect).toContainText("Lleidatà");
-  await languageSelect.selectOption("aranes");
+  const languageOptions = await languageSelect.locator("option").evaluateAll((options) =>
+    options.map((option) => ({ label: option.textContent.trim(), value: option.value }))
+  );
+  expect(languageOptions.map((option) => option.label)).toEqual(EXPECTED_LANGUAGE_LABELS);
+  expect(languageOptions.map((option) => option.value)).toEqual(EXPECTED_LANGUAGE_IDS);
+  await expect(languageSelect).toHaveValue("ca-standard");
+
+  const routeBefore = await getRouteAndRule(page);
+  await languageSelect.selectOption("ca-barceloni");
+  await expect(configModal.locator("h2")).toContainText("bro");
+  expect(await getRouteAndRule(page)).toEqual(routeBefore);
   await page.getByRole("button", { name: /Tanca/i }).click();
   await page.waitForFunction(() => {
     const raw = localStorage.getItem("rumb-settings-v1");
     if (!raw) return false;
     try {
       const parsed = JSON.parse(raw);
-      return parsed.language === "aranes";
+      return parsed.language === "ca-barceloni";
     } catch {
       return false;
     }
@@ -598,7 +679,29 @@ test("la configuració es persisteix", async ({ page }) => {
     const raw = localStorage.getItem("rumb-settings-v1");
     return raw ? JSON.parse(raw).language : null;
   });
-  expect(language).toBe("aranes");
+  expect(language).toBe("ca-barceloni");
+  await page.getByRole("button", { name: /Opcions/i }).click();
+  await page.getByRole("button", { name: /Config/i }).click();
+  await expect(page.locator(".config-content select").last()).toHaveValue("ca-barceloni");
+});
+
+test("ca-standard es el fallback i conserva la descripcio original", async ({ page }) => {
+  expect(translate("ca-standard", "descriptionNormal")).toBe(STANDARD_DESCRIPTION);
+  await page.addInitScript(() => {
+    localStorage.setItem("rumb-language-v1", "aranes");
+    localStorage.setItem(
+      "rumb-settings-v1",
+      JSON.stringify({
+        theme: "default",
+        language: "gironi"
+      })
+    );
+  });
+  await gotoHome(page);
+  await page.waitForSelector("svg.map");
+  await page.getByRole("button", { name: /Opcions/i }).click();
+  await page.getByRole("button", { name: /Configuraci/i }).click();
+  await expect(page.locator(".config-content select").last()).toHaveValue("ca-standard");
 });
 
 test("els simbols dels controls es renderitzen correctament", async ({ page }) => {
@@ -787,7 +890,7 @@ test("usa les families de sons del manifest en interaccions reals", async ({ pag
       "rumb-settings-v1",
       JSON.stringify({
         theme: "default",
-        language: "ca",
+        language: "ca-standard",
         musicEnabled: false,
         musicVolume: 0,
         musicTrack: "segadors",
@@ -880,8 +983,11 @@ test("usa les families de sons del manifest en interaccions reals", async ({ pag
   for (let index = 0; index < 14; index += 1) {
     if (await page.locator(".modal").isVisible().catch(() => false)) break;
     const revealButton = page.getByRole("button", { name: /Revela un pas/i });
-    if (await revealButton.isDisabled().catch(() => false)) break;
-    await revealButton.click();
+    if (!(await revealButton.isEnabled().catch(() => false))) break;
+    const clicked = await revealButton.click({ timeout: 1000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!clicked) break;
     await expectKind("powerup");
     await page.waitForSelector("path.comarca.is-reveal[data-comarca-name]");
     const revealName = await page
@@ -999,6 +1105,19 @@ test("la navegacio mobil te nomes reptes a capcalera i accions a baix", async ({
 });
 
 test("la barra mobil no talla accions ni solapa el mapa", async ({ page }) => {
+  const mobileLocale = "ca-rossellones";
+  const expectedBottomLabels = ["calendar", "newGame", "options"].map((key) =>
+    translate(mobileLocale, key)
+  );
+  await page.addInitScript((locale) => {
+    localStorage.setItem(
+      "rumb-settings-v1",
+      JSON.stringify({
+        theme: "default",
+        language: locale
+      })
+    );
+  }, mobileLocale);
   for (const width of [320, 390, 459]) {
     await page.setViewportSize({ width, height: 844 });
     await gotoHome(page);
@@ -1011,19 +1130,18 @@ test("la barra mobil no talla accions ni solapa el mapa", async ({ page }) => {
         return {
           text: label.textContent.trim(),
           buttonWidth: Math.round(buttonBox.width),
+          buttonHeight: Math.round(buttonBox.height),
           labelWidth: Math.round(labelBox.width),
-          nowrap: getComputedStyle(label).whiteSpace
+          labelHeight: Math.round(labelBox.height)
         };
       })
     );
-    expect(metrics.map((entry) => entry.text)).toEqual([
-      "Calendari",
-      "Nova partida",
-      "Opcions"
-    ]);
-    expect(metrics.every((entry) => entry.nowrap === "nowrap")).toBeTruthy();
+    expect(metrics.map((entry) => entry.text)).toEqual(expectedBottomLabels);
     expect(
       metrics.every((entry) => entry.labelWidth <= entry.buttonWidth - 8)
+    ).toBeTruthy();
+    expect(
+      metrics.every((entry) => entry.labelHeight <= entry.buttonHeight - 8)
     ).toBeTruthy();
     const mapBriefMetrics = await page.evaluate(() => {
       const map = document.querySelector(".map-wrap")?.getBoundingClientRect();

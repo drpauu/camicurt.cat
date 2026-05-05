@@ -24,6 +24,12 @@ const RAW_RULES = JSON.parse(fs.readFileSync(RULES_PATH, "utf8"));
 const RULE_DEFS = Array.isArray(RAW_RULES)
   ? RAW_RULES.map((rule) => normalizeRule(rule)).filter(Boolean)
   : [];
+const DEFAULT_BANK_COUNT = 20000;
+const DEFAULT_BANK_ADD_COUNT = 10000;
+const LOCAL_ENV = loadLocalEnvFiles([
+  path.resolve(__dirname, "..", ".env"),
+  path.resolve(__dirname, "..", ".env.local")
+]);
 const RULE_HISTORY_LIMIT = 60;
 const DIFFICULTY_CONFIGS = [
   {
@@ -51,8 +57,9 @@ const DIFFICULTY_CONFIGS = [
 function normalizeRule(schema) {
   if (!schema) return null;
   if (isDisabledRule(schema)) return null;
-  const type = schema.type || "REQUIRE";
-  const kind = type === "FORBID" ? "avoid" : "mustIncludeAny";
+  const type = String(schema.type || "REQUIRE").toUpperCase();
+  const kind =
+    type === "FORBID" || type === "EXCLUDE" ? "avoid" : "mustIncludeAny";
   return {
     id: schema.id,
     kind,
@@ -62,6 +69,106 @@ function normalizeRule(schema) {
     tags: schema.tags || [],
     explanation: schema.explanation || ""
   };
+}
+
+function parseEnvLine(line) {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.startsWith("#")) return null;
+  const match = trimmed.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+  if (!match) return null;
+  let value = match[2].trim();
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    value = value.slice(1, -1);
+  }
+  return [match[1], value];
+}
+
+function loadLocalEnvFiles(files) {
+  const values = {};
+  files.forEach((filePath) => {
+    if (!fs.existsSync(filePath)) return;
+    const content = fs.readFileSync(filePath, "utf8");
+    content.split(/\r?\n/).forEach((line) => {
+      const entry = parseEnvLine(line);
+      if (!entry) return;
+      const [key, value] = entry;
+      values[key] = value;
+    });
+  });
+  return values;
+}
+
+function isPlaceholderEnvValue(value) {
+  const text = String(value || "").trim();
+  return (
+    !text ||
+    text === "..." ||
+    text.includes("YOUR_") ||
+    /^<.+>$/.test(text) ||
+    /^(undefined|null)$/i.test(text)
+  );
+}
+
+function getCandidateEnvValue(name) {
+  const fromProcess = process.env[name];
+  if (!isPlaceholderEnvValue(fromProcess)) return fromProcess.trim();
+  const fromFile = LOCAL_ENV[name];
+  if (!isPlaceholderEnvValue(fromFile)) return fromFile.trim();
+  return null;
+}
+
+function getFirstEnvValue(names) {
+  for (const name of names) {
+    const value = getCandidateEnvValue(name);
+    if (value) return value;
+  }
+  return null;
+}
+
+function isValidHttpUrl(value) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function getSupabaseCredentials() {
+  const supabaseUrl = getFirstEnvValue([
+    "SUPABASE_URL",
+    "VITE_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_URL"
+  ]);
+  const serviceKey = getFirstEnvValue([
+    "SUPABASE_SECRET_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SERVICE_ROLE_KEY"
+  ]);
+
+  if (!supabaseUrl || !isValidHttpUrl(supabaseUrl)) {
+    console.error(
+      "Falta una URL valida de Supabase. Defineix SUPABASE_URL=https://<project-ref>.supabase.co o VITE_SUPABASE_URL a .env.local."
+    );
+    process.exit(1);
+  }
+  if (!serviceKey) {
+    console.error(
+      "Falta una key elevada. Defineix SUPABASE_SERVICE_ROLE_KEY o SERVICE_ROLE_KEY abans d'executar aquest script."
+    );
+    process.exit(1);
+  }
+  if (serviceKey.startsWith("sb_publishable_")) {
+    console.error(
+      "La key rebuda es publishable. Per inserir nivells cal una key elevada: sb_secret_... o la legacy service_role."
+    );
+    process.exit(1);
+  }
+
+  return { supabaseUrl, serviceKey };
 }
 
 function getLevelFingerprint(levelData) {
@@ -160,9 +267,10 @@ function prepareRule(def, ctx) {
 function isRuleFeasible(rule, ctx) {
   if (!rule) return false;
   if (rule.kind === "avoid") {
-    const blocked = rule.comarcaIds?.[0];
-    if (!blocked) return false;
-    const allowed = new Set(ctx.allIds.filter((id) => id !== blocked));
+    const blocked = rule.comarcaIds || [];
+    if (!blocked.length) return false;
+    const blockedSet = new Set(blocked);
+    const allowed = new Set(ctx.allIds.filter((id) => !blockedSet.has(id)));
     return (
       findShortestPathInSet(ctx.startId, ctx.targetId, ctx.adjacency, allowed).length > 0
     );
@@ -391,11 +499,13 @@ async function run() {
       "bank-add",
       "bank-sql",
       "bank-sql-chunks",
-      "assign-year"
+      "assign-year",
+      "reassign-year",
+      "reassign-years"
     ].includes(mode)
   ) {
     console.error(
-      "Usa: node scripts/generate-level.mjs daily|backfill-2025|backfill-year YYYY|backfill-dates|bank [count] [offset]|bank-add [count]|bank-sql [count] [output.sql]|bank-sql-chunks [count] [output-dir]|assign-year [YYYY]"
+      "Usa: node scripts/generate-level.mjs daily|backfill-2025|backfill-year YYYY|backfill-dates|bank [count] [offset]|bank-add [count]|bank-sql [count] [output.sql]|bank-sql-chunks [count] [output-dir]|assign-year [YYYY]|reassign-year YYYY|reassign-years YYYY [...]"
     );
     process.exit(1);
   }
@@ -403,23 +513,7 @@ async function run() {
   const needsSupabase = !["bank-sql", "bank-sql-chunks"].includes(mode);
   let supabase = null;
   if (needsSupabase) {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const serviceKey =
-      process.env.SUPABASE_SECRET_KEY ||
-      process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      process.env.SERVICE_ROLE_KEY;
-    if (!supabaseUrl || !serviceKey) {
-      console.error(
-        "Falten SUPABASE_URL i una key elevada: SUPABASE_SECRET_KEY, SUPABASE_SERVICE_ROLE_KEY o SERVICE_ROLE_KEY."
-      );
-      process.exit(1);
-    }
-    if (serviceKey.startsWith("sb_publishable_")) {
-      console.error(
-        "La key rebuda es publishable. Per inserir nivells cal una key elevada: sb_secret_... o la legacy service_role."
-      );
-      process.exit(1);
-    }
+    const { supabaseUrl, serviceKey } = getSupabaseCredentials();
     supabase = createClient(supabaseUrl, serviceKey);
   }
 
@@ -541,11 +635,17 @@ async function run() {
 
   function buildBankRows(requestedCount, offset = 0) {
     const rows = [];
-    for (let index = 0; index < requestedCount; index += 1) {
-      const globalIndex = offset + index;
-      const config = DIFFICULTY_CONFIGS[globalIndex % DIFFICULTY_CONFIGS.length];
+    const fingerprints = new Set();
+    let duplicateRetries = 0;
+    const maxDuplicateRetries = requestedCount * 100;
+
+    while (rows.length < requestedCount) {
+      const globalIndex = offset + rows.length;
+      const config = DIFFICULTY_CONFIGS[rows.length % DIFFICULTY_CONFIGS.length];
       const seedKey = `bank:${config.id}:${globalIndex}`;
-      const rng = mulberry32(hashString(seedKey));
+      const seedInput =
+        duplicateRetries > 0 ? `${seedKey}:retry:${duplicateRetries}` : seedKey;
+      const rng = mulberry32(hashString(seedInput));
       const levelData = buildLevel({
         rng,
         ids,
@@ -567,6 +667,16 @@ async function run() {
         must_pass_ids: levelData.must_pass_ids
       };
       row.fingerprint = getLevelFingerprint(row);
+      if (fingerprints.has(row.fingerprint)) {
+        duplicateRetries += 1;
+        if (duplicateRetries > maxDuplicateRetries) {
+          throw new Error(
+            `No s'han pogut generar ${requestedCount} fingerprints unics per al banc.`
+          );
+        }
+        continue;
+      }
+      fingerprints.add(row.fingerprint);
       rows.push(row);
     }
     return rows;
@@ -582,7 +692,7 @@ async function run() {
     );
     const migrationSql = fs.readFileSync(migrationPath, "utf8");
     const lines = [
-      "-- Seed 10000 pregenerated levels for public.level_bank.",
+      `-- Seed ${rows.length} pregenerated levels for public.level_bank.`,
       "-- Generated with scripts/generate-level.mjs using the active app rules and topology.",
       "",
       migrationSql.trim(),
@@ -717,7 +827,7 @@ async function run() {
       const batch = rows.slice(start, start + batchSize);
       const result = await supabase
         .from("level_bank")
-        .upsert(batch, { onConflict: "seed_key", ignoreDuplicates: true })
+        .upsert(batch, { onConflict: "seed_key" })
         .select("id");
       if (result.error) {
         console.error(`Error inserint banc ${start}-${start + batch.length}:`, result.error.message);
@@ -849,6 +959,113 @@ async function run() {
     };
   }
 
+  function getYearRange(year) {
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31);
+    const totalDays =
+      Math.round((endDate.getTime() - startDate.getTime()) / 86400000) + 1;
+    return { startDate, totalDays };
+  }
+
+  function parseYear(value, example = "2026") {
+    const year = Number(value);
+    if (!Number.isInteger(year) || year < 2020 || year > 2100) {
+      console.error(`Afegeix un any valid, per exemple: ${example}`);
+      process.exit(1);
+    }
+    return year;
+  }
+
+  async function clearBankUsageForKeys(keys) {
+    if (!keys.length) return 0;
+    const update = await supabase
+      .from("level_bank")
+      .update({ used_on: null })
+      .in("used_on", keys)
+      .select("id");
+    if (update.error) {
+      console.error("Error alliberant nivells del banc:", update.error.message);
+      process.exit(1);
+    }
+    return update.data?.length || 0;
+  }
+
+  async function deleteDailyLevelsForKeys(keys) {
+    if (!keys.length) return { calendarRows: 0, levelRows: 0 };
+    const existing = await supabase
+      .from("calendar_daily")
+      .select("date, level_id")
+      .in("date", keys);
+    if (existing.error) {
+      console.error("Error llegint el calendari existent:", existing.error.message);
+      process.exit(1);
+    }
+    const levelIds = [...new Set((existing.data || []).map((row) => row.level_id).filter(Boolean))];
+
+    const calendarDelete = await supabase
+      .from("calendar_daily")
+      .delete()
+      .in("date", keys)
+      .select("date");
+    if (calendarDelete.error) {
+      console.error("Error esborrant calendar_daily:", calendarDelete.error.message);
+      process.exit(1);
+    }
+
+    let deletedLevels = 0;
+    if (levelIds.length) {
+      const levelDelete = await supabase
+        .from("levels")
+        .delete()
+        .in("id", levelIds)
+        .select("id");
+      if (levelDelete.error) {
+        console.error("Error esborrant levels antics:", levelDelete.error.message);
+        process.exit(1);
+      }
+      deletedLevels += levelDelete.data?.length || 0;
+    }
+
+    const staleLevelDelete = await supabase
+      .from("levels")
+      .delete()
+      .eq("level_type", "daily")
+      .in("date", keys)
+      .select("id");
+    if (staleLevelDelete.error) {
+      console.error("Error esborrant levels daily per data:", staleLevelDelete.error.message);
+      process.exit(1);
+    }
+    deletedLevels += staleLevelDelete.data?.length || 0;
+
+    return {
+      calendarRows: calendarDelete.data?.length || 0,
+      levelRows: deletedLevels
+    };
+  }
+
+  async function reassignDailyRangeFromBank(startDate, days) {
+    const keys = Array.from({ length: days }, (_, index) =>
+      getDayKey(addDays(startDate, index))
+    );
+    const freedBankRows = await clearBankUsageForKeys(keys);
+    const availableRows = await fetchUnusedBankRows();
+    if (availableRows.length < keys.length) {
+      console.error(
+        `Falten nivells lliures al banc: calen ${keys.length}, disponibles ${availableRows.length}.`
+      );
+      process.exit(1);
+    }
+
+    const deleted = await deleteDailyLevelsForKeys(keys);
+    const assigned = await assignDailyRangeFromBank(startDate, days);
+    return {
+      ...assigned,
+      freedBankRows,
+      deleted
+    };
+  }
+
   if (mode === "daily") {
     const startDate = addDays(today, -20);
     const dailyBatch = await ensureDailyRange(startDate, 21);
@@ -879,15 +1096,8 @@ async function run() {
   }
 
   if (mode === "backfill-year") {
-    const year = Number(process.argv[3]);
-    if (!Number.isInteger(year) || year < 2020 || year > 2100) {
-      console.error("Afegeix un any valid, per exemple: backfill-year 2026");
-      process.exit(1);
-    }
-    const startDate = new Date(year, 0, 1);
-    const endDate = new Date(year, 11, 31);
-    const totalDays =
-      Math.round((endDate.getTime() - startDate.getTime()) / 86400000) + 1;
+    const year = parseYear(process.argv[3], "backfill-year 2026");
+    const { startDate, totalDays } = getYearRange(year);
     const dailyBatch = await ensureDailyRange(startDate, totalDays);
     console.log(
       `Backfill ${year} diari: ${dailyBatch.createdKeys.length}/${dailyBatch.total}`
@@ -920,10 +1130,10 @@ async function run() {
   }
 
   if (mode === "bank") {
-    const requestedCount = parsePositiveInteger(process.argv[3], 10000);
+    const requestedCount = parsePositiveInteger(process.argv[3], DEFAULT_BANK_COUNT);
     const offset = parseNonNegativeInteger(process.argv[4], 0);
     if (!requestedCount || offset === null) {
-      console.error("Afegeix valors valids, per exemple: bank 10000 10000");
+      console.error("Afegeix valors valids, per exemple: bank 20000 0");
       process.exit(1);
     }
 
@@ -935,7 +1145,7 @@ async function run() {
   }
 
   if (mode === "bank-add") {
-    const requestedCount = parsePositiveInteger(process.argv[3], 10000);
+    const requestedCount = parsePositiveInteger(process.argv[3], DEFAULT_BANK_ADD_COUNT);
     if (!requestedCount) {
       console.error("Afegeix un nombre valid de nivells, per exemple: bank-add 10000");
       process.exit(1);
@@ -948,9 +1158,9 @@ async function run() {
   }
 
   if (mode === "bank-sql") {
-    const requestedCount = Number(process.argv[3] || 10000);
+    const requestedCount = Number(process.argv[3] || DEFAULT_BANK_COUNT);
     if (!Number.isInteger(requestedCount) || requestedCount <= 0) {
-      console.error("Afegeix un nombre valid de nivells, per exemple: bank-sql 10000");
+      console.error("Afegeix un nombre valid de nivells, per exemple: bank-sql 20000");
       process.exit(1);
     }
     const outputPath = path.resolve(
@@ -964,9 +1174,9 @@ async function run() {
   }
 
   if (mode === "bank-sql-chunks") {
-    const requestedCount = Number(process.argv[3] || 10000);
+    const requestedCount = Number(process.argv[3] || DEFAULT_BANK_COUNT);
     if (!Number.isInteger(requestedCount) || requestedCount <= 0) {
-      console.error("Afegeix un nombre valid de nivells, per exemple: bank-sql-chunks 10000");
+      console.error("Afegeix un nombre valid de nivells, per exemple: bank-sql-chunks 20000");
       process.exit(1);
     }
     const outputDir = path.resolve(
@@ -981,19 +1191,40 @@ async function run() {
   }
 
   if (mode === "assign-year") {
-    const year = Number(process.argv[3] || new Date().getFullYear());
-    if (!Number.isInteger(year) || year < 2020 || year > 2100) {
-      console.error("Afegeix un any valid, per exemple: assign-year 2026");
-      process.exit(1);
-    }
-    const startDate = new Date(year, 0, 1);
-    const endDate = new Date(year, 11, 31);
-    const totalDays =
-      Math.round((endDate.getTime() - startDate.getTime()) / 86400000) + 1;
+    const year = parseYear(process.argv[3] || new Date().getFullYear(), "assign-year 2026");
+    const { startDate, totalDays } = getYearRange(year);
     const result = await assignDailyRangeFromBank(startDate, totalDays);
     console.log(
       `Calendari ${year} assignat: ${result.createdKeys.length}/${result.total} nous, ${result.skipped} ja existien`
     );
+    return;
+  }
+
+  if (mode === "reassign-year") {
+    const year = parseYear(process.argv[3], "reassign-year 2026");
+    const { startDate, totalDays } = getYearRange(year);
+    const result = await reassignDailyRangeFromBank(startDate, totalDays);
+    console.log(
+      `Calendari ${year} reassignat: ${result.createdKeys.length}/${result.total} nous, ${result.deleted.calendarRows} calendaris antics, ${result.deleted.levelRows} nivells antics, ${result.freedBankRows} banc alliberats`
+    );
+    return;
+  }
+
+  if (mode === "reassign-years") {
+    const years = [
+      ...new Set(process.argv.slice(3).map((value) => parseYear(value, "reassign-years 2026 2027 2028")))
+    ];
+    if (!years.length) {
+      console.error("Afegeix anys, per exemple: reassign-years 2026 2027 2028");
+      process.exit(1);
+    }
+    for (const year of years) {
+      const { startDate, totalDays } = getYearRange(year);
+      const result = await reassignDailyRangeFromBank(startDate, totalDays);
+      console.log(
+        `Calendari ${year} reassignat: ${result.createdKeys.length}/${result.total} nous, ${result.deleted.calendarRows} calendaris antics, ${result.deleted.levelRows} nivells antics, ${result.freedBankRows} banc alliberats`
+      );
+    }
     return;
   }
 }
