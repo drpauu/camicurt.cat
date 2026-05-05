@@ -1,17 +1,13 @@
-import { DEFAULT_LOCALE, resolveLocale } from "./locales.js";
-
 const SETTINGS_KEY = "rumb-settings-v1";
 const ACTIVE_THEME_KEY = "rumb-theme-active-v1";
 const MUSIC_SETTINGS_KEY = "rumb-music-settings-v1";
 const SFX_SETTINGS_KEY = "rumb-sfx-settings-v1";
-const LANGUAGE_KEY = "rumb-language-v1";
 
 export const DEFAULT_SETTINGS = {
   theme: "default",
-  language: DEFAULT_LOCALE,
   musicEnabled: false,
   musicVolume: 0,
-  musicTrack: "segadors",
+  musicTrack: "random",
   sfxEnabled: false,
   sfxVolume: 0
 };
@@ -39,7 +35,6 @@ export function loadSettings() {
       const parsed = JSON.parse(raw);
       return {
         theme: coerceString(parsed.theme, DEFAULT_SETTINGS.theme),
-        language: resolveLocale(coerceString(parsed.language, DEFAULT_SETTINGS.language)),
         musicEnabled: coerceBoolean(parsed.musicEnabled, DEFAULT_SETTINGS.musicEnabled),
         musicVolume: coerceNumber(parsed.musicVolume, DEFAULT_SETTINGS.musicVolume),
         musicTrack: coerceString(parsed.musicTrack, DEFAULT_SETTINGS.musicTrack),
@@ -52,7 +47,6 @@ export function loadSettings() {
   }
 
   const theme = localStorage.getItem(ACTIVE_THEME_KEY) || DEFAULT_SETTINGS.theme;
-  const language = localStorage.getItem(LANGUAGE_KEY) || DEFAULT_SETTINGS.language;
   let musicEnabled = DEFAULT_SETTINGS.musicEnabled;
   let musicVolume = DEFAULT_SETTINGS.musicVolume;
   let musicTrack = DEFAULT_SETTINGS.musicTrack;
@@ -84,7 +78,6 @@ export function loadSettings() {
 
   return {
     theme: coerceString(theme, DEFAULT_SETTINGS.theme),
-    language: resolveLocale(coerceString(language, DEFAULT_SETTINGS.language)),
     musicEnabled,
     musicVolume,
     musicTrack,
@@ -97,7 +90,6 @@ export function saveSettings(settings) {
   if (typeof window === "undefined") return;
   const payload = {
     theme: coerceString(settings.theme, DEFAULT_SETTINGS.theme),
-    language: resolveLocale(coerceString(settings.language, DEFAULT_SETTINGS.language)),
     musicEnabled: coerceBoolean(settings.musicEnabled, DEFAULT_SETTINGS.musicEnabled),
     musicVolume: coerceNumber(settings.musicVolume, DEFAULT_SETTINGS.musicVolume),
     musicTrack: coerceString(settings.musicTrack, DEFAULT_SETTINGS.musicTrack),

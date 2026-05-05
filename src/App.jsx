@@ -14,7 +14,7 @@ import {
   findShortestPathsWithRule
 } from "./lib/pathfinding.js";
 import { loadSettings, saveSettings } from "./lib/settings.js";
-import { LANGUAGES, resolveLocale, translate } from "./lib/locales.js";
+import { DEFAULT_LOCALE, translate } from "./lib/locales.js";
 import { TOMAS_THEME_ID } from "./lib/themes.js";
 import { RULES, pickRuleForKey, normalizeRule } from "./lib/rules.js";
 import { isDisabledRule } from "./lib/disabledRules.js";
@@ -54,7 +54,6 @@ const CALENDAR_DETAIL_COLUMNS =
 const RULE_HISTORY_KEY = "rumb-rule-history-v1";
 const RULE_ASSIGNMENTS_KEY = "rumb-rule-assignments-v1";
 const RULE_HISTORY_LIMIT = 60;
-const LANGUAGE_KEY = "rumb-language-v1";
 const MUSIC_SETTINGS_KEY = "rumb-music-settings-v1";
 const SFX_SETTINGS_KEY = "rumb-sfx-settings-v1";
 const SETTINGS_KEY = "rumb-settings-v1";
@@ -1057,15 +1056,12 @@ export default function App() {
     play,
     enabled: sfxEnabled,
     setEnabled: setSfxEnabled,
-    masterVolume,
-    setMasterVolume,
     sfxVolume,
     setSfxVolume
   } = useSound();
   const [musicEnabled, setMusicEnabled] = useState(initialSettings.musicEnabled);
   const [musicVolume, setMusicVolume] = useState(initialSettings.musicVolume);
   const [musicTrack, setMusicTrack] = useState(initialSettings.musicTrack);
-  const [language, setLanguage] = useState(() => resolveLocale(initialSettings.language));
   const [activeTheme, setActiveTheme] = useState(initialSettings.theme);
   const [configOpen, setConfigOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
@@ -1267,17 +1263,17 @@ export default function App() {
     return 0;
   }, [dailyStreak]);
   const streakTitle = getStreakTitle(displayStreak);
-  const t = useMemo(() => (key, vars = {}) => translate(language, key, vars), [language]);
+  const t = useMemo(() => (key, vars = {}) => translate(DEFAULT_LOCALE, key, vars), []);
   const playManifestSfx = useCallback(
     (kind, volumeMul = 1) => {
       if (!audioManifest?.sfx?.[kind]) return;
       if (!audioManagerRef.current) return;
-      if (!sfxEnabled || masterVolume <= 0 || sfxVolume <= 0) return;
-      const volume = clampVolumeValue(masterVolume * sfxVolume * volumeMul);
+      if (!sfxEnabled || sfxVolume <= 0) return;
+      const volume = clampVolumeValue(sfxVolume * volumeMul);
       if (volume <= 0) return;
       audioManagerRef.current.playSfx(kind, activeTheme, volume);
     },
-    [activeTheme, audioManifest, masterVolume, sfxEnabled, sfxVolume]
+    [activeTheme, audioManifest, sfxEnabled, sfxVolume]
   );
 
   useEffect(() => {
@@ -1285,8 +1281,7 @@ export default function App() {
     localStorage.setItem("rumb-mode", gameMode);
     localStorage.setItem("rumb-difficulty", difficulty);
     localStorage.setItem(ACTIVE_THEME_KEY, activeTheme);
-    localStorage.setItem(LANGUAGE_KEY, language);
-  }, [gameMode, difficulty, activeTheme, language]);
+  }, [gameMode, difficulty, activeTheme]);
 
   useEffect(() => {
     supabaseUserIdRef.current = supabaseUserId;
@@ -1295,14 +1290,13 @@ export default function App() {
   useEffect(() => {
     saveSettings({
       theme: activeTheme,
-      language,
       musicEnabled,
       musicVolume,
       musicTrack,
       sfxEnabled,
       sfxVolume
     });
-  }, [activeTheme, language, musicEnabled, musicVolume, musicTrack, sfxEnabled, sfxVolume]);
+  }, [activeTheme, musicEnabled, musicVolume, musicTrack, sfxEnabled, sfxVolume]);
 
   useEffect(() => {
     let active = true;
@@ -1323,8 +1317,8 @@ export default function App() {
     if (!audioManifest?.music) return;
     const ids = Object.keys(audioManifest.music);
     if (!ids.length) return;
-    if (!ids.includes(musicTrack)) {
-      setMusicTrack(ids[0]);
+    if (musicTrack !== "random" && !ids.includes(musicTrack)) {
+      setMusicTrack("random");
     }
   }, [audioManifest, musicTrack]);
 
@@ -1518,7 +1512,6 @@ export default function App() {
       .from("players")
       .update({
         unlocked_difficulties: [...unlockedDifficulties],
-        language,
         music_track: musicTrack,
         music_enabled: musicEnabled,
         music_volume: musicVolume,
@@ -1532,7 +1525,6 @@ export default function App() {
   }, [
     isSupabaseReady,
     unlockedDifficulties,
-    language,
     musicTrack,
     musicEnabled,
     musicVolume,
@@ -2023,9 +2015,6 @@ export default function App() {
           if (Array.isArray(playerData.unlocked_difficulties)) {
             setUnlockedDifficulties(new Set(playerData.unlocked_difficulties));
           }
-          if (typeof playerData.language === "string") {
-            setLanguage(resolveLocale(playerData.language));
-          }
           if (typeof playerData.music_enabled === "boolean") {
             setMusicEnabled(playerData.music_enabled);
           }
@@ -2430,9 +2419,25 @@ export default function App() {
     musicStartedRef.current = false;
   }
 
+  function getAvailableMusicTrackIds() {
+    if (audioManifest?.music) return Object.keys(audioManifest.music);
+    return MUSIC_TRACKS.map((track) => track.id);
+  }
+
+  function resolveMusicTrack(trackId = musicTrack) {
+    const ids = getAvailableMusicTrackIds();
+    if (!ids.length) return "";
+    if (trackId === "random" || !ids.includes(trackId)) {
+      return pickRandom(ids);
+    }
+    return trackId;
+  }
+
   function startMusic(trackId = musicTrack, volumeOverride, options = {}) {
     if (!musicEnabled && !options.force) return;
     if (audioManagerRef.current) {
+      const resolvedTrackId = resolveMusicTrack(trackId);
+      if (!resolvedTrackId) return;
       const nextVolume =
         typeof volumeOverride === "number" && Number.isFinite(volumeOverride)
           ? volumeOverride
@@ -2442,7 +2447,7 @@ export default function App() {
         return;
       }
       const playPromise = audioManagerRef.current.playMusic(
-        trackId,
+        resolvedTrackId,
         nextVolume,
         activeTheme
       );
@@ -2483,13 +2488,25 @@ export default function App() {
   function handleMusicVolumeInput(event) {
     const nextVolume = clampVolumeValue(Number(event.currentTarget.value));
     setMusicVolume(nextVolume);
-    if (nextVolume > 0) {
-      setMusicEnabled(true);
-      startMusic(musicTrack, nextVolume, { force: true });
+    if (musicEnabled && nextVolume > 0) {
+      if (musicBlockedRef.current || !musicStartedRef.current) {
+        startMusic(musicTrack, nextVolume, { force: true });
+      }
       return;
     }
-    setMusicEnabled(false);
-    stopMusic();
+    if (nextVolume <= 0) stopMusic();
+  }
+
+  function handleMusicToggle(nextEnabled) {
+    playManifestSfx("toggle", 0.55);
+    setMusicEnabled(nextEnabled);
+    if (!nextEnabled) {
+      stopMusic();
+      return;
+    }
+    const nextVolume = musicVolume > 0 ? musicVolume : 1;
+    if (musicVolume <= 0) setMusicVolume(nextVolume);
+    startMusic(musicTrack, nextVolume, { force: true });
   }
 
   function handleSfxToggle(nextEnabled) {
@@ -2498,26 +2515,12 @@ export default function App() {
     }
     setSfxEnabled(nextEnabled);
     if (!nextEnabled) return;
-    if (masterVolume <= 0) setMasterVolume(1);
     if (sfxVolume <= 0) setSfxVolume(1);
-  }
-
-  function handleMasterVolumeInput(event) {
-    const nextVolume = clampVolumeValue(Number(event.currentTarget.value));
-    setMasterVolume(nextVolume);
-    if (nextVolume > 0) {
-      if (sfxVolume <= 0) setSfxVolume(1);
-      setSfxEnabled(true);
-    }
   }
 
   function handleSfxVolumeInput(event) {
     const nextVolume = clampVolumeValue(Number(event.currentTarget.value));
     setSfxVolume(nextVolume);
-    if (nextVolume > 0) {
-      if (masterVolume <= 0) setMasterVolume(1);
-      setSfxEnabled(true);
-    }
   }
 
   function applyCalendarLevel(level, options = {}) {
@@ -4253,14 +4256,18 @@ export default function App() {
   const timeLeftUrgent = isTimedMode && timeLeftMs <= 10000;
   const shouldShowSuggestions = isSuggestionsOpen && suggestions.length > 0;
   const musicOptions = useMemo(() => {
+    const randomOption = { id: "random", label: t("randomTrack") };
     if (audioManifest?.music) {
-      return Object.entries(audioManifest.music).map(([id, file]) => ({
-        id,
-        label: (file.split("/").pop() || id).replace(/\.[^/.]+$/, "")
-      }));
+      return [
+        randomOption,
+        ...Object.entries(audioManifest.music).map(([id, file]) => ({
+          id,
+          label: (file.split("/").pop() || id).replace(/\.[^/.]+$/, "")
+        }))
+      ];
     }
-    return MUSIC_TRACKS.map((track) => ({ id: track.id, label: track.label }));
-  }, [audioManifest]);
+    return [randomOption, ...MUSIC_TRACKS.map((track) => ({ id: track.id, label: track.label }))];
+  }, [audioManifest, t]);
   const todayLabel = useMemo(() => formatFullDayLabel(dayKey), [dayKey]);
   const showDailySkeleton = calendarStatus === "loading" && calendarDaily.length === 0;
   const hasDailyLevels = calendarDaily.some((entry) => entry.levelId);
@@ -4813,6 +4820,14 @@ export default function App() {
             </div>
             <div className="config-content">
               <span className="label">{t("music")}</span>
+              <button
+                type="button"
+                className={`toggle-button ${musicEnabled ? "active" : ""}`}
+                aria-pressed={musicEnabled}
+                onClick={() => handleMusicToggle(!musicEnabled)}
+              >
+                {musicEnabled ? t("on") : t("off")}
+              </button>
               <select
                 className="level-select"
                 value={musicTrack}
@@ -4820,8 +4835,7 @@ export default function App() {
                   playManifestSfx("toggle", 0.55);
                   const nextTrack = event.target.value;
                   setMusicTrack(nextTrack);
-                  if (musicVolume > 0) {
-                    setMusicEnabled(true);
+                  if (musicEnabled && musicVolume > 0) {
                     startMusic(nextTrack, musicVolume, { force: true });
                   }
                 }}
@@ -4833,41 +4847,28 @@ export default function App() {
                 ))}
               </select>
               <div className="range-row">
-                <span className="label">{t("volume")}</span>
+                <span className="label">{t("musicVolume")}</span>
                 <input
                   type="range"
                   min="0"
                   max="1"
                   step="0.01"
                   value={musicVolume}
-                  aria-label={t("volume")}
+                  aria-label={t("musicVolume")}
                   onInput={handleMusicVolumeInput}
                   onChange={handleMusicVolumeInput}
                 />
               </div>
 
               <span className="label">{t("sounds")}</span>
-              <label className="toggle-row">
-                <input
-                  type="checkbox"
-                  checked={sfxEnabled}
-                  onChange={(event) => handleSfxToggle(event.target.checked)}
-                />
-                <span>{t("soundToggle")}</span>
-              </label>
-              <div className="range-row">
-                <span className="label">{t("masterVolume")}</span>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={masterVolume}
-                  aria-label={t("masterVolume")}
-                  onInput={handleMasterVolumeInput}
-                  onChange={handleMasterVolumeInput}
-                />
-              </div>
+              <button
+                type="button"
+                className={`toggle-button ${sfxEnabled ? "active" : ""}`}
+                aria-pressed={sfxEnabled}
+                onClick={() => handleSfxToggle(!sfxEnabled)}
+              >
+                {sfxEnabled ? t("on") : t("off")}
+              </button>
               <div className="range-row">
                 <span className="label">{t("sfxVolume")}</span>
                 <input
@@ -4881,22 +4882,6 @@ export default function App() {
                   onChange={handleSfxVolumeInput}
                 />
               </div>
-
-              <span className="label">{t("language")}</span>
-              <select
-                className="level-select"
-                value={language}
-                onChange={(event) => {
-                  playManifestSfx("toggle", 0.55);
-                  setLanguage(resolveLocale(event.target.value));
-                }}
-              >
-                {LANGUAGES.map((lang) => (
-                  <option key={lang.id} value={lang.id}>
-                    {lang.label}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
         </div>

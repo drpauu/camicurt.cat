@@ -10,8 +10,6 @@ type SoundContextValue = {
   play: (key: SoundKey, opts?: PlayOptions) => void;
   setEnabled: (next: boolean) => void;
   enabled: boolean;
-  masterVolume: number;
-  setMasterVolume: (next: number) => void;
   sfxVolume: number;
   setSfxVolume: (next: number) => void;
 };
@@ -22,7 +20,7 @@ const POOL_SIZE = 3;
 const BURST_WINDOW_MS = 600;
 const BURST_LIMIT = 3;
 const OUTCOME_DUCK_MS = 1200;
-const DEFAULT_SOUND_SETTINGS = { enabled: false, masterVolume: 0, sfxVolume: 0 };
+const DEFAULT_SOUND_SETTINGS = { enabled: false, sfxVolume: 0 };
 
 const SoundContext = createContext<SoundContextValue | null>(null);
 
@@ -47,7 +45,6 @@ function loadSoundSettings() {
             typeof parsed.sfxEnabled === "boolean"
               ? parsed.sfxEnabled
               : DEFAULT_SOUND_SETTINGS.enabled,
-          masterVolume: sfxVolume,
           sfxVolume
         };
       } catch {
@@ -61,8 +58,12 @@ function loadSoundSettings() {
     return {
       enabled:
         typeof parsed.enabled === "boolean" ? parsed.enabled : DEFAULT_SOUND_SETTINGS.enabled,
-      masterVolume: clampVolume(parsed.masterVolume, DEFAULT_SOUND_SETTINGS.masterVolume),
-      sfxVolume: clampVolume(parsed.sfxVolume, DEFAULT_SOUND_SETTINGS.sfxVolume)
+      sfxVolume: clampVolume(
+        typeof parsed.masterVolume === "number" && typeof parsed.sfxVolume === "number"
+          ? parsed.masterVolume * parsed.sfxVolume
+          : parsed.sfxVolume,
+        DEFAULT_SOUND_SETTINGS.sfxVolume
+      )
     };
   } catch {
     return { ...DEFAULT_SOUND_SETTINGS };
@@ -72,7 +73,6 @@ function loadSoundSettings() {
 export function SoundProvider({ children }: { children: React.ReactNode }) {
   const initial = useMemo(() => loadSoundSettings(), []);
   const [enabled, setEnabled] = useState<boolean>(initial.enabled);
-  const [masterVolume, setMasterVolume] = useState<number>(initial.masterVolume);
   const [sfxVolume, setSfxVolume] = useState<number>(initial.sfxVolume);
   const poolsRef = useRef(new Map<SoundKey, HTMLAudioElement[]>());
   const poolIndexRef = useRef(new Map<SoundKey, number>());
@@ -86,11 +86,10 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined") return;
     const payload = JSON.stringify({
       enabled,
-      masterVolume: clampVolume(masterVolume, 1),
       sfxVolume: clampVolume(sfxVolume, 1)
     });
     localStorage.setItem(SOUND_SETTINGS_KEY, payload);
-  }, [enabled, masterVolume, sfxVolume]);
+  }, [enabled, sfxVolume]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -145,10 +144,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
       burstRef.current.set(key, nextBurst);
 
       const volumeMul = typeof opts.volumeMul === "number" ? opts.volumeMul : 1;
-      const finalVolume = Math.min(
-        sound.baseVolume * sfxVolume * masterVolume * volumeMul,
-        1
-      );
+      const finalVolume = Math.min(sound.baseVolume * sfxVolume * volumeMul, 1);
       if (finalVolume <= 0) return;
 
       const pool = getPool(key);
@@ -169,7 +165,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
         blockKeyRef.current = key;
       }
     },
-    [enabled, masterVolume, sfxVolume, getPool]
+    [enabled, sfxVolume, getPool]
   );
 
   const value = useMemo(
@@ -177,12 +173,10 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
       play,
       setEnabled,
       enabled,
-      masterVolume,
-      setMasterVolume,
       sfxVolume,
       setSfxVolume
     }),
-    [play, enabled, masterVolume, sfxVolume]
+    [play, enabled, sfxVolume]
   );
 
   return <SoundContext.Provider value={value}>{children}</SoundContext.Provider>;

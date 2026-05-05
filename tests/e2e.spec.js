@@ -5,14 +5,12 @@ import { fileURLToPath } from "node:url";
 import { feature, neighbors as topoNeighbors } from "topojson-client";
 import { findShortestPathsWithRule } from "../src/lib/pathfinding.js";
 import { normalizeName } from "../src/lib/names.js";
-import { LANGUAGES, translate } from "../src/lib/locales.js";
+import { translate } from "../src/lib/locales.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const topoPath = path.resolve(__dirname, "..", "public", "catalunya-comarques.topojson");
 const rulesPath = path.resolve(__dirname, "..", "src", "data", "rules.json");
 const RULES = JSON.parse(fs.readFileSync(rulesPath, "utf8"));
-const EXPECTED_LANGUAGE_LABELS = LANGUAGES.map((language) => language.label);
-const EXPECTED_LANGUAGE_IDS = LANGUAGES.map((language) => language.id);
 const STANDARD_DESCRIPTION =
   "uneix Inici i Destí triant comarques veïnes, completa una ruta vàlida i intenta millorar-la fins acostar-te al camí òptim.";
 const topology = JSON.parse(fs.readFileSync(topoPath, "utf8"));
@@ -651,17 +649,11 @@ test("la configuració es persisteix", async ({ page }) => {
   await optionsDialog.getByRole("button", { name: /^Configuració$/i }).click();
   const configModal = page.locator(".config-modal");
   await expect(configModal.getByRole("heading", { name: /^Configuració$/i })).toBeVisible();
-  const languageSelect = page.locator(".config-content select").last();
-  const languageOptions = await languageSelect.locator("option").evaluateAll((options) =>
-    options.map((option) => ({ label: option.textContent.trim(), value: option.value }))
-  );
-  expect(languageOptions.map((option) => option.label)).toEqual(EXPECTED_LANGUAGE_LABELS);
-  expect(languageOptions.map((option) => option.value)).toEqual(EXPECTED_LANGUAGE_IDS);
-  await expect(languageSelect).toHaveValue("ca-standard");
-
+  await expect(configModal.locator(".config-content select")).toHaveCount(1);
+  await expect(configModal.locator(".config-content .toggle-button")).toHaveCount(2);
+  await expect(configModal).not.toContainText("Idioma");
   const routeBefore = await getRouteAndRule(page);
-  await languageSelect.selectOption("ca-barceloni");
-  await expect(configModal.locator("h2")).toContainText("bro");
+  await configModal.locator(".config-content .toggle-button").nth(1).click();
   expect(await getRouteAndRule(page)).toEqual(routeBefore);
   await page.getByRole("button", { name: /Tanca/i }).click();
   await page.waitForFunction(() => {
@@ -669,23 +661,25 @@ test("la configuració es persisteix", async ({ page }) => {
     if (!raw) return false;
     try {
       const parsed = JSON.parse(raw);
-      return parsed.language === "ca-barceloni";
+      return parsed.sfxEnabled === true && !Object.prototype.hasOwnProperty.call(parsed, "language");
     } catch {
       return false;
     }
   });
   await page.reload({ waitUntil: "domcontentloaded" });
-  const language = await page.evaluate(() => {
+  const savedSettings = await page.evaluate(() => {
     const raw = localStorage.getItem("rumb-settings-v1");
-    return raw ? JSON.parse(raw).language : null;
+    return raw ? JSON.parse(raw) : null;
   });
-  expect(language).toBe("ca-barceloni");
+  expect(savedSettings?.language).toBeUndefined();
+  expect(savedSettings?.sfxEnabled).toBe(true);
   await page.getByRole("button", { name: /Opcions/i }).click();
   await page.getByRole("button", { name: /Config/i }).click();
-  await expect(page.locator(".config-content select").last()).toHaveValue("ca-barceloni");
+  await expect(page.locator(".config-content select")).toHaveCount(1);
+  await expect(page.locator(".config-modal")).not.toContainText("Idioma");
 });
 
-test("ca-standard es el fallback i conserva la descripcio original", async ({ page }) => {
+test("els valors antics d'idioma s'ignoren i conserva la descripcio original", async ({ page }) => {
   expect(translate("ca-standard", "descriptionNormal")).toBe(STANDARD_DESCRIPTION);
   await page.addInitScript(() => {
     localStorage.setItem("rumb-language-v1", "aranes");
@@ -701,7 +695,14 @@ test("ca-standard es el fallback i conserva la descripcio original", async ({ pa
   await page.waitForSelector("svg.map");
   await page.getByRole("button", { name: /Opcions/i }).click();
   await page.getByRole("button", { name: /Configuraci/i }).click();
-  await expect(page.locator(".config-content select").last()).toHaveValue("ca-standard");
+  await expect(page.locator(".config-content select")).toHaveCount(1);
+  await expect(page.locator(".config-modal")).not.toContainText("Idioma");
+  await page.waitForFunction(() => {
+    const raw = localStorage.getItem("rumb-settings-v1");
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    return !Object.prototype.hasOwnProperty.call(parsed, "language");
+  });
 });
 
 test("els simbols dels controls es renderitzen correctament", async ({ page }) => {
@@ -841,24 +842,26 @@ test("arrenca amb l'audio silenciat i el volum funciona en mobil", async ({ page
     return (
       app.musicEnabled === false &&
       app.musicVolume === 0 &&
+      app.musicTrack === "random" &&
       app.sfxEnabled === false &&
       app.sfxVolume === 0 &&
       sound.enabled === false &&
-      sound.masterVolume === 0 &&
-      sound.sfxVolume === 0
+      sound.sfxVolume === 0 &&
+      !Object.prototype.hasOwnProperty.call(sound, "masterVolume")
     );
   });
 
   await page.locator(".bottom-nav").getByRole("button", { name: /Opcions/i }).click();
   await page.getByRole("button", { name: /Configuraci/i }).click();
   const ranges = page.locator('.config-content input[type="range"]');
-  await expect(ranges).toHaveCount(3);
+  const toggles = page.locator(".config-content .toggle-button");
+  await expect(ranges).toHaveCount(2);
+  await expect(toggles).toHaveCount(2);
+  await expect(page.locator(".config-content select")).toHaveValue("random");
   await expect(ranges.nth(0)).toHaveValue("0");
   await expect(ranges.nth(1)).toHaveValue("0");
-  await expect(ranges.nth(2)).toHaveValue("0");
-  await expect(ranges.nth(1)).toBeEnabled();
-  await expect(ranges.nth(2)).toBeEnabled();
-  await expect(page.locator('.config-content input[type="checkbox"]').first()).not.toBeChecked();
+  await expect(toggles.nth(0)).toHaveAttribute("aria-pressed", "false");
+  await expect(toggles.nth(1)).toHaveAttribute("aria-pressed", "false");
 
   const setRangeValue = async (range, value) => {
     await range.evaluate((input, nextValue) => {
@@ -872,6 +875,11 @@ test("arrenca amb l'audio silenciat i el volum funciona en mobil", async ({ page
   await expect(ranges.nth(0)).toHaveValue("0.42");
   await page.waitForFunction(() => {
     const settings = JSON.parse(localStorage.getItem("rumb-settings-v1") || "{}");
+    return settings.musicEnabled === false && settings.musicVolume === 0.42;
+  });
+  await toggles.nth(0).click();
+  await page.waitForFunction(() => {
+    const settings = JSON.parse(localStorage.getItem("rumb-settings-v1") || "{}");
     return settings.musicEnabled === true && settings.musicVolume === 0.42;
   });
 
@@ -879,7 +887,12 @@ test("arrenca amb l'audio silenciat i el volum funciona en mobil", async ({ page
   await expect(ranges.nth(1)).toHaveValue("0.35");
   await page.waitForFunction(() => {
     const sound = JSON.parse(localStorage.getItem("rumb-sound-settings-v1") || "{}");
-    return sound.enabled === true && sound.masterVolume === 0.35 && sound.sfxVolume === 1;
+    return sound.enabled === false && sound.sfxVolume === 0.35;
+  });
+  await toggles.nth(1).click();
+  await page.waitForFunction(() => {
+    const sound = JSON.parse(localStorage.getItem("rumb-sound-settings-v1") || "{}");
+    return sound.enabled === true && sound.sfxVolume === 0.35;
   });
 });
 
@@ -890,7 +903,6 @@ test("usa les families de sons del manifest en interaccions reals", async ({ pag
       "rumb-settings-v1",
       JSON.stringify({
         theme: "default",
-        language: "ca-standard",
         musicEnabled: false,
         musicVolume: 0,
         musicTrack: "segadors",
@@ -904,7 +916,7 @@ test("usa les families de sons del manifest en interaccions reals", async ({ pag
     );
     localStorage.setItem(
       "rumb-sound-settings-v1",
-      JSON.stringify({ enabled: true, masterVolume: 1, sfxVolume: 1 })
+      JSON.stringify({ enabled: true, sfxVolume: 1 })
     );
     window.__playedAudio = [];
     HTMLMediaElement.prototype.play = function () {
@@ -1105,19 +1117,12 @@ test("la navegacio mobil te nomes reptes a capcalera i accions a baix", async ({
 });
 
 test("la barra mobil no talla accions ni solapa el mapa", async ({ page }) => {
-  const mobileLocale = "ca-rossellones";
   const expectedBottomLabels = ["calendar", "newGame", "options"].map((key) =>
-    translate(mobileLocale, key)
+    translate("ca-standard", key)
   );
-  await page.addInitScript((locale) => {
-    localStorage.setItem(
-      "rumb-settings-v1",
-      JSON.stringify({
-        theme: "default",
-        language: locale
-      })
-    );
-  }, mobileLocale);
+  await page.addInitScript(() => {
+    localStorage.setItem("rumb-settings-v1", JSON.stringify({ theme: "default" }));
+  });
   for (const width of [320, 390, 459]) {
     await page.setViewportSize({ width, height: 844 });
     await gotoHome(page);

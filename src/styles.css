@@ -28,7 +28,7 @@
 body {
   margin: 0;
   font-family: "Space Grotesk", "IBM Plex Sans", "Helvetica Neue", sans-serif;
-  font-size: 17px;
+  font-size: 18px;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -105,9 +105,9 @@ html[data-weather="wind"] body::before {
 }
 
 .page {
-  padding: 18px 24px 22px;
+  padding: 20px 26px 24px;
   display: grid;
-  gap: 16px;
+  gap: 18px;
   min-height: 100vh;
   height: 100vh;
   grid-template-rows: auto 1fr;
@@ -118,7 +118,7 @@ html[data-weather="wind"] body::before {
 .topbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
+  gap: 18px;
   align-items: end;
 }
 
@@ -139,7 +139,7 @@ html[data-weather="wind"] body::before {
   flex: 0 0 auto;
   align-self: flex-end;
   color: var(--muted);
-  font-size: 0.94rem;
+  font-size: 1rem;
   line-height: 1;
   padding-bottom: 8px;
   text-transform: none;
@@ -203,10 +203,10 @@ html[data-weather="wind"] body::before {
   border: none;
   background: var(--accent);
   color: #ffffff;
-  min-height: 58px;
-  font-size: 1.08rem;
+  min-height: 62px;
+  font-size: 1.12rem;
   font-weight: 700;
-  padding: 15px 24px;
+  padding: 16px 26px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s;
@@ -220,10 +220,10 @@ html[data-weather="wind"] body::before {
   border: 1px solid var(--border);
   background: var(--panel);
   color: var(--text);
-  min-height: 58px;
-  font-size: 1.08rem;
+  min-height: 62px;
+  font-size: 1.12rem;
   font-weight: 700;
-  padding: 15px 22px;
+  padding: 16px 24px;
   border-radius: 8px;
   cursor: pointer;
   box-shadow: 0 1px 3px var(--shadow);
@@ -248,10 +248,10 @@ html[data-weather="wind"] body::before {
   border: 1px solid var(--border);
   background: var(--panel);
   color: var(--text);
-  min-height: 58px;
-  font-size: 1.08rem;
+  min-height: 62px;
+  font-size: 1.12rem;
   font-weight: 700;
-  padding: 15px 22px;
+  padding: 16px 24px;
   border-radius: 8px;
   cursor: pointer;
   display: inline-flex;
@@ -270,8 +270,8 @@ html[data-weather="wind"] body::before {
 }
 
 .calendar-icon {
-  width: 19px;
-  height: 19px;
+  width: 21px;
+  height: 21px;
   border: 1px solid currentColor;
   border-radius: 4px;
   position: relative;
@@ -326,8 +326,8 @@ textarea:focus-visible {
   background: var(--surface);
   color: var(--text);
   border-radius: 10px;
-  padding: 6px 8px;
-  font-size: 0.8rem;
+  padding: 7px 9px;
+  font-size: 0.86rem;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -352,8 +352,8 @@ textarea:focus-visible {
 }
 
 .status-badge {
-  font-size: 0.7rem;
-  padding: 4px 8px;
+  font-size: 0.76rem;
+  padding: 5px 9px;
   border-radius: 999px;
   text-transform: uppercase;
   letter-spacing: 0;
@@ -394,8 +394,8 @@ textarea:focus-visible {
   background: var(--surface);
   color: var(--text);
   border-radius: 10px;
-  padding: 6px 8px;
-  font-size: 0.75rem;
+  padding: 7px 9px;
+  font-size: 0.82rem;
   cursor: pointer;
   transition: background 0.15s;
 }
@@ -408,7 +408,7 @@ textarea:focus-visible {
 }
 
 .calendar-status {
-  font-size: 0.7rem;
+  font-size: 0.76rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--success);
@@ -431,7 +431,7 @@ textarea:focus-visible {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 18px;
-  padding: 16px;
+  padding: 18px;
   width: min(520px, 90vw);
   display: grid;
   gap: 12px;
@@ -452,13 +452,13 @@ textarea:focus-visible {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 8px;
   cursor: pointer;
   display: grid;
   place-items: center;
-  font-size: 1.1rem;
+  font-size: 1.18rem;
   box-shadow: 0 1px 3px var(--shadow);
 }
 
@@ -483,7 +483,7 @@ textarea:focus-visible {
 .calendar-weekdays {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  font-size: 0.7rem;
+  font-size: 0.76rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--muted);
@@ -502,8 +502,8 @@ textarea:focus-visible {
   background: var(--surface);
   color: var(--text);
   border-radius: 10px;
-  padding: 8px 6px;
-  min-height: 56px;
+  padding: 9px 7px;
+  min-height: 60px;
   cursor: pointer;
   display: grid;
   align-content: start;
@@ -561,7 +561,7 @@ textarea:focus-visible {
 }
 
 .calendar-day-label {
-  font-size: 0.9rem;
+  font-size: 0.98rem;
 }
 
 .calendar-dot {
@@ -604,10 +604,10 @@ textarea:focus-visible {
   border: none;
   background: var(--surface);
   color: var(--text);
-  padding: 6px 8px;
+  padding: 7px 9px;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.86rem;
   transition: background 0.12s;
 }
 
@@ -623,14 +623,14 @@ textarea:focus-visible {
 .eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.2em;
-  font-size: 0.7rem;
+  font-size: 0.76rem;
   color: var(--muted);
   margin: 0 0 8px;
 }
 
 h1 {
   margin: 0;
-  font-size: 2.42rem;
+  font-size: 2.55rem;
   line-height: 1;
   color: var(--text);
 }
@@ -644,7 +644,7 @@ h1 {
 .game-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.72fr) minmax(320px, 0.62fr);
-  gap: 18px;
+  gap: 20px;
   align-items: start;
   min-height: 0;
   height: 100%;
@@ -652,7 +652,7 @@ h1 {
 
 .side-panel {
   display: grid;
-  gap: 14px;
+  gap: 16px;
   align-content: start;
   height: auto;
   max-height: none;
@@ -663,7 +663,7 @@ h1 {
 
 .panel-card {
   background: var(--panel);
-  padding: 18px;
+  padding: 20px;
   border-radius: 8px;
   border: 1px solid var(--border);
   box-shadow: 0 1px 6px var(--shadow);
@@ -684,7 +684,7 @@ h1 {
 }
 
 .action-card {
-  gap: 14px;
+  gap: 16px;
 }
 
 .play-card {
@@ -713,19 +713,19 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  min-height: 52px;
+  gap: 14px;
+  min-height: 56px;
   border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
   border-radius: 8px;
   background: color-mix(in srgb, var(--accent) 8%, var(--surface));
-  padding: 10px 12px;
+  padding: 11px 14px;
   color: var(--text);
-  font-size: 0.94rem;
+  font-size: 1rem;
 }
 
 .attempt-limit strong {
   color: var(--accent-strong);
-  font-size: 1.08rem;
+  font-size: 1.16rem;
 }
 
 .options-card {
@@ -776,7 +776,7 @@ h1 {
 
 .options-section {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .value.start {
@@ -827,11 +827,11 @@ h1 {
   background: transparent;
   border: none;
   text-align: left;
-  padding: 10px 12px;
+  padding: 11px 13px;
   border-radius: 8px;
   color: var(--text);
   cursor: pointer;
-  font-size: 0.96rem;
+  font-size: 1.02rem;
   transition: background 0.12s;
 }
 
@@ -848,9 +848,9 @@ h1 {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 13px 14px;
+  padding: 14px 16px;
   color: var(--text);
-  font-size: 1.02rem;
+  font-size: 1.08rem;
   font-family: inherit;
   transition: border-color 0.15s, background 0.15s;
 }
@@ -880,12 +880,12 @@ h1 {
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  min-height: 52px;
-  padding: 13px 14px;
+  min-height: 56px;
+  padding: 14px 16px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  font-size: 1.06rem;
+  font-size: 1.12rem;
   transition: background 0.15s;
 }
 
@@ -903,8 +903,8 @@ h1 {
   border: none;
   background: var(--accent-strong);
   color: #fff;
-  min-height: 52px;
-  padding: 13px 16px;
+  min-height: 56px;
+  padding: 14px 18px;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
@@ -1073,14 +1073,14 @@ h1 {
 
 .muted {
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: 0.98rem;
 }
 
 .label {
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
 }
 
 .value {
@@ -1092,7 +1092,7 @@ h1 {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 10px 12px;
-  font-size: 0.9rem;
+  font-size: 0.98rem;
 }
 
 .rule-chip.good {
@@ -1128,11 +1128,11 @@ h1 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 5px 9px;
+  padding: 6px 10px;
   border-radius: 999px;
   background: rgba(118, 180, 176, 0.14);
   color: var(--text);
-  font-size: 0.8rem;
+  font-size: 0.86rem;
   border: 1px solid rgba(118, 180, 176, 0.45);
 }
 
@@ -1435,10 +1435,10 @@ h1 {
   background: var(--panel);
   background: color-mix(in srgb, var(--panel) 90%, transparent);
   border: 1px solid var(--border);
-  padding: 6px 10px;
+  padding: 7px 12px;
   border-radius: 8px;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 1rem;
   z-index: 4;
   color: var(--text);
   box-shadow: 0 1px 4px var(--shadow);
@@ -1456,7 +1456,7 @@ h1 {
   place-items: center;
   background: color-mix(in srgb, var(--bg) 82%, transparent);
   z-index: 5;
-  font-size: 4rem;
+  font-size: 4.35rem;
   font-weight: 700;
 }
 
@@ -1480,7 +1480,7 @@ h1 {
   background: var(--surface);
   background: color-mix(in srgb, var(--surface) 95%, transparent);
   color: var(--muted);
-  font-size: 0.95rem;
+  font-size: 1.04rem;
   z-index: 3;
 }
 
@@ -1496,11 +1496,11 @@ h1 {
 .prompt {
   position: relative;
   background: var(--panel);
-  padding: 11px 13px 12px;
+  padding: 12px 15px 13px;
   border-radius: 8px;
   border: 1px solid var(--border);
   box-shadow: 0 1px 4px var(--shadow);
-  font-size: 0.98rem;
+  font-size: 1.06rem;
   display: grid;
   gap: 6px;
   color: var(--text);
@@ -1524,9 +1524,9 @@ h1 {
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 8px;
-  min-width: 52px;
-  min-height: 52px;
-  padding: 10px 12px;
+  min-width: 56px;
+  min-height: 56px;
+  padding: 11px 13px;
   cursor: pointer;
   font-family: inherit;
   font-weight: 700;
@@ -1575,7 +1575,7 @@ h1 {
 
 .status {
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: 0.98rem;
 }
 
 .map {
@@ -1751,12 +1751,12 @@ h1 {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  min-height: 48px;
-  padding: 10px 12px;
+  min-height: 52px;
+  padding: 11px 14px;
   color: var(--text);
   cursor: pointer;
   text-align: center;
-  font-size: 0.92rem;
+  font-size: 0.98rem;
   transition: background 0.12s;
 }
 
@@ -1782,12 +1782,12 @@ h1 {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  min-height: 48px;
-  padding: 10px 12px;
+  min-height: 52px;
+  padding: 11px 14px;
   color: var(--text);
   cursor: pointer;
   text-align: left;
-  font-size: 0.92rem;
+  font-size: 0.98rem;
   transition: background 0.12s;
 }
 
@@ -1807,40 +1807,50 @@ h1 {
 
 .difficulty-button .price {
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.84rem;
 }
 
 .level-select {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  min-height: 48px;
-  padding: 10px 12px;
+  min-height: 52px;
+  padding: 11px 14px;
   color: var(--text);
+  font-size: 1rem;
   font-family: inherit;
 }
 
-.toggle-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.92rem;
+.toggle-button {
+  justify-self: start;
+  min-height: 52px;
+  min-width: 164px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
 }
 
-.toggle-row input {
-  accent-color: var(--accent);
+.toggle-button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 .range-row {
   display: grid;
-  gap: 8px;
+  gap: 9px;
   min-width: 0;
 }
 
 .range-row input[type="range"] {
   width: 100%;
   min-width: 0;
-  height: 40px;
+  height: 44px;
   margin: 0;
   accent-color: var(--accent);
   cursor: pointer;
@@ -1883,13 +1893,13 @@ h1 {
 .modal {
   background: var(--panel);
   border-radius: 8px;
-  padding: 26px;
+  padding: 28px;
   max-width: 580px;
   width: min(580px, 100%);
   max-height: 90vh;
   overflow-y: auto;
   display: grid;
-  gap: 14px;
+  gap: 16px;
   border: 1px solid var(--border);
   box-shadow: 0 8px 40px rgba(31, 42, 48, 0.16);
 }
@@ -1915,7 +1925,7 @@ h1 {
 
 .config-content {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
 .modal .path-list,
@@ -1933,8 +1943,8 @@ h1 {
 
 .result-modal {
   width: min(620px, 100%);
-  gap: 16px;
-  padding: 24px;
+  gap: 18px;
+  padding: 26px;
 }
 
 .result-hero {
@@ -1943,7 +1953,7 @@ h1 {
 }
 
 .result-hero h2 {
-  font-size: 1.62rem;
+  font-size: 1.78rem;
   line-height: 1.12;
   letter-spacing: 0;
 }
@@ -1958,14 +1968,14 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 52px;
+  min-height: 56px;
   border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
   border-radius: 8px;
   background: color-mix(in srgb, var(--accent) 10%, var(--panel));
   color: var(--text);
-  padding: 10px 12px;
+  padding: 11px 14px;
   font-weight: 700;
-  font-size: 0.94rem;
+  font-size: 1rem;
   line-height: 1.15;
   text-align: center;
 }
@@ -2001,7 +2011,7 @@ h1 {
 .modal-subtitle {
   margin: 0;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.98rem;
 }
 
 .modal-section {
@@ -2089,13 +2099,13 @@ h1 {
 /* ── MOBILE ── */
 @media (max-width: 900px) {
   body {
-    font-size: 16px;
+    font-size: 17px;
     height: auto;
     overflow: auto;
   }
 
   .page {
-    padding: 12px 12px 96px;
+    padding: 13px 13px 104px;
     height: auto;
     min-height: 100vh;
   }
@@ -2141,7 +2151,7 @@ h1 {
   }
 
   .brand h1 {
-    font-size: 2.05rem;
+    font-size: 2.18rem;
     line-height: 1;
   }
 
@@ -2198,7 +2208,7 @@ h1 {
     width: 100%;
     max-width: none;
     border-radius: 8px 8px 0 0;
-    height: min(85vh, 640px);
+    height: min(86vh, 660px);
     max-height: calc(100vh - 20px);
   }
 
@@ -2228,16 +2238,16 @@ h1 {
   }
 
   .map-wrap {
-    height: clamp(320px, 72vw, 430px);
-    min-height: 320px;
-    max-height: 430px;
+    height: clamp(340px, 74vw, 450px);
+    min-height: 340px;
+    max-height: 450px;
     border-radius: 8px;
     gap: 8px;
   }
 
   .prompt {
-    padding: 8px;
-    font-size: 0.8rem;
+    padding: 9px;
+    font-size: 0.88rem;
     gap: 5px;
   }
 
@@ -2253,7 +2263,7 @@ h1 {
   }
 
   .rule-line {
-    font-size: 0.72rem;
+    font-size: 0.8rem;
     line-height: 1.25;
   }
 
@@ -2271,7 +2281,7 @@ h1 {
   }
 
   .panel-card {
-    padding: 14px 16px;
+    padding: 16px 18px;
     border-radius: 8px;
   }
 
@@ -2290,7 +2300,7 @@ h1 {
 
   .result-modal {
     max-height: calc(100vh - 110px);
-    padding: 16px;
+    padding: 18px;
   }
 
   .result-score-row {
@@ -2320,8 +2330,8 @@ h1 {
     bottom: 0;
     left: 0;
     right: 0;
-    min-height: 74px;
-    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    min-height: 80px;
+    padding: 11px 13px calc(11px + env(safe-area-inset-bottom));
     background: var(--panel);
     border-top: 1px solid var(--border);
     box-shadow: 0 -2px 12px var(--shadow);
@@ -2335,7 +2345,7 @@ h1 {
     justify-content: center;
     gap: 0;
     min-width: 0;
-    min-height: 44px;
+    min-height: 48px;
     border: 1px solid transparent;
     border-radius: 8px;
     background: transparent;
@@ -2359,14 +2369,14 @@ h1 {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 126px;
-    min-height: 48px;
+    min-width: 134px;
+    min-height: 54px;
     border: 1px solid color-mix(in srgb, var(--accent) 70%, var(--stroke));
     border-radius: 8px;
     background: var(--accent);
     color: #fff;
     cursor: pointer;
-    padding: 12px 14px;
+    padding: 13px 16px;
     font-family: inherit;
     box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 24%, transparent);
     transition:
@@ -2392,7 +2402,7 @@ h1 {
   .bottom-nav-label {
     min-width: 0;
     max-width: 100%;
-    font-size: clamp(0.64rem, 2.35vw, 0.78rem);
+    font-size: clamp(0.7rem, 2.5vw, 0.86rem);
     font-weight: 650;
     letter-spacing: 0;
     line-height: 1.08;
@@ -2402,7 +2412,7 @@ h1 {
   }
 
   .bottom-nav-new-game .bottom-nav-label {
-    font-size: clamp(0.68rem, 2.55vw, 0.86rem);
+    font-size: clamp(0.76rem, 2.75vw, 0.96rem);
     font-weight: 750;
   }
 }
