@@ -28,6 +28,7 @@
 body {
   margin: 0;
   font-family: "Space Grotesk", "IBM Plex Sans", "Helvetica Neue", sans-serif;
+  font-size: 17px;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -104,9 +105,9 @@ html[data-weather="wind"] body::before {
 }
 
 .page {
-  padding: 14px 18px 18px;
+  padding: 18px 24px 22px;
   display: grid;
-  gap: 12px;
+  gap: 16px;
   min-height: 100vh;
   height: 100vh;
   grid-template-rows: auto 1fr;
@@ -117,7 +118,7 @@ html[data-weather="wind"] body::before {
 .topbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  gap: 16px;
   align-items: end;
 }
 
@@ -130,7 +131,7 @@ html[data-weather="wind"] body::before {
 .brand-row {
   display: flex;
   align-items: flex-end;
-  column-gap: 10px;
+  column-gap: 12px;
   min-width: 0;
 }
 
@@ -138,7 +139,7 @@ html[data-weather="wind"] body::before {
   flex: 0 0 auto;
   align-self: flex-end;
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.94rem;
   line-height: 1;
   padding-bottom: 8px;
   text-transform: none;
@@ -156,24 +157,24 @@ html[data-weather="wind"] body::before {
   display: inline-flex;
   align-items: flex-end;
   align-self: end;
-  gap: 12px;
-  min-height: 52px;
+  gap: 14px;
+  min-height: 62px;
   white-space: nowrap;
 }
 
 .brand-logo {
   display: block;
-  width: 64px;
-  height: 50px;
-  flex: 0 0 64px;
+  width: 76px;
+  height: 60px;
+  flex: 0 0 76px;
   overflow: hidden;
   position: relative;
 }
 
 .brand-logo-image {
   display: block;
-  width: 146px;
-  height: 146px;
+  width: 174px;
+  height: 174px;
   max-width: none;
   position: absolute;
   left: 50%;
@@ -185,7 +186,7 @@ html[data-weather="wind"] body::before {
   flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
   align-items: flex-end;
   justify-content: flex-end;
   padding-top: 0;
@@ -194,7 +195,7 @@ html[data-weather="wind"] body::before {
 
 .topbar-actions {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
 }
 
@@ -202,8 +203,10 @@ html[data-weather="wind"] body::before {
   border: none;
   background: var(--accent);
   color: #ffffff;
-  font-weight: 600;
-  padding: 9px 14px;
+  min-height: 58px;
+  font-size: 1.08rem;
+  font-weight: 700;
+  padding: 15px 24px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s;
@@ -217,8 +220,10 @@ html[data-weather="wind"] body::before {
   border: 1px solid var(--border);
   background: var(--panel);
   color: var(--text);
-  font-weight: 600;
-  padding: 9px 12px;
+  min-height: 58px;
+  font-size: 1.08rem;
+  font-weight: 700;
+  padding: 15px 22px;
   border-radius: 8px;
   cursor: pointer;
   box-shadow: 0 1px 3px var(--shadow);
@@ -243,8 +248,10 @@ html[data-weather="wind"] body::before {
   border: 1px solid var(--border);
   background: var(--panel);
   color: var(--text);
-  font-weight: 600;
-  padding: 9px 12px;
+  min-height: 58px;
+  font-size: 1.08rem;
+  font-weight: 700;
+  padding: 15px 22px;
   border-radius: 8px;
   cursor: pointer;
   display: inline-flex;
@@ -263,8 +270,8 @@ html[data-weather="wind"] body::before {
 }
 
 .calendar-icon {
-  width: 16px;
-  height: 16px;
+  width: 19px;
+  height: 19px;
   border: 1px solid currentColor;
   border-radius: 4px;
   position: relative;
@@ -276,7 +283,7 @@ html[data-weather="wind"] body::before {
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
+  height: 5px;
   background: currentColor;
   opacity: 0.45;
   border-top-left-radius: 4px;
@@ -286,7 +293,7 @@ html[data-weather="wind"] body::before {
 .calendar-icon::after {
   content: "";
   position: absolute;
-  top: 7px;
+  top: 9px;
   left: 3px;
   right: 3px;
   height: 1px;
@@ -623,7 +630,7 @@ textarea:focus-visible {
 
 h1 {
   margin: 0;
-  font-size: 2.15rem;
+  font-size: 2.42rem;
   line-height: 1;
   color: var(--text);
 }
@@ -636,8 +643,8 @@ h1 {
 
 .game-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.75fr) minmax(280px, 0.58fr);
-  gap: 14px;
+  grid-template-columns: minmax(0, 1.72fr) minmax(320px, 0.62fr);
+  gap: 18px;
   align-items: start;
   min-height: 0;
   height: 100%;
@@ -645,7 +652,7 @@ h1 {
 
 .side-panel {
   display: grid;
-  gap: 12px;
+  gap: 14px;
   align-content: start;
   height: auto;
   max-height: none;
@@ -656,7 +663,7 @@ h1 {
 
 .panel-card {
   background: var(--panel);
-  padding: 14px;
+  padding: 18px;
   border-radius: 8px;
   border: 1px solid var(--border);
   box-shadow: 0 1px 6px var(--shadow);
@@ -677,7 +684,7 @@ h1 {
 }
 
 .action-card {
-  gap: 12px;
+  gap: 14px;
 }
 
 .play-card {
@@ -687,7 +694,7 @@ h1 {
 .action-progress {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 12px;
+  gap: 10px 14px;
 }
 
 .progress-item {
@@ -699,26 +706,26 @@ h1 {
 }
 
 .action-feedback {
-  min-height: 20px;
+  min-height: 24px;
 }
 
 .attempt-limit {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  min-height: 44px;
+  gap: 12px;
+  min-height: 52px;
   border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
   border-radius: 8px;
   background: color-mix(in srgb, var(--accent) 8%, var(--surface));
-  padding: 8px 10px;
+  padding: 10px 12px;
   color: var(--text);
-  font-size: 0.88rem;
+  font-size: 0.94rem;
 }
 
 .attempt-limit strong {
   color: var(--accent-strong);
-  font-size: 1rem;
+  font-size: 1.08rem;
 }
 
 .options-card {
@@ -727,7 +734,7 @@ h1 {
 
 .side-powerups {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .options-launch-button {
@@ -735,8 +742,8 @@ h1 {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
-  min-height: 44px;
-  padding: 11px 12px;
+  min-height: 52px;
+  padding: 13px 14px;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
@@ -764,12 +771,12 @@ h1 {
 
 .options-body {
   display: grid;
-  gap: 16px;
+  gap: 18px;
 }
 
 .options-section {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .value.start {
@@ -798,17 +805,17 @@ h1 {
 
 .guess-form {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .suggestions {
   display: none;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 6px;
+  padding: 8px;
   box-shadow: 0 4px 14px var(--shadow);
 }
 
@@ -820,11 +827,11 @@ h1 {
   background: transparent;
   border: none;
   text-align: left;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-radius: 8px;
   color: var(--text);
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.96rem;
   transition: background 0.12s;
 }
 
@@ -841,9 +848,9 @@ h1 {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 13px 14px;
   color: var(--text);
-  font-size: 0.95rem;
+  font-size: 1.02rem;
   font-family: inherit;
   transition: border-color 0.15s, background 0.15s;
 }
@@ -873,12 +880,12 @@ h1 {
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  min-height: 44px;
-  padding: 11px 12px;
+  min-height: 52px;
+  padding: 13px 14px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  font-size: 1rem;
+  font-size: 1.06rem;
   transition: background 0.15s;
 }
 
@@ -896,7 +903,8 @@ h1 {
   border: none;
   background: var(--accent-strong);
   color: #fff;
-  padding: 12px 14px;
+  min-height: 52px;
+  padding: 13px 16px;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
@@ -917,7 +925,8 @@ h1 {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
-  padding: 12px 14px;
+  min-height: 52px;
+  padding: 13px 16px;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
@@ -1058,20 +1067,20 @@ h1 {
 .modal-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
   align-items: stretch;
 }
 
 .muted {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.92rem;
 }
 
 .label {
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0;
-  font-size: 0.65rem;
+  font-size: 0.72rem;
 }
 
 .value {
@@ -1119,11 +1128,11 @@ h1 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 8px;
+  padding: 5px 9px;
   border-radius: 999px;
   background: rgba(118, 180, 176, 0.14);
   color: var(--text);
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   border: 1px solid rgba(118, 180, 176, 0.45);
 }
 
@@ -1135,19 +1144,19 @@ h1 {
 
 .powerups {
   display: grid;
-  gap: 7px;
+  gap: 9px;
 }
 
 .powerup-button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  min-height: 44px;
-  padding: 9px 10px;
+  min-height: 52px;
+  padding: 11px 12px;
   color: var(--text);
   cursor: pointer;
   font-family: inherit;
@@ -1316,8 +1325,8 @@ h1 {
   color: #fff;
   border: none;
   border-radius: 8px;
-  min-height: 44px;
-  padding: 11px 14px;
+  min-height: 52px;
+  padding: 13px 16px;
   font-family: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -1341,12 +1350,12 @@ h1 {
 }
 
 .result-secondary {
-  min-height: 44px;
+  min-height: 52px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
   color: var(--text);
-  padding: 11px 14px;
+  padding: 13px 16px;
   font-family: inherit;
   font-weight: 650;
   cursor: pointer;
@@ -1487,13 +1496,13 @@ h1 {
 .prompt {
   position: relative;
   background: var(--panel);
-  padding: 8px 10px 9px;
+  padding: 11px 13px 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
   box-shadow: 0 1px 4px var(--shadow);
-  font-size: 0.9rem;
+  font-size: 0.98rem;
   display: grid;
-  gap: 4px;
+  gap: 6px;
   color: var(--text);
   max-width: none;
   min-width: 0;
@@ -1502,10 +1511,10 @@ h1 {
 
 .map-controls {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 14px;
+  right: 14px;
   display: flex;
-  gap: 6px;
+  gap: 8px;
   z-index: 2;
 }
 
@@ -1515,9 +1524,9 @@ h1 {
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 8px;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 8px 10px;
+  min-width: 52px;
+  min-height: 52px;
+  padding: 10px 12px;
   cursor: pointer;
   font-family: inherit;
   font-weight: 700;
@@ -1541,7 +1550,7 @@ h1 {
   font-weight: 600;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 14px;
+  gap: 8px 16px;
 }
 
 .route-point {
@@ -1566,7 +1575,7 @@ h1 {
 
 .status {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.92rem;
 }
 
 .map {
@@ -1725,12 +1734,12 @@ h1 {
 
 .hint-buttons {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .mode-buttons {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
@@ -1742,11 +1751,12 @@ h1 {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px 10px;
+  min-height: 48px;
+  padding: 10px 12px;
   color: var(--text);
   cursor: pointer;
   text-align: center;
-  font-size: 0.85rem;
+  font-size: 0.92rem;
   transition: background 0.12s;
 }
 
@@ -1762,21 +1772,22 @@ h1 {
 
 .difficulty-grid {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .difficulty-button {
   display: grid;
-  gap: 4px;
+  gap: 5px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px 10px;
+  min-height: 48px;
+  padding: 10px 12px;
   color: var(--text);
   cursor: pointer;
   text-align: left;
-  font-size: 0.85rem;
+  font-size: 0.92rem;
   transition: background 0.12s;
 }
 
@@ -1796,14 +1807,15 @@ h1 {
 
 .difficulty-button .price {
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.78rem;
 }
 
 .level-select {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 8px 10px;
+  min-height: 48px;
+  padding: 10px 12px;
   color: var(--text);
   font-family: inherit;
 }
@@ -1811,8 +1823,8 @@ h1 {
 .toggle-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.85rem;
+  gap: 10px;
+  font-size: 0.92rem;
 }
 
 .toggle-row input {
@@ -1821,14 +1833,14 @@ h1 {
 
 .range-row {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
 
 .range-row input[type="range"] {
   width: 100%;
   min-width: 0;
-  height: 34px;
+  height: 40px;
   margin: 0;
   accent-color: var(--accent);
   cursor: pointer;
@@ -1839,7 +1851,8 @@ h1 {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 10px 12px;
+  min-height: 48px;
+  padding: 12px 14px;
   color: var(--text);
   cursor: pointer;
   text-align: left;
@@ -1863,26 +1876,26 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 24px;
   z-index: 20;
 }
 
 .modal {
   background: var(--panel);
   border-radius: 8px;
-  padding: 22px;
-  max-width: 520px;
-  width: min(520px, 100%);
+  padding: 26px;
+  max-width: 580px;
+  width: min(580px, 100%);
   max-height: 90vh;
   overflow-y: auto;
   display: grid;
-  gap: 12px;
+  gap: 14px;
   border: 1px solid var(--border);
   box-shadow: 0 8px 40px rgba(31, 42, 48, 0.16);
 }
 
 .options-modal {
-  max-width: 560px;
+  max-width: 620px;
 }
 
 .options-actions {
@@ -1893,16 +1906,16 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
 }
 
 .config-modal {
-  max-width: 640px;
+  max-width: 700px;
 }
 
 .config-content {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .modal .path-list,
@@ -1919,18 +1932,18 @@ h1 {
 }
 
 .result-modal {
-  width: min(560px, 100%);
-  gap: 14px;
-  padding: 20px;
+  width: min(620px, 100%);
+  gap: 16px;
+  padding: 24px;
 }
 
 .result-hero {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .result-hero h2 {
-  font-size: 1.45rem;
+  font-size: 1.62rem;
   line-height: 1.12;
   letter-spacing: 0;
 }
@@ -1938,21 +1951,21 @@ h1 {
 .result-score-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
 }
 
 .result-score-pill {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
+  min-height: 52px;
   border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
   border-radius: 8px;
   background: color-mix(in srgb, var(--accent) 10%, var(--panel));
   color: var(--text);
-  padding: 8px 10px;
+  padding: 10px 12px;
   font-weight: 700;
-  font-size: 0.86rem;
+  font-size: 0.94rem;
   line-height: 1.15;
   text-align: center;
 }
@@ -1961,7 +1974,7 @@ h1 {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
-  padding: 10px 12px;
+  padding: 12px 14px;
 }
 
 .result-optimal {
@@ -2076,6 +2089,7 @@ h1 {
 /* ── MOBILE ── */
 @media (max-width: 900px) {
   body {
+    font-size: 16px;
     height: auto;
     overflow: auto;
   }
