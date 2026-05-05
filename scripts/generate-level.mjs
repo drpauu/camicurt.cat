@@ -5,7 +5,12 @@ import { createClient } from "@supabase/supabase-js";
 import { geoCentroid } from "d3-geo";
 import { feature, neighbors as topoNeighbors } from "topojson-client";
 import { normalizeName, slugifyName } from "../src/lib/names.js";
-import { isDisabledGroupCulturalRule } from "../src/lib/disabledRules.js";
+import { isDisabledRule } from "../src/lib/disabledRules.js";
+import {
+  classifyDifficultyByShortestCount,
+  getDifficultyDistanceRange,
+  getShortestInternalCount
+} from "../src/lib/difficulty.js";
 import {
   findShortestPath,
   findShortestPathInSet,
@@ -23,29 +28,29 @@ const RULE_HISTORY_LIMIT = 60;
 const DIFFICULTY_CONFIGS = [
   {
     id: "pixapi",
-    ruleLevels: ["easy"],
-    minInternal: 3
+    minInternal: 0,
+    maxInternal: 3
   },
   {
     id: "dominguero",
-    ruleLevels: ["easy", "medium"],
-    minInternal: 4
+    minInternal: 4,
+    maxInternal: 5
   },
   {
     id: "rondinaire",
-    ruleLevels: ["medium", "hard"],
-    minInternal: 6
+    minInternal: 6,
+    maxInternal: 8
   },
   {
     id: "cap-colla-rutes",
-    ruleLevels: ["expert"],
-    minInternal: 9
+    minInternal: 9,
+    maxInternal: Infinity
   }
 ];
 
 function normalizeRule(schema) {
   if (!schema) return null;
-  if (isDisabledGroupCulturalRule(schema)) return null;
+  if (isDisabledRule(schema)) return null;
   const type = schema.type || "REQUIRE";
   const kind = type === "FORBID" ? "avoid" : "mustIncludeAny";
   return {
@@ -53,39 +58,10 @@ function normalizeRule(schema) {
     kind,
     label: schema.text,
     comarques: schema.comarques || [],
-    difficultyCultural: schema.difficultyCultural || 3,
+    difficulty: "medium",
     tags: schema.tags || [],
     explanation: schema.explanation || ""
   };
-}
-
-function getRuleDifficulty(def) {
-  if (!def) return "medium";
-  const value = typeof def.difficultyCultural === "number" ? def.difficultyCultural : 3;
-  if (value >= 5) return "expert";
-  if (value >= 4) return "hard";
-  if (value >= 3) return "medium";
-  return "easy";
-}
-
-function getRuleTags(def) {
-  if (def?.tags?.length) return def.tags;
-  return ["cultural"];
-}
-
-function getDifficultyConfig(difficultyId) {
-  return (
-    DIFFICULTY_CONFIGS.find((entry) => entry.id === difficultyId) ||
-    DIFFICULTY_CONFIGS[0]
-  );
-}
-
-function getRulePoolForDifficulty(difficultyId) {
-  const config = getDifficultyConfig(difficultyId);
-  const pool = RULE_DEFS.filter((def) =>
-    config.ruleLevels.includes(getRuleDifficulty(def))
-  );
-  return pool.length ? pool : RULE_DEFS;
 }
 
 function getLevelFingerprint(levelData) {
@@ -101,10 +77,13 @@ function getLevelFingerprint(levelData) {
 }
 
 function sanitizeDisabledRuleLevelData(levelData, adjacency) {
-  if (!isDisabledGroupCulturalRule(levelData?.rule_id)) return levelData;
+  if (!isDisabledRule(levelData?.rule_id)) return levelData;
   const shortestPath = findShortestPath(levelData.start_id, levelData.target_id, adjacency);
   return {
     ...levelData,
+    difficulty_id: classifyDifficultyByShortestCount(
+      shortestPath.length ? shortestPath : levelData.shortest_path
+    ),
     rule_id: null,
     avoid_ids: null,
     must_pass_ids: null,
@@ -170,7 +149,7 @@ function resolveRule(def, ctx) {
 
 function prepareRule(def, ctx) {
   const resolved = resolveRule(def, ctx);
-  const difficulty = resolved.difficulty || getRuleDifficulty(def);
+  const difficulty = resolved.difficulty || "medium";
   const names = resolved.comarques || [];
   const comarcaIds = names
     .map((name) => ctx.normalizedToId.get(normalizeName(name)))
@@ -295,15 +274,29 @@ function buildLevel({
   centroidMap,
   adjacency,
   minInternal,
+  maxInternal = Infinity,
+  targetDifficultyId = null,
   rulePool
 }) {
-  const minLength = Math.max(minInternal + 2, 3);
-  const pool = rulePool.length ? rulePool : RULE_DEFS;
+  const targetRange = targetDifficultyId
+    ? getDifficultyDistanceRange(targetDifficultyId)
+    : {
+        minInternal: Math.max(Number(minInternal) || 0, 0),
+        maxInternal: Number.isFinite(maxInternal) ? maxInternal : Infinity
+      };
+  const isPathInTargetRange = (path) => {
+    const internalCount = getShortestInternalCount(path);
+    return (
+      internalCount >= targetRange.minInternal &&
+      internalCount <= targetRange.maxInternal
+    );
+  };
+  const pool = rulePool?.length ? rulePool : RULE_DEFS;
   let start = null;
   let target = null;
   let shortest = [];
   let selectedRule = null;
-  let attemptsLeft = 500;
+  let attemptsLeft = 3000;
 
   while (attemptsLeft > 0) {
     attemptsLeft -= 1;
@@ -339,7 +332,7 @@ function buildLevel({
     const basePath = findShortestPath(candidateStart, candidateTarget, adjacency);
     if (!path.length) continue;
     if (basePath.length && path.length <= basePath.length) continue;
-    if (path.length < minLength) continue;
+    if (!isPathInTargetRange(path)) continue;
     start = candidateStart;
     target = candidateTarget;
     shortest = path;
@@ -348,9 +341,25 @@ function buildLevel({
   }
 
   if (!start || !target) {
-    start = ids[0];
-    target = ids[1] || ids[0];
-    shortest = findShortestPath(start, target, adjacency);
+    for (const candidateStart of ids) {
+      for (const candidateTarget of ids) {
+        if (candidateTarget === candidateStart) continue;
+        const neighbors = adjacency.get(candidateStart);
+        if (neighbors && neighbors.has(candidateTarget)) continue;
+        const path = findShortestPath(candidateStart, candidateTarget, adjacency);
+        if (!path.length || !isPathInTargetRange(path)) continue;
+        start = candidateStart;
+        target = candidateTarget;
+        shortest = path;
+        break;
+      }
+      if (start && target) break;
+    }
+    if (!start || !target) {
+      start = ids[0];
+      target = ids[1] || ids[0];
+      shortest = findShortestPath(start, target, adjacency);
+    }
   }
 
   const avoidIds =
@@ -359,6 +368,7 @@ function buildLevel({
     selectedRule?.kind === "mustIncludeAny" ? selectedRule.comarcaIds || [] : [];
 
   return {
+    difficulty_id: classifyDifficultyByShortestCount(shortest),
     start_id: start,
     target_id: target,
     shortest_path: shortest,
@@ -417,15 +427,7 @@ async function run() {
 
   const today = new Date();
   const dayKey = getDayKey(today);
-  const difficultyId = "cap-colla-rutes";
-  const highPool = RULE_DEFS.filter((def) => {
-    const difficultyLevel = getRuleDifficulty(def);
-    const tags = getRuleTags(def);
-    const hasCultural = tags.includes("cultural");
-    const hasGeo = tags.includes("geo");
-    return difficultyLevel === "expert" && (hasCultural || hasGeo);
-  });
-  const rulePool = highPool.length ? highPool : RULE_DEFS;
+  const rulePool = RULE_DEFS;
 
   async function fetchRecentRuleIds(mode, limit) {
     const query = supabase
@@ -452,7 +454,7 @@ async function run() {
     if (existing.data) return { created: false, reason: "ja_existeix" };
     if (existing.error) return { created: false, reason: existing.error.message };
 
-    const seed = `${forDayKey}-${difficultyId}`;
+    const seed = forDayKey;
     const rng = mulberry32(hashString(seed));
     const ruleDef = pickRuleForKey(rulePool, forDayKey, dailyHistory, mulberry32) || rulePool[0];
     if (ruleDef && !dailyHistory.includes(ruleDef.id)) {
@@ -475,7 +477,7 @@ async function run() {
     const insertLevel = await supabase
       .rpc("create_daily_level", {
         p_date: forDayKey,
-        p_difficulty_id: difficultyId,
+        p_difficulty_id: levelData.difficulty_id,
         p_rule_id: levelData.rule_id,
         p_start_id: levelData.start_id,
         p_target_id: levelData.target_id,
@@ -544,7 +546,6 @@ async function run() {
       const config = DIFFICULTY_CONFIGS[globalIndex % DIFFICULTY_CONFIGS.length];
       const seedKey = `bank:${config.id}:${globalIndex}`;
       const rng = mulberry32(hashString(seedKey));
-      const rulePoolForDifficulty = getRulePoolForDifficulty(config.id);
       const levelData = buildLevel({
         rng,
         ids,
@@ -552,12 +553,12 @@ async function run() {
         normalizedToId,
         centroidMap,
         adjacency: adjacencyMap,
-        minInternal: config.minInternal,
-        rulePool: rulePoolForDifficulty
+        targetDifficultyId: config.id,
+        rulePool: RULE_DEFS
       });
       const row = {
         seed_key: seedKey,
-        difficulty_id: config.id,
+        difficulty_id: levelData.difficulty_id,
         rule_id: levelData.rule_id,
         start_id: levelData.start_id,
         target_id: levelData.target_id,

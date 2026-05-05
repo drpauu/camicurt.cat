@@ -6,7 +6,6 @@
     "comarques": [
       "Alt Camp"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Alt Camp.",
     "tags": [
       "festa",
@@ -20,7 +19,6 @@
     "comarques": [
       "Alt Camp"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Alt Camp.",
     "tags": [
       "festa",
@@ -34,7 +32,6 @@
     "comarques": [
       "Alt Camp"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Alt Camp.",
     "tags": [
       "festa",
@@ -48,7 +45,6 @@
     "comarques": [
       "Alt Camp"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Alt Camp.",
     "tags": [
       "festa",
@@ -62,36 +58,7 @@
     "comarques": [
       "Alt Camp"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Alt Camp.",
-    "tags": [
-      "festa",
-      "gastronomia"
-    ]
-  },
-  {
-    "id": "alt-camp-direct-0",
-    "text": "Has de passar per Alt Camp.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Alt Camp"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Alt Camp és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "festa",
-      "gastronomia"
-    ]
-  },
-  {
-    "id": "alt-camp-direct-1",
-    "text": "No pots passar per Alt Camp.",
-    "type": "FORBID",
-    "comarques": [
-      "Alt Camp"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Alt Camp.",
     "tags": [
       "festa",
       "gastronomia"
@@ -104,7 +71,6 @@
     "comarques": [
       "Alt Empordà"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Alt Empordà.",
     "tags": [
       "paisatge",
@@ -118,7 +84,6 @@
     "comarques": [
       "Alt Empordà"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Alt Empordà.",
     "tags": [
       "paisatge",
@@ -132,7 +97,6 @@
     "comarques": [
       "Alt Empordà"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Alt Empordà.",
     "tags": [
       "paisatge",
@@ -146,7 +110,6 @@
     "comarques": [
       "Alt Empordà"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Alt Empordà.",
     "tags": [
       "paisatge",
@@ -160,36 +123,7 @@
     "comarques": [
       "Alt Empordà"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Alt Empordà.",
-    "tags": [
-      "paisatge",
-      "vent"
-    ]
-  },
-  {
-    "id": "alt-emporda-direct-0",
-    "text": "Has de passar per Alt Empordà.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Alt Empordà"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Alt Empordà és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "paisatge",
-      "vent"
-    ]
-  },
-  {
-    "id": "alt-emporda-direct-1",
-    "text": "No pots passar per Alt Empordà.",
-    "type": "FORBID",
-    "comarques": [
-      "Alt Empordà"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Alt Empordà.",
     "tags": [
       "paisatge",
       "vent"
@@ -202,7 +136,6 @@
     "comarques": [
       "Alt Penedès"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Alt Penedès.",
     "tags": [
       "gastronomia",
@@ -216,7 +149,6 @@
     "comarques": [
       "Alt Penedès"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Alt Penedès.",
     "tags": [
       "gastronomia",
@@ -230,7 +162,6 @@
     "comarques": [
       "Alt Penedès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Alt Penedès.",
     "tags": [
       "gastronomia",
@@ -244,7 +175,6 @@
     "comarques": [
       "Alt Penedès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Alt Penedès.",
     "tags": [
       "gastronomia",
@@ -258,36 +188,7 @@
     "comarques": [
       "Alt Penedès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Alt Penedès.",
-    "tags": [
-      "gastronomia",
-      "vinya"
-    ]
-  },
-  {
-    "id": "alt-penedes-direct-0",
-    "text": "Has de passar per Alt Penedès.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Alt Penedès"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Alt Penedès és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "gastronomia",
-      "vinya"
-    ]
-  },
-  {
-    "id": "alt-penedes-direct-1",
-    "text": "No pots passar per Alt Penedès.",
-    "type": "FORBID",
-    "comarques": [
-      "Alt Penedès"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Alt Penedès.",
     "tags": [
       "gastronomia",
       "vinya"
@@ -300,7 +201,6 @@
     "comarques": [
       "Alt Urgell"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Alt Urgell.",
     "tags": [
       "paisatge",
@@ -314,7 +214,6 @@
     "comarques": [
       "Alt Urgell"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Alt Urgell.",
     "tags": [
       "paisatge",
@@ -328,7 +227,6 @@
     "comarques": [
       "Alt Urgell"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Alt Urgell.",
     "tags": [
       "paisatge",
@@ -342,7 +240,6 @@
     "comarques": [
       "Alt Urgell"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Alt Urgell.",
     "tags": [
       "paisatge",
@@ -356,36 +253,7 @@
     "comarques": [
       "Alt Urgell"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Alt Urgell.",
-    "tags": [
-      "paisatge",
-      "pirineu"
-    ]
-  },
-  {
-    "id": "alt-urgell-direct-0",
-    "text": "Has de passar per Alt Urgell.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Alt Urgell"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Alt Urgell és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "paisatge",
-      "pirineu"
-    ]
-  },
-  {
-    "id": "alt-urgell-direct-1",
-    "text": "No pots passar per Alt Urgell.",
-    "type": "FORBID",
-    "comarques": [
-      "Alt Urgell"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Alt Urgell.",
     "tags": [
       "paisatge",
       "pirineu"
@@ -398,7 +266,6 @@
     "comarques": [
       "Alta Ribagorça"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Alta Ribagorça.",
     "tags": [
       "patrimoni"
@@ -411,7 +278,6 @@
     "comarques": [
       "Alta Ribagorça"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Alta Ribagorça.",
     "tags": [
       "patrimoni"
@@ -424,7 +290,6 @@
     "comarques": [
       "Alta Ribagorça"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Alta Ribagorça.",
     "tags": [
       "patrimoni"
@@ -437,7 +302,6 @@
     "comarques": [
       "Alta Ribagorça"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Alta Ribagorça.",
     "tags": [
       "patrimoni"
@@ -450,34 +314,7 @@
     "comarques": [
       "Alta Ribagorça"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Alta Ribagorça.",
-    "tags": [
-      "patrimoni"
-    ]
-  },
-  {
-    "id": "alta-ribagorca-direct-0",
-    "text": "Has de passar per Alta Ribagorça.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Alta Ribagorça"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Alta Ribagorça és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "patrimoni"
-    ]
-  },
-  {
-    "id": "alta-ribagorca-direct-1",
-    "text": "No pots passar per Alta Ribagorça.",
-    "type": "FORBID",
-    "comarques": [
-      "Alta Ribagorça"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Alta Ribagorça.",
     "tags": [
       "patrimoni"
     ]
@@ -489,7 +326,6 @@
     "comarques": [
       "Anoia"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Anoia.",
     "tags": [
       "industria"
@@ -502,7 +338,6 @@
     "comarques": [
       "Anoia"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Anoia.",
     "tags": [
       "industria"
@@ -515,7 +350,6 @@
     "comarques": [
       "Anoia"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Anoia.",
     "tags": [
       "industria"
@@ -528,7 +362,6 @@
     "comarques": [
       "Anoia"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Anoia.",
     "tags": [
       "industria"
@@ -541,34 +374,7 @@
     "comarques": [
       "Anoia"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Anoia.",
-    "tags": [
-      "industria"
-    ]
-  },
-  {
-    "id": "anoia-direct-0",
-    "text": "Has de passar per Anoia.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Anoia"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Anoia és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "industria"
-    ]
-  },
-  {
-    "id": "anoia-direct-1",
-    "text": "No pots passar per Anoia.",
-    "type": "FORBID",
-    "comarques": [
-      "Anoia"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Anoia.",
     "tags": [
       "industria"
     ]
@@ -580,7 +386,6 @@
     "comarques": [
       "Bages"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Bages.",
     "tags": [
       "patrimoni",
@@ -594,7 +399,6 @@
     "comarques": [
       "Bages"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Bages.",
     "tags": [
       "patrimoni",
@@ -608,7 +412,6 @@
     "comarques": [
       "Bages"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Bages.",
     "tags": [
       "patrimoni",
@@ -622,7 +425,6 @@
     "comarques": [
       "Bages"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Bages.",
     "tags": [
       "patrimoni",
@@ -636,36 +438,7 @@
     "comarques": [
       "Bages"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Bages.",
-    "tags": [
-      "patrimoni",
-      "paisatge"
-    ]
-  },
-  {
-    "id": "bages-direct-0",
-    "text": "Has de passar per Bages.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Bages"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Bages és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "patrimoni",
-      "paisatge"
-    ]
-  },
-  {
-    "id": "bages-direct-1",
-    "text": "No pots passar per Bages.",
-    "type": "FORBID",
-    "comarques": [
-      "Bages"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Bages.",
     "tags": [
       "patrimoni",
       "paisatge"
@@ -678,7 +451,6 @@
     "comarques": [
       "Baix Camp"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Baix Camp.",
     "tags": [
       "gastronomia",
@@ -692,7 +464,6 @@
     "comarques": [
       "Baix Camp"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Baix Camp.",
     "tags": [
       "gastronomia",
@@ -706,7 +477,6 @@
     "comarques": [
       "Baix Camp"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Baix Camp.",
     "tags": [
       "gastronomia",
@@ -720,7 +490,6 @@
     "comarques": [
       "Baix Camp"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Baix Camp.",
     "tags": [
       "gastronomia",
@@ -734,36 +503,7 @@
     "comarques": [
       "Baix Camp"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Baix Camp.",
-    "tags": [
-      "gastronomia",
-      "mar"
-    ]
-  },
-  {
-    "id": "baix-camp-direct-0",
-    "text": "Has de passar per Baix Camp.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Baix Camp"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Baix Camp és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "gastronomia",
-      "mar"
-    ]
-  },
-  {
-    "id": "baix-camp-direct-1",
-    "text": "No pots passar per Baix Camp.",
-    "type": "FORBID",
-    "comarques": [
-      "Baix Camp"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Baix Camp.",
     "tags": [
       "gastronomia",
       "mar"
@@ -776,7 +516,6 @@
     "comarques": [
       "Baix Ebre"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Baix Ebre.",
     "tags": [
       "paisatge",
@@ -790,7 +529,6 @@
     "comarques": [
       "Baix Ebre"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Baix Ebre.",
     "tags": [
       "paisatge",
@@ -804,7 +542,6 @@
     "comarques": [
       "Baix Ebre"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Baix Ebre.",
     "tags": [
       "paisatge",
@@ -818,7 +555,6 @@
     "comarques": [
       "Baix Ebre"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Baix Ebre.",
     "tags": [
       "paisatge",
@@ -832,36 +568,7 @@
     "comarques": [
       "Baix Ebre"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Baix Ebre.",
-    "tags": [
-      "paisatge",
-      "mar"
-    ]
-  },
-  {
-    "id": "baix-ebre-direct-0",
-    "text": "Has de passar per Baix Ebre.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Baix Ebre"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Baix Ebre és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "paisatge",
-      "mar"
-    ]
-  },
-  {
-    "id": "baix-ebre-direct-1",
-    "text": "No pots passar per Baix Ebre.",
-    "type": "FORBID",
-    "comarques": [
-      "Baix Ebre"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Baix Ebre.",
     "tags": [
       "paisatge",
       "mar"
@@ -874,7 +581,6 @@
     "comarques": [
       "Baix Empordà"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Baix Empordà.",
     "tags": [
       "gastronomia",
@@ -888,7 +594,6 @@
     "comarques": [
       "Baix Empordà"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Baix Empordà.",
     "tags": [
       "gastronomia",
@@ -902,7 +607,6 @@
     "comarques": [
       "Baix Empordà"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Baix Empordà.",
     "tags": [
       "gastronomia",
@@ -916,7 +620,6 @@
     "comarques": [
       "Baix Empordà"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Baix Empordà.",
     "tags": [
       "gastronomia",
@@ -930,36 +633,7 @@
     "comarques": [
       "Baix Empordà"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Baix Empordà.",
-    "tags": [
-      "gastronomia",
-      "mar"
-    ]
-  },
-  {
-    "id": "baix-emporda-direct-0",
-    "text": "Has de passar per Baix Empordà.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Baix Empordà"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Baix Empordà és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "gastronomia",
-      "mar"
-    ]
-  },
-  {
-    "id": "baix-emporda-direct-1",
-    "text": "No pots passar per Baix Empordà.",
-    "type": "FORBID",
-    "comarques": [
-      "Baix Empordà"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Baix Empordà.",
     "tags": [
       "gastronomia",
       "mar"
@@ -972,7 +646,6 @@
     "comarques": [
       "Baix Llobregat"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Baix Llobregat.",
     "tags": [
       "paisatge",
@@ -986,7 +659,6 @@
     "comarques": [
       "Baix Llobregat"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Baix Llobregat.",
     "tags": [
       "paisatge",
@@ -1000,7 +672,6 @@
     "comarques": [
       "Baix Llobregat"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Baix Llobregat.",
     "tags": [
       "paisatge",
@@ -1014,7 +685,6 @@
     "comarques": [
       "Baix Llobregat"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Baix Llobregat.",
     "tags": [
       "paisatge",
@@ -1028,36 +698,7 @@
     "comarques": [
       "Baix Llobregat"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Baix Llobregat.",
-    "tags": [
-      "paisatge",
-      "industria"
-    ]
-  },
-  {
-    "id": "baix-llobregat-direct-0",
-    "text": "Has de passar per Baix Llobregat.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Baix Llobregat"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Baix Llobregat és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "paisatge",
-      "industria"
-    ]
-  },
-  {
-    "id": "baix-llobregat-direct-1",
-    "text": "No pots passar per Baix Llobregat.",
-    "type": "FORBID",
-    "comarques": [
-      "Baix Llobregat"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Baix Llobregat.",
     "tags": [
       "paisatge",
       "industria"
@@ -1070,7 +711,6 @@
     "comarques": [
       "Baix Penedès"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Baix Penedès.",
     "tags": [
       "mar",
@@ -1084,7 +724,6 @@
     "comarques": [
       "Baix Penedès"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Baix Penedès.",
     "tags": [
       "mar",
@@ -1098,7 +737,6 @@
     "comarques": [
       "Baix Penedès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Baix Penedès.",
     "tags": [
       "mar",
@@ -1112,7 +750,6 @@
     "comarques": [
       "Baix Penedès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Baix Penedès.",
     "tags": [
       "mar",
@@ -1126,36 +763,7 @@
     "comarques": [
       "Baix Penedès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Baix Penedès.",
-    "tags": [
-      "mar",
-      "vinya"
-    ]
-  },
-  {
-    "id": "baix-penedes-direct-0",
-    "text": "Has de passar per Baix Penedès.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Baix Penedès"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Baix Penedès és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "mar",
-      "vinya"
-    ]
-  },
-  {
-    "id": "baix-penedes-direct-1",
-    "text": "No pots passar per Baix Penedès.",
-    "type": "FORBID",
-    "comarques": [
-      "Baix Penedès"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Baix Penedès.",
     "tags": [
       "mar",
       "vinya"
@@ -1168,7 +776,6 @@
     "comarques": [
       "Barcelonès"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Barcelonès.",
     "tags": [
       "urbana",
@@ -1182,7 +789,6 @@
     "comarques": [
       "Barcelonès"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Barcelonès.",
     "tags": [
       "urbana",
@@ -1196,7 +802,6 @@
     "comarques": [
       "Barcelonès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Barcelonès.",
     "tags": [
       "urbana",
@@ -1210,7 +815,6 @@
     "comarques": [
       "Barcelonès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Barcelonès.",
     "tags": [
       "urbana",
@@ -1224,36 +828,7 @@
     "comarques": [
       "Barcelonès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Barcelonès.",
-    "tags": [
-      "urbana",
-      "cultura"
-    ]
-  },
-  {
-    "id": "barcelones-direct-0",
-    "text": "Has de passar per Barcelonès.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Barcelonès"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Barcelonès és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "urbana",
-      "cultura"
-    ]
-  },
-  {
-    "id": "barcelones-direct-1",
-    "text": "No pots passar per Barcelonès.",
-    "type": "FORBID",
-    "comarques": [
-      "Barcelonès"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Barcelonès.",
     "tags": [
       "urbana",
       "cultura"
@@ -1266,7 +841,6 @@
     "comarques": [
       "Berguedà"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Berguedà.",
     "tags": [
       "festa",
@@ -1280,7 +854,6 @@
     "comarques": [
       "Berguedà"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Berguedà.",
     "tags": [
       "festa",
@@ -1294,7 +867,6 @@
     "comarques": [
       "Berguedà"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Berguedà.",
     "tags": [
       "festa",
@@ -1308,7 +880,6 @@
     "comarques": [
       "Berguedà"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Berguedà.",
     "tags": [
       "festa",
@@ -1322,36 +893,7 @@
     "comarques": [
       "Berguedà"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Berguedà.",
-    "tags": [
-      "festa",
-      "cultura"
-    ]
-  },
-  {
-    "id": "bergueda-direct-0",
-    "text": "Has de passar per Berguedà.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Berguedà"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Berguedà és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "festa",
-      "cultura"
-    ]
-  },
-  {
-    "id": "bergueda-direct-1",
-    "text": "No pots passar per Berguedà.",
-    "type": "FORBID",
-    "comarques": [
-      "Berguedà"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Berguedà.",
     "tags": [
       "festa",
       "cultura"
@@ -1364,7 +906,6 @@
     "comarques": [
       "Cerdanya"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Cerdanya.",
     "tags": [
       "paisatge",
@@ -1378,7 +919,6 @@
     "comarques": [
       "Cerdanya"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Cerdanya.",
     "tags": [
       "paisatge",
@@ -1392,7 +932,6 @@
     "comarques": [
       "Cerdanya"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Cerdanya.",
     "tags": [
       "paisatge",
@@ -1406,7 +945,6 @@
     "comarques": [
       "Cerdanya"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Cerdanya.",
     "tags": [
       "paisatge",
@@ -1420,36 +958,7 @@
     "comarques": [
       "Cerdanya"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Cerdanya.",
-    "tags": [
-      "paisatge",
-      "pirineu"
-    ]
-  },
-  {
-    "id": "cerdanya-direct-0",
-    "text": "Has de passar per Cerdanya.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Cerdanya"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Cerdanya és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "paisatge",
-      "pirineu"
-    ]
-  },
-  {
-    "id": "cerdanya-direct-1",
-    "text": "No pots passar per Cerdanya.",
-    "type": "FORBID",
-    "comarques": [
-      "Cerdanya"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Cerdanya.",
     "tags": [
       "paisatge",
       "pirineu"
@@ -1462,7 +971,6 @@
     "comarques": [
       "Conca de Barberà"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Conca de Barberà.",
     "tags": [
       "patrimoni"
@@ -1475,7 +983,6 @@
     "comarques": [
       "Conca de Barberà"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Conca de Barberà.",
     "tags": [
       "patrimoni"
@@ -1488,7 +995,6 @@
     "comarques": [
       "Conca de Barberà"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Conca de Barberà.",
     "tags": [
       "patrimoni"
@@ -1501,7 +1007,6 @@
     "comarques": [
       "Conca de Barberà"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Conca de Barberà.",
     "tags": [
       "patrimoni"
@@ -1514,34 +1019,7 @@
     "comarques": [
       "Conca de Barberà"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Conca de Barberà.",
-    "tags": [
-      "patrimoni"
-    ]
-  },
-  {
-    "id": "conca-de-barbera-direct-0",
-    "text": "Has de passar per Conca de Barberà.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Conca de Barberà"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Conca de Barberà és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "patrimoni"
-    ]
-  },
-  {
-    "id": "conca-de-barbera-direct-1",
-    "text": "No pots passar per Conca de Barberà.",
-    "type": "FORBID",
-    "comarques": [
-      "Conca de Barberà"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Conca de Barberà.",
     "tags": [
       "patrimoni"
     ]
@@ -1553,7 +1031,6 @@
     "comarques": [
       "Garraf"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Garraf.",
     "tags": [
       "mar",
@@ -1567,7 +1044,6 @@
     "comarques": [
       "Garraf"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Garraf.",
     "tags": [
       "mar",
@@ -1581,7 +1057,6 @@
     "comarques": [
       "Garraf"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Garraf.",
     "tags": [
       "mar",
@@ -1595,7 +1070,6 @@
     "comarques": [
       "Garraf"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Garraf.",
     "tags": [
       "mar",
@@ -1609,36 +1083,7 @@
     "comarques": [
       "Garraf"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Garraf.",
-    "tags": [
-      "mar",
-      "paisatge"
-    ]
-  },
-  {
-    "id": "garraf-direct-0",
-    "text": "Has de passar per Garraf.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Garraf"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Garraf és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "mar",
-      "paisatge"
-    ]
-  },
-  {
-    "id": "garraf-direct-1",
-    "text": "No pots passar per Garraf.",
-    "type": "FORBID",
-    "comarques": [
-      "Garraf"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Garraf.",
     "tags": [
       "mar",
       "paisatge"
@@ -1651,7 +1096,6 @@
     "comarques": [
       "Garrigues"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Garrigues.",
     "tags": [
       "gastronomia"
@@ -1664,7 +1108,6 @@
     "comarques": [
       "Garrigues"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Garrigues.",
     "tags": [
       "gastronomia"
@@ -1677,7 +1120,6 @@
     "comarques": [
       "Garrigues"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Garrigues.",
     "tags": [
       "gastronomia"
@@ -1690,7 +1132,6 @@
     "comarques": [
       "Garrigues"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Garrigues.",
     "tags": [
       "gastronomia"
@@ -1703,34 +1144,7 @@
     "comarques": [
       "Garrigues"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Garrigues.",
-    "tags": [
-      "gastronomia"
-    ]
-  },
-  {
-    "id": "garrigues-direct-0",
-    "text": "Has de passar per Garrigues.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Garrigues"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Garrigues és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "gastronomia"
-    ]
-  },
-  {
-    "id": "garrigues-direct-1",
-    "text": "No pots passar per Garrigues.",
-    "type": "FORBID",
-    "comarques": [
-      "Garrigues"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Garrigues.",
     "tags": [
       "gastronomia"
     ]
@@ -1742,7 +1156,6 @@
     "comarques": [
       "Garrotxa"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Garrotxa.",
     "tags": [
       "paisatge",
@@ -1756,7 +1169,6 @@
     "comarques": [
       "Garrotxa"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Garrotxa.",
     "tags": [
       "paisatge",
@@ -1770,7 +1182,6 @@
     "comarques": [
       "Garrotxa"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Garrotxa.",
     "tags": [
       "paisatge",
@@ -1784,7 +1195,6 @@
     "comarques": [
       "Garrotxa"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Garrotxa.",
     "tags": [
       "paisatge",
@@ -1798,36 +1208,7 @@
     "comarques": [
       "Garrotxa"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Garrotxa.",
-    "tags": [
-      "paisatge",
-      "natura"
-    ]
-  },
-  {
-    "id": "garrotxa-direct-0",
-    "text": "Has de passar per Garrotxa.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Garrotxa"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Garrotxa és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "paisatge",
-      "natura"
-    ]
-  },
-  {
-    "id": "garrotxa-direct-1",
-    "text": "No pots passar per Garrotxa.",
-    "type": "FORBID",
-    "comarques": [
-      "Garrotxa"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Garrotxa.",
     "tags": [
       "paisatge",
       "natura"
@@ -1840,7 +1221,6 @@
     "comarques": [
       "Gironès"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Gironès.",
     "tags": [
       "patrimoni",
@@ -1854,7 +1234,6 @@
     "comarques": [
       "Gironès"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Gironès.",
     "tags": [
       "patrimoni",
@@ -1868,7 +1247,6 @@
     "comarques": [
       "Gironès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Gironès.",
     "tags": [
       "patrimoni",
@@ -1882,7 +1260,6 @@
     "comarques": [
       "Gironès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Gironès.",
     "tags": [
       "patrimoni",
@@ -1896,36 +1273,7 @@
     "comarques": [
       "Gironès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Gironès.",
-    "tags": [
-      "patrimoni",
-      "cultura"
-    ]
-  },
-  {
-    "id": "girones-direct-0",
-    "text": "Has de passar per Gironès.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Gironès"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Gironès és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "patrimoni",
-      "cultura"
-    ]
-  },
-  {
-    "id": "girones-direct-1",
-    "text": "No pots passar per Gironès.",
-    "type": "FORBID",
-    "comarques": [
-      "Gironès"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Gironès.",
     "tags": [
       "patrimoni",
       "cultura"
@@ -1938,7 +1286,6 @@
     "comarques": [
       "Lluçanès"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Lluçanès.",
     "tags": [
       "natura"
@@ -1951,7 +1298,6 @@
     "comarques": [
       "Lluçanès"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Lluçanès.",
     "tags": [
       "natura"
@@ -1964,7 +1310,6 @@
     "comarques": [
       "Lluçanès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Lluçanès.",
     "tags": [
       "natura"
@@ -1977,7 +1322,6 @@
     "comarques": [
       "Lluçanès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Lluçanès.",
     "tags": [
       "natura"
@@ -1990,34 +1334,7 @@
     "comarques": [
       "Lluçanès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Lluçanès.",
-    "tags": [
-      "natura"
-    ]
-  },
-  {
-    "id": "llucanes-direct-0",
-    "text": "Has de passar per Lluçanès.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Lluçanès"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Lluçanès és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "natura"
-    ]
-  },
-  {
-    "id": "llucanes-direct-1",
-    "text": "No pots passar per Lluçanès.",
-    "type": "FORBID",
-    "comarques": [
-      "Lluçanès"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Lluçanès.",
     "tags": [
       "natura"
     ]
@@ -2029,7 +1346,6 @@
     "comarques": [
       "Maresme"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Maresme.",
     "tags": [
       "gastronomia",
@@ -2043,7 +1359,6 @@
     "comarques": [
       "Maresme"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Maresme.",
     "tags": [
       "gastronomia",
@@ -2057,7 +1372,6 @@
     "comarques": [
       "Maresme"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Maresme.",
     "tags": [
       "gastronomia",
@@ -2071,7 +1385,6 @@
     "comarques": [
       "Maresme"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Maresme.",
     "tags": [
       "gastronomia",
@@ -2085,36 +1398,7 @@
     "comarques": [
       "Maresme"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Maresme.",
-    "tags": [
-      "gastronomia",
-      "mar"
-    ]
-  },
-  {
-    "id": "maresme-direct-0",
-    "text": "Has de passar per Maresme.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Maresme"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Maresme és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "gastronomia",
-      "mar"
-    ]
-  },
-  {
-    "id": "maresme-direct-1",
-    "text": "No pots passar per Maresme.",
-    "type": "FORBID",
-    "comarques": [
-      "Maresme"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Maresme.",
     "tags": [
       "gastronomia",
       "mar"
@@ -2127,7 +1411,6 @@
     "comarques": [
       "Moianès"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Moianès.",
     "tags": [
       "natura"
@@ -2140,7 +1423,6 @@
     "comarques": [
       "Moianès"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Moianès.",
     "tags": [
       "natura"
@@ -2153,7 +1435,6 @@
     "comarques": [
       "Moianès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Moianès.",
     "tags": [
       "natura"
@@ -2166,7 +1447,6 @@
     "comarques": [
       "Moianès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Moianès.",
     "tags": [
       "natura"
@@ -2179,34 +1459,7 @@
     "comarques": [
       "Moianès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Moianès.",
-    "tags": [
-      "natura"
-    ]
-  },
-  {
-    "id": "moianes-direct-0",
-    "text": "Has de passar per Moianès.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Moianès"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Moianès és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "natura"
-    ]
-  },
-  {
-    "id": "moianes-direct-1",
-    "text": "No pots passar per Moianès.",
-    "type": "FORBID",
-    "comarques": [
-      "Moianès"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Moianès.",
     "tags": [
       "natura"
     ]
@@ -2218,7 +1471,6 @@
     "comarques": [
       "Montsià"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Montsià.",
     "tags": [
       "mar",
@@ -2232,7 +1484,6 @@
     "comarques": [
       "Montsià"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Montsià.",
     "tags": [
       "mar",
@@ -2246,7 +1497,6 @@
     "comarques": [
       "Montsià"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Montsià.",
     "tags": [
       "mar",
@@ -2260,7 +1510,6 @@
     "comarques": [
       "Montsià"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Montsià.",
     "tags": [
       "mar",
@@ -2274,36 +1523,7 @@
     "comarques": [
       "Montsià"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Montsià.",
-    "tags": [
-      "mar",
-      "gastronomia"
-    ]
-  },
-  {
-    "id": "montsia-direct-0",
-    "text": "Has de passar per Montsià.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Montsià"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Montsià és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "mar",
-      "gastronomia"
-    ]
-  },
-  {
-    "id": "montsia-direct-1",
-    "text": "No pots passar per Montsià.",
-    "type": "FORBID",
-    "comarques": [
-      "Montsià"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Montsià.",
     "tags": [
       "mar",
       "gastronomia"
@@ -2316,7 +1536,6 @@
     "comarques": [
       "Noguera"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Noguera.",
     "tags": [
       "paisatge",
@@ -2330,7 +1549,6 @@
     "comarques": [
       "Noguera"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Noguera.",
     "tags": [
       "paisatge",
@@ -2344,7 +1562,6 @@
     "comarques": [
       "Noguera"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Noguera.",
     "tags": [
       "paisatge",
@@ -2358,7 +1575,6 @@
     "comarques": [
       "Noguera"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Noguera.",
     "tags": [
       "paisatge",
@@ -2372,36 +1588,7 @@
     "comarques": [
       "Noguera"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Noguera.",
-    "tags": [
-      "paisatge",
-      "astronomia"
-    ]
-  },
-  {
-    "id": "noguera-direct-0",
-    "text": "Has de passar per Noguera.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Noguera"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Noguera és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "paisatge",
-      "astronomia"
-    ]
-  },
-  {
-    "id": "noguera-direct-1",
-    "text": "No pots passar per Noguera.",
-    "type": "FORBID",
-    "comarques": [
-      "Noguera"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Noguera.",
     "tags": [
       "paisatge",
       "astronomia"
@@ -2414,7 +1601,6 @@
     "comarques": [
       "Osona"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Osona.",
     "tags": [
       "paisatge"
@@ -2427,7 +1613,6 @@
     "comarques": [
       "Osona"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Osona.",
     "tags": [
       "paisatge"
@@ -2440,7 +1625,6 @@
     "comarques": [
       "Osona"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Osona.",
     "tags": [
       "paisatge"
@@ -2453,7 +1637,6 @@
     "comarques": [
       "Osona"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Osona.",
     "tags": [
       "paisatge"
@@ -2466,34 +1649,7 @@
     "comarques": [
       "Osona"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Osona.",
-    "tags": [
-      "paisatge"
-    ]
-  },
-  {
-    "id": "osona-direct-0",
-    "text": "Has de passar per Osona.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Osona"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Osona és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "paisatge"
-    ]
-  },
-  {
-    "id": "osona-direct-1",
-    "text": "No pots passar per Osona.",
-    "type": "FORBID",
-    "comarques": [
-      "Osona"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Osona.",
     "tags": [
       "paisatge"
     ]
@@ -2505,7 +1661,6 @@
     "comarques": [
       "Pallars Jussà"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Pallars Jussà.",
     "tags": [
       "paisatge",
@@ -2519,7 +1674,6 @@
     "comarques": [
       "Pallars Jussà"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Pallars Jussà.",
     "tags": [
       "paisatge",
@@ -2533,7 +1687,6 @@
     "comarques": [
       "Pallars Jussà"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Pallars Jussà.",
     "tags": [
       "paisatge",
@@ -2547,7 +1700,6 @@
     "comarques": [
       "Pallars Jussà"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Pallars Jussà.",
     "tags": [
       "paisatge",
@@ -2561,36 +1713,7 @@
     "comarques": [
       "Pallars Jussà"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Pallars Jussà.",
-    "tags": [
-      "paisatge",
-      "pirineu"
-    ]
-  },
-  {
-    "id": "pallars-jussa-direct-0",
-    "text": "Has de passar per Pallars Jussà.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Pallars Jussà"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Pallars Jussà és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "paisatge",
-      "pirineu"
-    ]
-  },
-  {
-    "id": "pallars-jussa-direct-1",
-    "text": "No pots passar per Pallars Jussà.",
-    "type": "FORBID",
-    "comarques": [
-      "Pallars Jussà"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Pallars Jussà.",
     "tags": [
       "paisatge",
       "pirineu"
@@ -2603,7 +1726,6 @@
     "comarques": [
       "Pallars Sobirà"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Pallars Sobirà.",
     "tags": [
       "pirineu",
@@ -2617,7 +1739,6 @@
     "comarques": [
       "Pallars Sobirà"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Pallars Sobirà.",
     "tags": [
       "pirineu",
@@ -2631,7 +1752,6 @@
     "comarques": [
       "Pallars Sobirà"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Pallars Sobirà.",
     "tags": [
       "pirineu",
@@ -2645,7 +1765,6 @@
     "comarques": [
       "Pallars Sobirà"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Pallars Sobirà.",
     "tags": [
       "pirineu",
@@ -2659,36 +1778,7 @@
     "comarques": [
       "Pallars Sobirà"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Pallars Sobirà.",
-    "tags": [
-      "pirineu",
-      "natura"
-    ]
-  },
-  {
-    "id": "pallars-sobira-direct-0",
-    "text": "Has de passar per Pallars Sobirà.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Pallars Sobirà"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Pallars Sobirà és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "pirineu",
-      "natura"
-    ]
-  },
-  {
-    "id": "pallars-sobira-direct-1",
-    "text": "No pots passar per Pallars Sobirà.",
-    "type": "FORBID",
-    "comarques": [
-      "Pallars Sobirà"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Pallars Sobirà.",
     "tags": [
       "pirineu",
       "natura"
@@ -2701,7 +1791,6 @@
     "comarques": [
       "Pla de l'Estany"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Pla de l'Estany.",
     "tags": [
       "paisatge"
@@ -2714,7 +1803,6 @@
     "comarques": [
       "Pla de l'Estany"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Pla de l'Estany.",
     "tags": [
       "paisatge"
@@ -2727,7 +1815,6 @@
     "comarques": [
       "Pla de l'Estany"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Pla de l'Estany.",
     "tags": [
       "paisatge"
@@ -2740,7 +1827,6 @@
     "comarques": [
       "Pla de l'Estany"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Pla de l'Estany.",
     "tags": [
       "paisatge"
@@ -2753,34 +1839,7 @@
     "comarques": [
       "Pla de l'Estany"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Pla de l'Estany.",
-    "tags": [
-      "paisatge"
-    ]
-  },
-  {
-    "id": "pla-de-lestany-direct-0",
-    "text": "Has de passar per Pla de l'Estany.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Pla de l'Estany"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Pla de l'Estany és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "paisatge"
-    ]
-  },
-  {
-    "id": "pla-de-lestany-direct-1",
-    "text": "No pots passar per Pla de l'Estany.",
-    "type": "FORBID",
-    "comarques": [
-      "Pla de l'Estany"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Pla de l'Estany.",
     "tags": [
       "paisatge"
     ]
@@ -2792,7 +1851,6 @@
     "comarques": [
       "Pla d'Urgell"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Pla d'Urgell.",
     "tags": [
       "agricultura"
@@ -2805,7 +1863,6 @@
     "comarques": [
       "Pla d'Urgell"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Pla d'Urgell.",
     "tags": [
       "agricultura"
@@ -2818,7 +1875,6 @@
     "comarques": [
       "Pla d'Urgell"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Pla d'Urgell.",
     "tags": [
       "agricultura"
@@ -2831,7 +1887,6 @@
     "comarques": [
       "Pla d'Urgell"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Pla d'Urgell.",
     "tags": [
       "agricultura"
@@ -2844,34 +1899,7 @@
     "comarques": [
       "Pla d'Urgell"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Pla d'Urgell.",
-    "tags": [
-      "agricultura"
-    ]
-  },
-  {
-    "id": "pla-durgell-direct-0",
-    "text": "Has de passar per Pla d'Urgell.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Pla d'Urgell"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Pla d'Urgell és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "agricultura"
-    ]
-  },
-  {
-    "id": "pla-durgell-direct-1",
-    "text": "No pots passar per Pla d'Urgell.",
-    "type": "FORBID",
-    "comarques": [
-      "Pla d'Urgell"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Pla d'Urgell.",
     "tags": [
       "agricultura"
     ]
@@ -2883,7 +1911,6 @@
     "comarques": [
       "Priorat"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Priorat.",
     "tags": [
       "vinya",
@@ -2897,7 +1924,6 @@
     "comarques": [
       "Priorat"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Priorat.",
     "tags": [
       "vinya",
@@ -2911,7 +1937,6 @@
     "comarques": [
       "Priorat"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Priorat.",
     "tags": [
       "vinya",
@@ -2925,7 +1950,6 @@
     "comarques": [
       "Priorat"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Priorat.",
     "tags": [
       "vinya",
@@ -2939,36 +1963,7 @@
     "comarques": [
       "Priorat"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Priorat.",
-    "tags": [
-      "vinya",
-      "gastronomia"
-    ]
-  },
-  {
-    "id": "priorat-direct-0",
-    "text": "Has de passar per Priorat.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Priorat"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Priorat és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "vinya",
-      "gastronomia"
-    ]
-  },
-  {
-    "id": "priorat-direct-1",
-    "text": "No pots passar per Priorat.",
-    "type": "FORBID",
-    "comarques": [
-      "Priorat"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Priorat.",
     "tags": [
       "vinya",
       "gastronomia"
@@ -2981,7 +1976,6 @@
     "comarques": [
       "Ribera d'Ebre"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Ribera d'Ebre.",
     "tags": [
       "paisatge"
@@ -2994,7 +1988,6 @@
     "comarques": [
       "Ribera d'Ebre"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Ribera d'Ebre.",
     "tags": [
       "paisatge"
@@ -3007,7 +2000,6 @@
     "comarques": [
       "Ribera d'Ebre"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Ribera d'Ebre.",
     "tags": [
       "paisatge"
@@ -3020,7 +2012,6 @@
     "comarques": [
       "Ribera d'Ebre"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Ribera d'Ebre.",
     "tags": [
       "paisatge"
@@ -3033,34 +2024,7 @@
     "comarques": [
       "Ribera d'Ebre"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Ribera d'Ebre.",
-    "tags": [
-      "paisatge"
-    ]
-  },
-  {
-    "id": "ribera-debre-direct-0",
-    "text": "Has de passar per Ribera d'Ebre.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Ribera d'Ebre"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Ribera d'Ebre és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "paisatge"
-    ]
-  },
-  {
-    "id": "ribera-debre-direct-1",
-    "text": "No pots passar per Ribera d'Ebre.",
-    "type": "FORBID",
-    "comarques": [
-      "Ribera d'Ebre"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Ribera d'Ebre.",
     "tags": [
       "paisatge"
     ]
@@ -3072,7 +2036,6 @@
     "comarques": [
       "Ripollès"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Ripollès.",
     "tags": [
       "patrimoni",
@@ -3086,7 +2049,6 @@
     "comarques": [
       "Ripollès"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Ripollès.",
     "tags": [
       "patrimoni",
@@ -3100,7 +2062,6 @@
     "comarques": [
       "Ripollès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Ripollès.",
     "tags": [
       "patrimoni",
@@ -3114,7 +2075,6 @@
     "comarques": [
       "Ripollès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Ripollès.",
     "tags": [
       "patrimoni",
@@ -3128,36 +2088,7 @@
     "comarques": [
       "Ripollès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Ripollès.",
-    "tags": [
-      "patrimoni",
-      "pirineu"
-    ]
-  },
-  {
-    "id": "ripolles-direct-0",
-    "text": "Has de passar per Ripollès.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Ripollès"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Ripollès és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "patrimoni",
-      "pirineu"
-    ]
-  },
-  {
-    "id": "ripolles-direct-1",
-    "text": "No pots passar per Ripollès.",
-    "type": "FORBID",
-    "comarques": [
-      "Ripollès"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Ripollès.",
     "tags": [
       "patrimoni",
       "pirineu"
@@ -3170,7 +2101,6 @@
     "comarques": [
       "Segarra"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Segarra.",
     "tags": [
       "paisatge",
@@ -3184,7 +2114,6 @@
     "comarques": [
       "Segarra"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Segarra.",
     "tags": [
       "paisatge",
@@ -3198,7 +2127,6 @@
     "comarques": [
       "Segarra"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Segarra.",
     "tags": [
       "paisatge",
@@ -3212,7 +2140,6 @@
     "comarques": [
       "Segarra"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Segarra.",
     "tags": [
       "paisatge",
@@ -3226,36 +2153,7 @@
     "comarques": [
       "Segarra"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Segarra.",
-    "tags": [
-      "paisatge",
-      "patrimoni"
-    ]
-  },
-  {
-    "id": "segarra-direct-0",
-    "text": "Has de passar per Segarra.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Segarra"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Segarra és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "paisatge",
-      "patrimoni"
-    ]
-  },
-  {
-    "id": "segarra-direct-1",
-    "text": "No pots passar per Segarra.",
-    "type": "FORBID",
-    "comarques": [
-      "Segarra"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Segarra.",
     "tags": [
       "paisatge",
       "patrimoni"
@@ -3268,7 +2166,6 @@
     "comarques": [
       "Segrià"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Segrià.",
     "tags": [
       "agricultura"
@@ -3281,7 +2178,6 @@
     "comarques": [
       "Segrià"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Segrià.",
     "tags": [
       "agricultura"
@@ -3294,7 +2190,6 @@
     "comarques": [
       "Segrià"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Segrià.",
     "tags": [
       "agricultura"
@@ -3307,7 +2202,6 @@
     "comarques": [
       "Segrià"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Segrià.",
     "tags": [
       "agricultura"
@@ -3320,34 +2214,7 @@
     "comarques": [
       "Segrià"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Segrià.",
-    "tags": [
-      "agricultura"
-    ]
-  },
-  {
-    "id": "segria-direct-0",
-    "text": "Has de passar per Segrià.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Segrià"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Segrià és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "agricultura"
-    ]
-  },
-  {
-    "id": "segria-direct-1",
-    "text": "No pots passar per Segrià.",
-    "type": "FORBID",
-    "comarques": [
-      "Segrià"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Segrià.",
     "tags": [
       "agricultura"
     ]
@@ -3359,7 +2226,6 @@
     "comarques": [
       "Selva"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Selva.",
     "tags": [
       "natura"
@@ -3372,7 +2238,6 @@
     "comarques": [
       "Selva"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Selva.",
     "tags": [
       "natura"
@@ -3385,7 +2250,6 @@
     "comarques": [
       "Selva"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Selva.",
     "tags": [
       "natura"
@@ -3398,7 +2262,6 @@
     "comarques": [
       "Selva"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Selva.",
     "tags": [
       "natura"
@@ -3411,34 +2274,7 @@
     "comarques": [
       "Selva"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Selva.",
-    "tags": [
-      "natura"
-    ]
-  },
-  {
-    "id": "selva-direct-0",
-    "text": "Has de passar per Selva.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Selva"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Selva és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "natura"
-    ]
-  },
-  {
-    "id": "selva-direct-1",
-    "text": "No pots passar per Selva.",
-    "type": "FORBID",
-    "comarques": [
-      "Selva"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Selva.",
     "tags": [
       "natura"
     ]
@@ -3450,7 +2286,6 @@
     "comarques": [
       "Solsonès"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Solsonès.",
     "tags": [
       "patrimoni",
@@ -3464,7 +2299,6 @@
     "comarques": [
       "Solsonès"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Solsonès.",
     "tags": [
       "patrimoni",
@@ -3478,7 +2312,6 @@
     "comarques": [
       "Solsonès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Solsonès.",
     "tags": [
       "patrimoni",
@@ -3492,7 +2325,6 @@
     "comarques": [
       "Solsonès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Solsonès.",
     "tags": [
       "patrimoni",
@@ -3506,36 +2338,7 @@
     "comarques": [
       "Solsonès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Solsonès.",
-    "tags": [
-      "patrimoni",
-      "natura"
-    ]
-  },
-  {
-    "id": "solsones-direct-0",
-    "text": "Has de passar per Solsonès.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Solsonès"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Solsonès és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "patrimoni",
-      "natura"
-    ]
-  },
-  {
-    "id": "solsones-direct-1",
-    "text": "No pots passar per Solsonès.",
-    "type": "FORBID",
-    "comarques": [
-      "Solsonès"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Solsonès.",
     "tags": [
       "patrimoni",
       "natura"
@@ -3548,7 +2351,6 @@
     "comarques": [
       "Tarragonès"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Tarragonès.",
     "tags": [
       "patrimoni",
@@ -3562,7 +2364,6 @@
     "comarques": [
       "Tarragonès"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Tarragonès.",
     "tags": [
       "patrimoni",
@@ -3576,7 +2377,6 @@
     "comarques": [
       "Tarragonès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Tarragonès.",
     "tags": [
       "patrimoni",
@@ -3590,7 +2390,6 @@
     "comarques": [
       "Tarragonès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Tarragonès.",
     "tags": [
       "patrimoni",
@@ -3604,36 +2403,7 @@
     "comarques": [
       "Tarragonès"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Tarragonès.",
-    "tags": [
-      "patrimoni",
-      "cultura"
-    ]
-  },
-  {
-    "id": "tarragones-direct-0",
-    "text": "Has de passar per Tarragonès.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Tarragonès"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Tarragonès és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "patrimoni",
-      "cultura"
-    ]
-  },
-  {
-    "id": "tarragones-direct-1",
-    "text": "No pots passar per Tarragonès.",
-    "type": "FORBID",
-    "comarques": [
-      "Tarragonès"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Tarragonès.",
     "tags": [
       "patrimoni",
       "cultura"
@@ -3646,7 +2416,6 @@
     "comarques": [
       "Terra Alta"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Terra Alta.",
     "tags": [
       "historia"
@@ -3659,7 +2428,6 @@
     "comarques": [
       "Terra Alta"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Terra Alta.",
     "tags": [
       "historia"
@@ -3672,7 +2440,6 @@
     "comarques": [
       "Terra Alta"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Terra Alta.",
     "tags": [
       "historia"
@@ -3685,7 +2452,6 @@
     "comarques": [
       "Terra Alta"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Terra Alta.",
     "tags": [
       "historia"
@@ -3698,34 +2464,7 @@
     "comarques": [
       "Terra Alta"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Terra Alta.",
-    "tags": [
-      "historia"
-    ]
-  },
-  {
-    "id": "terra-alta-direct-0",
-    "text": "Has de passar per Terra Alta.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Terra Alta"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Terra Alta és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "historia"
-    ]
-  },
-  {
-    "id": "terra-alta-direct-1",
-    "text": "No pots passar per Terra Alta.",
-    "type": "FORBID",
-    "comarques": [
-      "Terra Alta"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Terra Alta.",
     "tags": [
       "historia"
     ]
@@ -3737,7 +2476,6 @@
     "comarques": [
       "Urgell"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Urgell.",
     "tags": [
       "cultura"
@@ -3750,7 +2488,6 @@
     "comarques": [
       "Urgell"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Urgell.",
     "tags": [
       "cultura"
@@ -3763,7 +2500,6 @@
     "comarques": [
       "Urgell"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Urgell.",
     "tags": [
       "cultura"
@@ -3776,7 +2512,6 @@
     "comarques": [
       "Urgell"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Urgell.",
     "tags": [
       "cultura"
@@ -3789,34 +2524,7 @@
     "comarques": [
       "Urgell"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Urgell.",
-    "tags": [
-      "cultura"
-    ]
-  },
-  {
-    "id": "urgell-direct-0",
-    "text": "Has de passar per Urgell.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Urgell"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Urgell és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "cultura"
-    ]
-  },
-  {
-    "id": "urgell-direct-1",
-    "text": "No pots passar per Urgell.",
-    "type": "FORBID",
-    "comarques": [
-      "Urgell"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Urgell.",
     "tags": [
       "cultura"
     ]
@@ -3828,7 +2536,6 @@
     "comarques": [
       "Vallès Occidental"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Vallès Occidental.",
     "tags": [
       "industria"
@@ -3841,7 +2548,6 @@
     "comarques": [
       "Vallès Occidental"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Vallès Occidental.",
     "tags": [
       "industria"
@@ -3854,7 +2560,6 @@
     "comarques": [
       "Vallès Occidental"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Vallès Occidental.",
     "tags": [
       "industria"
@@ -3867,7 +2572,6 @@
     "comarques": [
       "Vallès Occidental"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Vallès Occidental.",
     "tags": [
       "industria"
@@ -3880,34 +2584,7 @@
     "comarques": [
       "Vallès Occidental"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Vallès Occidental.",
-    "tags": [
-      "industria"
-    ]
-  },
-  {
-    "id": "valles-occidental-direct-0",
-    "text": "Has de passar per Vallès Occidental.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Vallès Occidental"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Vallès Occidental és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "industria"
-    ]
-  },
-  {
-    "id": "valles-occidental-direct-1",
-    "text": "No pots passar per Vallès Occidental.",
-    "type": "FORBID",
-    "comarques": [
-      "Vallès Occidental"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Vallès Occidental.",
     "tags": [
       "industria"
     ]
@@ -3919,7 +2596,6 @@
     "comarques": [
       "Vallès Oriental"
     ],
-    "difficultyCultural": 4,
     "explanation": "La pista feia referència a Vallès Oriental.",
     "tags": [
       "paisatge",
@@ -3933,7 +2609,6 @@
     "comarques": [
       "Vallès Oriental"
     ],
-    "difficultyCultural": 4,
     "explanation": "La comarca a evitar era Vallès Oriental.",
     "tags": [
       "paisatge",
@@ -3947,7 +2622,6 @@
     "comarques": [
       "Vallès Oriental"
     ],
-    "difficultyCultural": 5,
     "explanation": "La pista apuntava a Vallès Oriental.",
     "tags": [
       "paisatge",
@@ -3961,7 +2635,6 @@
     "comarques": [
       "Vallès Oriental"
     ],
-    "difficultyCultural": 5,
     "explanation": "La comarca correcta era Vallès Oriental.",
     "tags": [
       "paisatge",
@@ -3975,36 +2648,7 @@
     "comarques": [
       "Vallès Oriental"
     ],
-    "difficultyCultural": 5,
     "explanation": "La referència corresponia a Vallès Oriental.",
-    "tags": [
-      "paisatge",
-      "natura"
-    ]
-  },
-  {
-    "id": "valles-oriental-direct-0",
-    "text": "Has de passar per Vallès Oriental.",
-    "type": "REQUIRE",
-    "comarques": [
-      "Vallès Oriental"
-    ],
-    "difficultyCultural": 1,
-    "explanation": "Vallès Oriental és la comarca obligatòria d'aquesta norma.",
-    "tags": [
-      "paisatge",
-      "natura"
-    ]
-  },
-  {
-    "id": "valles-oriental-direct-1",
-    "text": "No pots passar per Vallès Oriental.",
-    "type": "FORBID",
-    "comarques": [
-      "Vallès Oriental"
-    ],
-    "difficultyCultural": 2,
-    "explanation": "No es podia passar per Vallès Oriental.",
     "tags": [
       "paisatge",
       "natura"
@@ -4028,7 +2672,6 @@
       "Baix Ebre",
       "Montsià"
     ],
-    "difficultyCultural": 3,
     "explanation": "Qualsevol d'aquestes comarques complia la norma: Alt Empordà, Baix Empordà, Selva, Maresme, Barcelonès, Baix Llobregat, Garraf, Baix Penedès, Tarragonès, Baix Camp, Baix Ebre, Montsià.",
     "tags": [
       "zona"
@@ -4052,7 +2695,6 @@
       "Baix Ebre",
       "Montsià"
     ],
-    "difficultyCultural": 4,
     "explanation": "S'havien d'evitar aquestes comarques: Alt Empordà, Baix Empordà, Selva, Maresme, Barcelonès, Baix Llobregat, Garraf, Baix Penedès, Tarragonès, Baix Camp, Baix Ebre, Montsià.",
     "tags": [
       "zona"
@@ -4071,7 +2713,6 @@
       "Cerdanya",
       "Ripollès"
     ],
-    "difficultyCultural": 3,
     "explanation": "Qualsevol d'aquestes comarques complia la norma: Val d'Aran, Alta Ribagorça, Pallars Sobirà, Pallars Jussà, Alt Urgell, Cerdanya, Ripollès.",
     "tags": [
       "zona"
@@ -4090,7 +2731,6 @@
       "Cerdanya",
       "Ripollès"
     ],
-    "difficultyCultural": 4,
     "explanation": "S'havien d'evitar aquestes comarques: Val d'Aran, Alta Ribagorça, Pallars Sobirà, Pallars Jussà, Alt Urgell, Cerdanya, Ripollès.",
     "tags": [
       "zona"
@@ -4106,7 +2746,6 @@
       "Priorat",
       "Tarragonès"
     ],
-    "difficultyCultural": 3,
     "explanation": "Qualsevol d'aquestes comarques complia la norma: Alt Penedès, Baix Penedès, Priorat, Tarragonès.",
     "tags": [
       "zona"
@@ -4122,7 +2761,6 @@
       "Priorat",
       "Tarragonès"
     ],
-    "difficultyCultural": 4,
     "explanation": "S'havien d'evitar aquestes comarques: Alt Penedès, Baix Penedès, Priorat, Tarragonès.",
     "tags": [
       "zona"
@@ -4139,7 +2777,6 @@
       "Pla d'Urgell",
       "Garrigues"
     ],
-    "difficultyCultural": 3,
     "explanation": "Qualsevol d'aquestes comarques complia la norma: Segarra, Urgell, Segrià, Pla d'Urgell, Garrigues.",
     "tags": [
       "zona"
@@ -4156,7 +2793,6 @@
       "Pla d'Urgell",
       "Garrigues"
     ],
-    "difficultyCultural": 4,
     "explanation": "S'havien d'evitar aquestes comarques: Segarra, Urgell, Segrià, Pla d'Urgell, Garrigues.",
     "tags": [
       "zona"
@@ -4172,7 +2808,6 @@
       "Bages",
       "Alt Urgell"
     ],
-    "difficultyCultural": 3,
     "explanation": "Qualsevol d'aquestes comarques complia la norma: Conca de Barberà, Ripollès, Bages, Alt Urgell.",
     "tags": [
       "zona"
@@ -4188,7 +2823,6 @@
       "Bages",
       "Alt Urgell"
     ],
-    "difficultyCultural": 4,
     "explanation": "S'havien d'evitar aquestes comarques: Conca de Barberà, Ripollès, Bages, Alt Urgell.",
     "tags": [
       "zona"

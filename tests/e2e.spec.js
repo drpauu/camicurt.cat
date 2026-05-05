@@ -116,32 +116,20 @@ test("carrega el mapa i la UI base", async ({ page }) => {
   expect(logoBox?.width).toBeGreaterThanOrEqual(54);
   expect(logoBox?.height).toBeGreaterThanOrEqual(42);
   await expect(page.locator(".brand-date")).toBeVisible();
-  await expect(page.locator(".brand-mode-description")).toContainText("uneix Inici i Dest");
-  await expect(page.locator(".brand-mode-description")).not.toContainText("Mode normal:");
+  await expect(page.locator(".brand-mode-description")).toHaveCount(0);
   const headerAlignment = await page.evaluate(() => {
     const titleBox = document.querySelector(".brand h1")?.getBoundingClientRect();
     const dateBox = document.querySelector(".brand-date")?.getBoundingClientRect();
-    const descriptionBox = document
-      .querySelector(".brand-mode-description")
-      ?.getBoundingClientRect();
     const actionsBox = document.querySelector(".topbar-actions")?.getBoundingClientRect();
     return {
       dateTitleBottomDelta:
         titleBox && dateBox ? Math.abs(titleBox.bottom - dateBox.bottom) : Infinity,
-      descriptionTitleBottomDelta:
-        titleBox && descriptionBox
-          ? Math.abs(titleBox.bottom - descriptionBox.bottom)
-          : Infinity,
-      descriptionStartsAfterDate:
-        dateBox && descriptionBox ? descriptionBox.left > dateBox.right : false,
-      descriptionBeforeActions:
-        descriptionBox && actionsBox ? descriptionBox.right <= actionsBox.left - 4 : false
+      dateBeforeActions:
+        dateBox && actionsBox ? dateBox.right <= actionsBox.left - 4 : false
     };
   });
   expect(headerAlignment.dateTitleBottomDelta).toBeLessThanOrEqual(4);
-  expect(headerAlignment.descriptionTitleBottomDelta).toBeLessThanOrEqual(4);
-  expect(headerAlignment.descriptionStartsAfterDate).toBeTruthy();
-  expect(headerAlignment.descriptionBeforeActions).toBeTruthy();
+  expect(headerAlignment.dateBeforeActions).toBeTruthy();
   const faviconLinks = await page.$$eval('link[rel~="icon"]', (links) =>
     links.map((link) => ({
       rel: link.getAttribute("rel"),
@@ -256,8 +244,7 @@ test("inicia el nivell diari", async ({ page }) => {
   await gotoHome(page);
   await page.getByRole("button", { name: /^Diari$/i }).click();
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");
-  await expect(page.locator(".brand-mode-description")).toContainText("uneix Inici i Dest");
-  await expect(page.locator(".brand-mode-description")).not.toContainText("Mode diari:");
+  await expect(page.locator(".brand-mode-description")).toHaveCount(0);
 });
 
 test("completar el nivell diari desbloqueja totes les dificultats", async ({ page }) => {
@@ -291,7 +278,7 @@ test("completar el nivell diari desbloqueja totes les dificultats", async ({ pag
     .toEqual(["cap-colla-rutes", "dominguero", "pixapi", "rondinaire"]);
 });
 
-test("la descripcio de capcalera canvia en mode explora", async ({ page }) => {
+test("la capcalera no mostra descripcio en mode explora", async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem("rumb-mode", "normal");
   });
@@ -300,8 +287,7 @@ test("la descripcio de capcalera canvia en mode explora", async ({ page }) => {
   const optionsDialog = page.getByRole("dialog", { name: /Opcions/i });
   await optionsDialog.getByRole("button", { name: /^Explora$/i }).click();
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "explore");
-  await expect(page.locator(".brand-mode-description")).toContainText("juga sense pressa");
-  await expect(page.locator(".brand-mode-description")).not.toContainText("Explora:");
+  await expect(page.locator(".brand-mode-description")).toHaveCount(0);
 });
 
 test("contrarellotge tanca opcions i mostra compte enrere des de 5", async ({ page }) => {
@@ -333,10 +319,7 @@ test("contrarellotge tanca opcions i mostra compte enrere des de 5", async ({ pa
   await expect(optionsDialog).toBeVisible();
   await optionsDialog.getByRole("button", { name: /Contrarellotge/i }).click();
   await expect(optionsDialog).toBeHidden();
-  await expect(page.locator(".brand-mode-description")).toContainText(
-    "completa el cam"
-  );
-  await expect(page.locator(".brand-mode-description")).not.toContainText("Contrarellotge:");
+  await expect(page.locator(".brand-mode-description")).toHaveCount(0);
 
   const countdown = page.locator(".countdown-value");
   await expect(countdown).toHaveText("5");

@@ -8,7 +8,12 @@ import {
   findShortestPathsWithRule
 } from "../src/lib/pathfinding.js";
 import { normalizeName } from "../src/lib/names.js";
-import { isDisabledGroupCulturalRule } from "../src/lib/disabledRules.js";
+import {
+  isDisabledDirectComarcaRule,
+  isDisabledGroupCulturalRule,
+  isDisabledRule
+} from "../src/lib/disabledRules.js";
+import { classifyDifficultyByShortestCount } from "../src/lib/difficulty.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -89,11 +94,66 @@ test("les regles de grup cultural queden deshabilitades", () => {
   expect(appRules.some((rule) => isDisabledGroupCulturalRule(rule))).toBeFalsy();
 });
 
-test("les dades i seeds no tornen a introduir regles de grup cultural", () => {
-  const checkedPaths = [
+test("les regles directes que revelen comarca queden deshabilitades", () => {
+  expect(isDisabledDirectComarcaRule("alt-camp-direct-0")).toBeTruthy();
+  expect(isDisabledDirectComarcaRule("girones-direct-1")).toBeTruthy();
+  expect(isDisabledDirectComarcaRule({ text: "Has de passar per Gironès." })).toBeTruthy();
+  expect(isDisabledDirectComarcaRule({ text: "No pots passar per Gironès." })).toBeTruthy();
+  expect(
+    isDisabledDirectComarcaRule({
+      text: "Has de passar per la comarca de muralles i ponts."
+    })
+  ).toBeFalsy();
+  expect(isDisabledRule({ text: "Has de passar per Gironès." })).toBeTruthy();
+});
+
+test("la dificultat es classifica nomes per distancia del cami curt", () => {
+  expect(classifyDifficultyByShortestCount(3)).toBe("pixapi");
+  expect(classifyDifficultyByShortestCount(4)).toBe("dominguero");
+  expect(classifyDifficultyByShortestCount(5)).toBe("dominguero");
+  expect(classifyDifficultyByShortestCount(6)).toBe("rondinaire");
+  expect(classifyDifficultyByShortestCount(8)).toBe("rondinaire");
+  expect(classifyDifficultyByShortestCount(9)).toBe("cap-colla-rutes");
+});
+
+test("els seeds del banc guarden difficulty_id segons el shortest_path", () => {
+  const sql = fs.readFileSync(
+    path.join(rootDir, "supabase", "seed_level_bank_10000.sql"),
+    "utf8"
+  );
+  const rows = sql
+    .split(/\r?\n/)
+    .filter((line) => /^\s*\('bank:/.test(line));
+  expect(rows.length).toBeGreaterThan(0);
+  const mismatches = rows.filter((line) => {
+    const match = line.match(
+      /^\s*\('[^']+', '([^']+)', (?:'[^']+'|null), '[^']+', '[^']+', (array\[[^\]]+\]::text\[])/
+    );
+    if (!match) return true;
+    const difficultyId = match[1];
+    const pathIds = [...match[2].matchAll(/'([^']+)'/g)].map((entry) => entry[1]);
+    return difficultyId !== classifyDifficultyByShortestCount(pathIds);
+  });
+  expect(mismatches.slice(0, 5)).toEqual([]);
+});
+
+test("les dades i seeds no tornen a introduir regles deshabilitades", () => {
+  const jsonPaths = [
     "src/data/rules.json",
     "data/rules.json",
     "supabase/functions/generate-level/rules.json",
+    ...fs
+      .readdirSync(path.join(rootDir, "normes"))
+      .filter((name) => name.endsWith(".json"))
+      .map((name) => path.join("normes", name))
+  ];
+  const jsonOffenders = jsonPaths.filter((relativePath) => {
+    const rules = JSON.parse(fs.readFileSync(path.join(rootDir, relativePath), "utf8"));
+    return Array.isArray(rules) && rules.some((rule) => isDisabledRule(rule));
+  });
+  expect(jsonOffenders).toEqual([]);
+
+  const checkedPaths = [
     "scripts/generate-rules.mjs",
     "supabase/seed_level_bank_10000.sql",
     ...fs
@@ -101,7 +161,7 @@ test("les dades i seeds no tornen a introduir regles de grup cultural", () => {
       .filter((name) => name.endsWith(".sql"))
       .map((name) => path.join("supabase", "seed_level_bank_10000_chunks", name))
   ];
-  const disabledPattern = /grup cultural|group-\d+-[01]/i;
+  const disabledPattern = /grup cultural|group-\d+-[01]|-direct-[01]/i;
   const offenders = checkedPaths.filter((relativePath) =>
     disabledPattern.test(fs.readFileSync(path.join(rootDir, relativePath), "utf8"))
   );

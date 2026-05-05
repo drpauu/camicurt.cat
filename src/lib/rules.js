@@ -1,8 +1,8 @@
 import RAW_RULES from "../data/rules.json";
-import { isDisabledGroupCulturalRule } from "./disabledRules.js";
+import { isDisabledRule } from "./disabledRules.js";
 
 export const RULES = Array.isArray(RAW_RULES)
-  ? RAW_RULES.filter((rule) => !isDisabledGroupCulturalRule(rule))
+  ? RAW_RULES.filter((rule) => !isDisabledRule(rule))
   : [];
 
 function hashString(value) {
@@ -29,7 +29,7 @@ export function pickRuleForKey(rules, seedKey, history = [], rngFactory) {
 
 export function normalizeRule(schema) {
   if (!schema) return null;
-  if (isDisabledGroupCulturalRule(schema)) return null;
+  if (isDisabledRule(schema)) return null;
   const type = schema.type || "REQUIRE";
   const kind =
     type === "FORBID" ? "avoid" : type === "ONE_OF" ? "mustIncludeAny" : "mustIncludeAny";
@@ -38,7 +38,7 @@ export function normalizeRule(schema) {
     kind,
     label: schema.text,
     comarques: schema.comarques || [],
-    difficultyCultural: schema.difficultyCultural || 3,
+    difficulty: "medium",
     explanation: schema.explanation || "",
     tags: schema.tags || []
   };

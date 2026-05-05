@@ -46,23 +46,6 @@ const COMARQUES = [
   { name: "Vallès Oriental", clue: "valls i Montseny", tags: ["paisatge", "natura"] }
 ];
 
-const DIRECT_TEMPLATES = [
-  {
-    type: "REQUIRE",
-    text: (c) => `Has de passar per ${c.name}.`,
-    explanation: (c) => `${c.name} és la comarca obligatòria d'aquesta norma.`,
-    difficulty: 1,
-    tags: ["directa"]
-  },
-  {
-    type: "FORBID",
-    text: (c) => `No pots passar per ${c.name}.`,
-    explanation: (c) => `No es podia passar per ${c.name}.`,
-    difficulty: 2,
-    tags: ["directa"]
-  }
-];
-
 const INDIRECT_TEMPLATES = [
   {
     type: "REQUIRE",
@@ -177,18 +160,6 @@ COMARQUES.forEach((comarca) => {
       text: tpl.text(comarca),
       type: tpl.type,
       comarques: [comarca.name],
-      difficultyCultural: tpl.difficulty,
-      explanation: tpl.explanation(comarca),
-      tags: comarca.tags || []
-    });
-  });
-  DIRECT_TEMPLATES.forEach((tpl, index) => {
-    rules.push({
-      id: `${slugify(comarca.name)}-direct-${index}`,
-      text: tpl.text(comarca),
-      type: tpl.type,
-      comarques: [comarca.name],
-      difficultyCultural: tpl.difficulty,
       explanation: tpl.explanation(comarca),
       tags: comarca.tags || []
     });
@@ -202,7 +173,6 @@ ZONE_GROUPS.forEach((zone, index) => {
       text: tpl.text(zone.comarques, zone.clue),
       type: tpl.type,
       comarques: zone.comarques,
-      difficultyCultural: tpl.difficulty,
       explanation: tpl.explanation(zone.comarques),
       tags: tpl.tags
     });

@@ -16,7 +16,12 @@ import {
 import { loadSettings, saveSettings } from "./lib/settings.js";
 import { TOMAS_THEME_ID } from "./lib/themes.js";
 import { RULES, pickRuleForKey, normalizeRule } from "./lib/rules.js";
-import { isDisabledGroupCulturalRule } from "./lib/disabledRules.js";
+import { isDisabledRule } from "./lib/disabledRules.js";
+import {
+  classifyDifficultyByShortestCount,
+  getDifficultyDistanceRange,
+  getShortestInternalCount
+} from "./lib/difficulty.js";
 import { createAudioManager, loadAudioManifest } from "./lib/audio.js";
 import { useSound } from "./audio/SoundProvider.tsx";
 import {
@@ -95,8 +100,8 @@ const DIFFICULTIES = [
     id: "pixapi",
     label: "Pixapí",
     shortLabel: "pixapi",
-    ruleLevels: ["easy"],
-    minInternal: 3,
+    minInternal: 0,
+    maxInternal: 3,
     hintsDisabled: false,
     fog: false
   },
@@ -104,8 +109,8 @@ const DIFFICULTIES = [
     id: "dominguero",
     label: "Dominguero",
     shortLabel: "dominguero",
-    ruleLevels: ["easy", "medium"],
     minInternal: 4,
+    maxInternal: 5,
     hintsDisabled: false,
     fog: false
   },
@@ -113,8 +118,8 @@ const DIFFICULTIES = [
     id: "rondinaire",
     label: "Rondinaire",
     shortLabel: "rondinaire",
-    ruleLevels: ["medium", "hard"],
     minInternal: 6,
+    maxInternal: 8,
     hintsDisabled: true,
     fog: true
   },
@@ -122,8 +127,8 @@ const DIFFICULTIES = [
     id: "cap-colla-rutes",
     label: "Cap de colla de rutes",
     shortLabel: "cap de colla",
-    ruleLevels: ["expert"],
     minInternal: 9,
+    maxInternal: Infinity,
     hintsDisabled: true,
     fog: true
   }
@@ -943,16 +948,6 @@ async function withRetry(action, config = {}) {
   throw lastError;
 }
 
-function getRuleDifficulty(def) {
-  if (!def) return "medium";
-  if (typeof def.difficulty === "string") return def.difficulty;
-  const value = typeof def.difficultyCultural === "number" ? def.difficultyCultural : 3;
-  if (value >= 5) return "expert";
-  if (value >= 4) return "hard";
-  if (value >= 3) return "medium";
-  return "easy";
-}
-
 function getRuleTags(def) {
   if (def?.tags && def.tags.length) return def.tags;
   return ["cultural"];
@@ -1403,7 +1398,7 @@ function resolveRule(def, ctx) {
 
 function prepareRule(def, ctx) {
   const resolved = resolveRule(def, ctx);
-  const difficulty = resolved.difficulty || getRuleDifficulty(def);
+  const difficulty = resolved.difficulty || "medium";
   const tags = resolved.tags || getRuleTags(def);
   const names = resolved.comarques || [];
   const comarcaIds = names
@@ -1414,9 +1409,9 @@ function prepareRule(def, ctx) {
 
 function buildRuleFromLevel(level, comarcaById, normalizedToId) {
   if (!level?.rule_id) return null;
-  if (isDisabledGroupCulturalRule(level.rule_id)) return null;
+  if (isDisabledRule(level.rule_id)) return null;
   const base = RULE_DEFS.find((def) => def.id === level.rule_id) || null;
-  if (isDisabledGroupCulturalRule(base)) return null;
+  if (base && isDisabledRule(base)) return null;
   const avoidIds = Array.isArray(level.avoid_ids) ? level.avoid_ids : [];
   const mustPassIds = Array.isArray(level.must_pass_ids) ? level.must_pass_ids : [];
   const kind = base?.kind || (avoidIds.length ? "avoid" : "mustIncludeAny");
@@ -1438,7 +1433,7 @@ function buildRuleFromLevel(level, comarcaById, normalizedToId) {
       label = "Has de passar per algun lloc clau.";
     }
   }
-  const difficulty = base ? getRuleDifficulty(base) : "medium";
+  const difficulty = "medium";
   const tags = base ? getRuleTags(base) : ["geo"];
   const explanation = base?.explanation || "";
   return {
@@ -1780,7 +1775,10 @@ export default function App() {
   const isDailyMode = gameMode === "daily";
   const isFixedMode = isDailyMode;
   const shouldLoadCalendar = isSupabaseReady || calendarOpen || isDailyMode;
-  const activeDifficulty = isFixedMode ? "cap-colla-rutes" : difficulty;
+  const routeDifficulty = classifyDifficultyByShortestCount(
+    shortestPath.length ? Math.max(shortestPath.length - 2, 0) : 0
+  );
+  const activeDifficulty = isFixedMode ? routeDifficulty : difficulty;
   const difficultyConfig = useMemo(() => {
     return DIFFICULTIES.find((entry) => entry.id === activeDifficulty) || DIFFICULTIES[0];
   }, [activeDifficulty]);
@@ -3116,7 +3114,10 @@ export default function App() {
     const nextShortest = pathResult.primaryPath;
     const nextShortestPaths = pathResult.paths;
     const playerPath = Array.isArray(result?.playerPath) ? result.playerPath : [];
-    const basePowerups = getPowerupUses(activeDifficulty);
+    const levelDifficulty =
+      level.difficulty_id ||
+      classifyDifficultyByShortestCount(Math.max(nextShortest.length - 2, 0));
+    const basePowerups = getPowerupUses(levelDifficulty);
 
     setStartId(start);
     setTargetId(target);
@@ -3208,7 +3209,9 @@ export default function App() {
           );
           return normalizeLevelSnapshot({
             mode: record.mode || context.mode || "daily",
-            difficulty: level.difficulty_id || HARDEST_DIFFICULTY_ID,
+            difficulty:
+              level.difficulty_id ||
+              classifyDifficultyByShortestCount(pathResult.primaryPath),
             dayKey: dayKeyForRecord,
             startId: level.start_id,
             targetId: level.target_id,
@@ -3244,7 +3247,7 @@ export default function App() {
       difficulty:
         record.winningAttempt.difficulty ||
         level?.difficulty_id ||
-        (record.mode === "daily" || context.mode === "daily" ? HARDEST_DIFFICULTY_ID : ""),
+        classifyDifficultyByShortestCount(record.shortestCount || record.winningAttempt.shortestCount || 0),
       levelSnapshot
     };
     if (level) {
@@ -3283,39 +3286,23 @@ export default function App() {
     lastGuessRef.current = null;
     const ids = comarques.map((featureItem) => featureItem.properties.id);
     const todayKey = getDayKey();
-    const baseSeed =
-      gameMode === "daily"
-        ? `${todayKey}-${activeDifficulty}`
-        : null;
+    const baseSeed = gameMode === "daily" ? todayKey : null;
     const seed = baseSeed && !forceNew ? baseSeed : null;
     const rng = seed ? mulberry32(hashString(seed)) : Math.random;
-    const minInternal = isDailyMode
-      ? DAILY_MIN_INTERNAL
+    const targetRange = isDailyMode
+      ? { minInternal: DAILY_MIN_INTERNAL, maxInternal: Infinity }
       : isExploreMode
-          ? EXPLORE_MIN_INTERNAL
-          : difficultyConfig.minInternal || 4;
-    const minLength = minInternal + 2;
+        ? { minInternal: EXPLORE_MIN_INTERNAL, maxInternal: Infinity }
+        : getDifficultyDistanceRange(activeDifficulty);
     const comarcaNames = comarques.map((featureItem) => featureItem.properties.name);
-    const allowedLevels = difficultyConfig.ruleLevels || ["medium"];
-    const rulePool = RULE_DEFS.filter((def) =>
-      allowedLevels.includes(getRuleDifficulty(def))
-    );
-    const highPool = RULE_DEFS.filter((def) => {
-      const difficultyLevel = getRuleDifficulty(def);
-      const tags = getRuleTags(def);
-      const hasCultural = tags.includes("cultural");
-      const hasGeo = tags.includes("geo");
-      return difficultyLevel === "expert" && (hasCultural || hasGeo);
-    });
-    const pool = isDailyMode
-      ? highPool.length
-        ? highPool
-        : rulePool.length
-          ? rulePool
-          : RULE_DEFS
-      : rulePool.length
-        ? rulePool
-        : RULE_DEFS;
+    const pool = RULE_DEFS;
+    const isPathInTargetRange = (path) => {
+      const internalCount = getShortestInternalCount(path);
+      return (
+        internalCount >= targetRange.minInternal &&
+        internalCount <= targetRange.maxInternal
+      );
+    };
     const fixedMode = isDailyMode;
     const fixedKey = isDailyMode ? activeDayKey : null;
     const previousPairs =
@@ -3400,7 +3387,7 @@ export default function App() {
       if (!isExploreMode && candidateRule && basePath.length && path.length <= basePath.length) {
         continue;
       }
-      if (path.length < minLength) continue;
+      if (!isPathInTargetRange(path)) continue;
       start = candidateStart;
       target = candidateTarget;
       nextShortest = path;
@@ -3409,7 +3396,7 @@ export default function App() {
       break;
     }
 
-    if (!start || !target || (!isExploreMode && !selectedRule)) {
+    if (!start || !target) {
       let fallbackAttempts = 500;
       while (fallbackAttempts > 0) {
         fallbackAttempts -= 1;
@@ -3459,7 +3446,7 @@ export default function App() {
         ) {
           continue;
         }
-        if (path.length < minLength) continue;
+        if (!isPathInTargetRange(path)) continue;
         start = candidateStart;
         target = candidateTarget;
         nextShortest = path;
@@ -3469,15 +3456,41 @@ export default function App() {
       }
     }
     if (!start || !target) {
-      start = ids[0];
-      target = ids[1] || ids[0];
-      const pathResult = findShortestPathsWithRule(start, target, adjacency, null, ids, {
-        cache: shortestPathCache,
-        centroidMap,
-        maxPaths: 64
-      });
-      nextShortest = pathResult.primaryPath;
-      nextShortestPaths = pathResult.paths;
+      for (const candidateStart of ids) {
+        for (const candidateTarget of ids) {
+          if (candidateTarget === candidateStart) continue;
+          const neighbors = adjacency.get(candidateStart);
+          if (neighbors && neighbors.has(candidateTarget)) continue;
+          const pathResult = findShortestPathsWithRule(
+            candidateStart,
+            candidateTarget,
+            adjacency,
+            null,
+            ids,
+            { cache: shortestPathCache, centroidMap, maxPaths: 64 }
+          );
+          if (!pathResult.primaryPath.length || !isPathInTargetRange(pathResult.primaryPath)) {
+            continue;
+          }
+          start = candidateStart;
+          target = candidateTarget;
+          nextShortest = pathResult.primaryPath;
+          nextShortestPaths = pathResult.paths;
+          break;
+        }
+        if (start && target) break;
+      }
+      if (!start || !target) {
+        start = ids[0];
+        target = ids[1] || ids[0];
+        const pathResult = findShortestPathsWithRule(start, target, adjacency, null, ids, {
+          cache: shortestPathCache,
+          centroidMap,
+          maxPaths: 64
+        });
+        nextShortest = pathResult.primaryPath;
+        nextShortestPaths = pathResult.paths;
+      }
     }
     if (!selectedRule) {
       const startName = comarcaById.get(start)?.properties.name;
@@ -3518,7 +3531,12 @@ export default function App() {
         );
         const candidatePath = candidatePathResult.primaryPath;
         const basePath = findShortestPath(start, target, adjacency, shortestPathCache);
-        if (candidatePath.length && basePath.length && candidatePath.length > basePath.length) {
+        if (
+          candidatePath.length &&
+          basePath.length &&
+          candidatePath.length > basePath.length &&
+          isPathInTargetRange(candidatePath)
+        ) {
           selectedRule = candidateRule;
           nextShortest = candidatePath;
           nextShortestPaths = candidatePathResult.paths;
@@ -3528,6 +3546,7 @@ export default function App() {
     if (!nextShortestPaths.length && nextShortest.length) {
       nextShortestPaths = [nextShortest];
     }
+    const generatedDifficulty = classifyDifficultyByShortestCount(nextShortest);
 
     setStartId(start);
     setTargetId(target);
@@ -3539,7 +3558,7 @@ export default function App() {
     setTempRevealId(null);
     setTempNeighborHint(false);
     setTempInitialsHint(false);
-    const basePowerups = getPowerupUses(activeDifficulty);
+    const basePowerups = getPowerupUses(generatedDifficulty);
     const explorePowerups = Object.fromEntries(
       POWERUPS.map((powerup) => [powerup.id, 99])
     );
@@ -3583,7 +3602,7 @@ export default function App() {
         level_type: gameMode,
         date: gameMode === "daily" ? todayKey : null,
         week_key: null,
-        difficulty_id: activeDifficulty,
+        difficulty_id: generatedDifficulty,
         rule_id: selectedRule?.id || null,
         start_id: start,
         target_id: target,
@@ -3644,7 +3663,7 @@ export default function App() {
             shortestCount: 0,
             distance: 0,
             mode: gameMode,
-            difficulty: activeDifficulty,
+            difficulty: generatedDifficulty,
             streak: displayStreak,
             levelSnapshot: buildCurrentLevelSnapshot()
           }
@@ -3720,6 +3739,7 @@ export default function App() {
     if (isComplete || isFailed) return;
     const totalTime = startedAt ? Date.now() - startedAt : elapsedMs;
     const shortestCount = shortestPath.length ? Math.max(shortestPath.length - 2, 0) : 0;
+    const resultDifficulty = classifyDifficultyByShortestCount(shortestCount);
     const foundCount = nextPath.length ? Math.max(nextPath.length - 2, 0) : 0;
     const shortestNames = shortestPath
       .filter((id) => id !== startId && id !== targetId)
@@ -3748,7 +3768,7 @@ export default function App() {
       ruleComarques: activeRule?.comarques || [],
       hintsUsed,
       mode: gameMode,
-      difficulty: activeDifficulty,
+      difficulty: resultDifficulty,
       dayKey: isDailyMode ? activeDayKey : null,
       streak: displayStreak,
       levelSnapshot: buildCurrentLevelSnapshot()
@@ -4047,7 +4067,8 @@ export default function App() {
     setTempInitialsHint(false);
     const snapshotDifficulty =
       repeatSnapshot.mode === "daily"
-        ? HARDEST_DIFFICULTY_ID
+        ? repeatSnapshot.difficulty ||
+          classifyDifficultyByShortestCount(repeatSnapshot.shortestPath)
         : repeatSnapshot.difficulty || activeDifficulty;
     const basePowerups = getPowerupUses(snapshotDifficulty);
     const explorePowerups = Object.fromEntries(
@@ -4384,6 +4405,7 @@ export default function App() {
     const totalTime = startedAt ? Date.now() - startedAt : elapsedMs;
     const bonusMs = isTimedMode ? Math.max(timeLimitMs - totalTime, 0) : 0;
     const shortestCount = shortestPath.length ? shortestPath.length - 2 : 0;
+    const resultDifficulty = classifyDifficultyByShortestCount(shortestCount);
     const optimalPathCount = shortestPaths.length || (shortestPath.length ? 1 : 0);
     const foundCount = path.length ? Math.max(path.length - 2, 0) : 0;
     const distance = Math.max(foundCount - shortestCount, 0);
@@ -4479,7 +4501,7 @@ export default function App() {
       playerId: playerIdRef.current,
       mode: gameMode,
       mapId: MAP_ID,
-      difficulty: activeDifficulty,
+      difficulty: resultDifficulty,
       timeMs: totalTime,
       attempts,
       guesses: guessedIds.length,
@@ -4524,7 +4546,7 @@ export default function App() {
         id: entry.id,
         date: entry.createdAt,
         mode: gameMode,
-        difficulty: activeDifficulty,
+        difficulty: resultDifficulty,
         timeMs: totalTime,
         attempts,
         distance,
@@ -4555,7 +4577,7 @@ export default function App() {
       bonusMs,
       entryId: entry.id,
       mode: gameMode,
-      difficulty: activeDifficulty,
+      difficulty: resultDifficulty,
       streak: nextStreak.count || 0,
       unlockLabel,
       isNewBest: shouldReward,
@@ -4786,11 +4808,6 @@ export default function App() {
   ]);
   const timeLeftUrgent = isTimedMode && timeLeftMs <= 10000;
   const shouldShowSuggestions = isSuggestionsOpen && suggestions.length > 0;
-  const subtitleKey = isTimedMode
-    ? "descriptionTimed"
-    : isExploreMode
-      ? "descriptionExplore"
-      : "descriptionNormal";
   const musicOptions = useMemo(() => {
     if (audioManifest?.music) {
       return Object.entries(audioManifest.music).map(([id, file]) => ({
@@ -4875,7 +4892,6 @@ export default function App() {
               <h1>camicurt.cat</h1>
             </button>
             <span className="brand-date">{todayLabel}</span>
-            <span className="brand-mode-description">{t(subtitleKey)}</span>
           </div>
         </div>
         <div className="topbar-right">

@@ -145,22 +145,6 @@ html[data-weather="wind"] body::before {
   white-space: nowrap;
 }
 
-.brand-mode-description {
-  flex: 1 1 220px;
-  align-self: flex-end;
-  color: var(--text);
-  color: color-mix(in srgb, var(--text) 82%, var(--muted));
-  font-size: 0.86rem;
-  line-height: 1.25;
-  max-width: min(620px, 100%);
-  min-width: 0;
-  padding-bottom: 4px;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
 .brand-button {
   flex: 0 0 auto;
   padding: 0;
@@ -2126,8 +2110,7 @@ h1 {
     justify-content: center;
   }
 
-  .brand-date,
-  .brand-mode-description {
+  .brand-date {
     display: none;
   }
 

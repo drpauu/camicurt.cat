@@ -4,30 +4,127 @@ import { geoCentroid } from "https://esm.sh/d3-geo@3.1.1";
 import topology from "./catalunya-comarques.topojson.json" assert { type: "json" };
 import rules from "./rules.json" assert { type: "json" };
 
-const RULE_DEFS = Array.isArray(rules)
-  ? rules.map((rule: any) => normalizeRule(rule)).filter(Boolean)
-  : [];
 const RULE_HISTORY_LIMIT = 60;
 const GROUP_CULTURAL_RULE_ID_PATTERN = /^group-\d+-[01]$/;
 const GROUP_CULTURAL_TEXT_PATTERN = /grup cultural/i;
+const DIRECT_COMARCA_RULE_ID_PATTERN = /-direct-[01]$/;
+const DIRECT_COMARCA_TEXT_PATTERN = /^(Has de passar per|No pots passar per) (.+)\.$/i;
+const DIRECT_COMARCA_NAMES = new Set(
+  [
+    "Alt Camp",
+    "Alt Empordà",
+    "Alt Penedès",
+    "Alt Urgell",
+    "Alta Ribagorça",
+    "Anoia",
+    "Bages",
+    "Baix Camp",
+    "Baix Ebre",
+    "Baix Empordà",
+    "Baix Llobregat",
+    "Baix Penedès",
+    "Barcelonès",
+    "Berguedà",
+    "Cerdanya",
+    "Conca de Barberà",
+    "Garraf",
+    "Garrigues",
+    "Garrotxa",
+    "Gironès",
+    "Lluçanès",
+    "Maresme",
+    "Moianès",
+    "Montsià",
+    "Noguera",
+    "Osona",
+    "Pallars Jussà",
+    "Pallars Sobirà",
+    "Pla de l'Estany",
+    "Pla d'Urgell",
+    "Priorat",
+    "Ribera d'Ebre",
+    "Ripollès",
+    "Segarra",
+    "Segrià",
+    "Selva",
+    "Solsonès",
+    "Tarragonès",
+    "Terra Alta",
+    "Urgell",
+    "Val d'Aran",
+    "Vallès Occidental",
+    "Vallès Oriental"
+  ].map(normalizeDirectRuleName)
+);
+const DISTANCE_DIFFICULTY_RANGES = [
+  { id: "pixapi", minInternal: 0, maxInternal: 3 },
+  { id: "dominguero", minInternal: 4, maxInternal: 5 },
+  { id: "rondinaire", minInternal: 6, maxInternal: 8 },
+  { id: "cap-colla-rutes", minInternal: 9, maxInternal: Infinity }
+];
+
+function normalizeDirectRuleName(value: any) {
+  return String(value || "")
+    .normalize("NFC")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLocaleLowerCase("ca");
+}
+
+function getRuleIdAndText(ruleOrId: any) {
+  return {
+    id:
+      typeof ruleOrId === "string"
+        ? ruleOrId
+        : ruleOrId?.id || ruleOrId?.rule_id || "",
+    text:
+      typeof ruleOrId === "string"
+        ? ""
+        : ruleOrId?.text || ruleOrId?.label || ""
+  };
+}
 
 function isDisabledGroupCulturalRule(ruleOrId: any) {
   if (!ruleOrId) return false;
-  const id =
-    typeof ruleOrId === "string"
-      ? ruleOrId
-      : ruleOrId.id || ruleOrId.rule_id || "";
-  const text =
-    typeof ruleOrId === "string" ? "" : ruleOrId.text || ruleOrId.label || "";
+  const { id, text } = getRuleIdAndText(ruleOrId);
   return (
     GROUP_CULTURAL_RULE_ID_PATTERN.test(String(id)) ||
     GROUP_CULTURAL_TEXT_PATTERN.test(String(text))
   );
 }
 
+function isDisabledDirectComarcaRule(ruleOrId: any) {
+  if (!ruleOrId) return false;
+  const { id, text } = getRuleIdAndText(ruleOrId);
+  if (DIRECT_COMARCA_RULE_ID_PATTERN.test(String(id))) return true;
+  const match = String(text).normalize("NFC").trim().match(DIRECT_COMARCA_TEXT_PATTERN);
+  if (!match) return false;
+  return DIRECT_COMARCA_NAMES.has(normalizeDirectRuleName(match[2]));
+}
+
+function isDisabledRule(ruleOrId: any) {
+  return isDisabledGroupCulturalRule(ruleOrId) || isDisabledDirectComarcaRule(ruleOrId);
+}
+
+function getShortestInternalCount(pathOrCount: any) {
+  if (Array.isArray(pathOrCount)) return Math.max(pathOrCount.length - 2, 0);
+  const count = Number(pathOrCount);
+  return Number.isFinite(count) ? Math.max(Math.trunc(count), 0) : 0;
+}
+
+function classifyDifficultyByShortestCount(shortestCount: any) {
+  const internalCount = getShortestInternalCount(shortestCount);
+  return (
+    DISTANCE_DIFFICULTY_RANGES.find(
+      (range) =>
+        internalCount >= range.minInternal && internalCount <= range.maxInternal
+    )?.id || DISTANCE_DIFFICULTY_RANGES[DISTANCE_DIFFICULTY_RANGES.length - 1].id
+  );
+}
+
 function normalizeRule(schema: any) {
   if (!schema) return null;
-  if (isDisabledGroupCulturalRule(schema)) return null;
+  if (isDisabledRule(schema)) return null;
   const type = schema.type || "REQUIRE";
   const kind = type === "FORBID" ? "avoid" : "mustIncludeAny";
   return {
@@ -35,27 +132,16 @@ function normalizeRule(schema: any) {
     kind,
     label: schema.text,
     comarques: schema.comarques || [],
-    difficultyCultural: schema.difficultyCultural || 3,
+    difficulty: "medium",
     tags: schema.tags || [],
     explanation: schema.explanation || ""
   };
 }
 
-function getRuleDifficulty(def: any) {
-  if (!def) return "medium";
-  const value = typeof def.difficultyCultural === "number" ? def.difficultyCultural : 3;
-  if (value >= 5) return "expert";
-  if (value >= 4) return "hard";
-  if (value >= 3) return "medium";
-  return "easy";
-}
+const RULE_DEFS = Array.isArray(rules)
+  ? rules.map((rule: any) => normalizeRule(rule)).filter(Boolean)
+  : [];
 
-function getRuleTags(def: any) {
-  if (def?.tags?.length) return def.tags;
-  return ["cultural"];
-}
-
-const difficultyId = "cap-colla-rutes";
 const DAILY_MIN_INTERNAL = 4;
 
 function normalizeName(value: string) {
@@ -384,8 +470,8 @@ function resolveRule(def: any, ctx: any) {
 
 function prepareRule(def: any, ctx: any) {
   const resolved = resolveRule(def, ctx);
-  const difficulty = resolved.difficulty || getRuleDifficulty(def);
-  const tags = resolved.tags || getRuleTags(def);
+  const difficulty = resolved.difficulty || "medium";
+  const tags = resolved.tags || def.tags || ["cultural"];
   const names = resolved.comarques || [];
   const comarcaIds = names
     .map((name: string) => ctx.normalizedToId.get(normalizeName(name)))
@@ -439,6 +525,7 @@ function buildLevel({
   centroidMap,
   adjacency,
   minInternal,
+  maxInternal = Infinity,
   rulePool
 }: {
   rng: () => number;
@@ -448,14 +535,25 @@ function buildLevel({
   centroidMap: Map<string, any>;
   adjacency: Map<string, Set<string>>;
   minInternal: number;
+  maxInternal?: number;
   rulePool: any[];
 }) {
-  const minLength = Math.max(minInternal + 2, 3);
+  const targetRange = {
+    minInternal: Math.max(Number(minInternal) || 0, 0),
+    maxInternal: Number.isFinite(maxInternal) ? maxInternal : Infinity
+  };
+  const isPathInTargetRange = (path: string[]) => {
+    const internalCount = getShortestInternalCount(path);
+    return (
+      internalCount >= targetRange.minInternal &&
+      internalCount <= targetRange.maxInternal
+    );
+  };
   let start: string | null = null;
   let target: string | null = null;
   let shortest: string[] = [];
   let selectedRule: any = null;
-  let attemptsLeft = 500;
+  let attemptsLeft = 3000;
 
   while (attemptsLeft > 0) {
     attemptsLeft -= 1;
@@ -490,7 +588,7 @@ function buildLevel({
     const basePath = findShortestPath(candidateStart, candidateTarget, adjacency);
     if (!path.length) continue;
     if (basePath.length && path.length <= basePath.length) continue;
-    if (path.length < minLength) continue;
+    if (!isPathInTargetRange(path)) continue;
     start = candidateStart;
     target = candidateTarget;
     shortest = path;
@@ -499,24 +597,25 @@ function buildLevel({
   }
 
   if (!start || !target) {
-    start = ids[0];
-    target = ids[1] || ids[0];
-    shortest = findShortestPath(start, target, adjacency);
-  }
-
-  if (!selectedRule) {
-    const ctx = {
-      rng,
-      startId: start,
-      targetId: target,
-      startName: names[ids.indexOf(start)],
-      targetName: names[ids.indexOf(target)],
-      comarcaNames: names,
-      normalizedToId,
-      adjacency,
-      allIds: ids
-    };
-    selectedRule = pickRule(rulePool, ctx);
+    for (const candidateStart of ids) {
+      for (const candidateTarget of ids) {
+        if (candidateTarget === candidateStart) continue;
+        const neighbors = adjacency.get(candidateStart);
+        if (neighbors && neighbors.has(candidateTarget)) continue;
+        const path = findShortestPath(candidateStart, candidateTarget, adjacency);
+        if (!path.length || !isPathInTargetRange(path)) continue;
+        start = candidateStart;
+        target = candidateTarget;
+        shortest = path;
+        break;
+      }
+      if (start && target) break;
+    }
+    if (!start || !target) {
+      start = ids[0];
+      target = ids[1] || ids[0];
+      shortest = findShortestPath(start, target, adjacency);
+    }
   }
 
   const avoidIds =
@@ -525,6 +624,7 @@ function buildLevel({
     selectedRule?.kind === "mustIncludeAny" ? selectedRule.comarcaIds || [] : [];
 
   return {
+    difficulty_id: classifyDifficultyByShortestCount(shortest),
     start_id: start,
     target_id: target,
     shortest_path: shortest,
@@ -635,14 +735,7 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(supabaseUrl, serviceKey);
 
-  const highPool = RULE_DEFS.filter((def) => {
-    const difficultyLevel = getRuleDifficulty(def);
-    const tags = getRuleTags(def);
-    const hasCultural = tags.includes("cultural");
-    const hasGeo = tags.includes("geo");
-    return difficultyLevel === "expert" && (hasCultural || hasGeo);
-  });
-  const rulePool = highPool.length ? highPool : RULE_DEFS;
+  const rulePool = RULE_DEFS;
 
   async function fetchRecentRuleIds(mode: "daily", limit: number) {
     const { data, error } = await supabase
@@ -701,7 +794,7 @@ Deno.serve(async (req) => {
     if (existing.data) return { created: false, reason: "ja_existeix" };
     if (existing.error) return { created: false, reason: existing.error.message };
 
-    const seed = `${forDayKey}-${difficultyId}`;
+    const seed = forDayKey;
     const rng = mulberry32(hashString(seed));
     const ruleDef =
       pickRuleForKey(rulePool, forDayKey, dailyHistory, mulberry32) || rulePool[0];
@@ -725,7 +818,7 @@ Deno.serve(async (req) => {
     const insertLevel = await supabase
       .rpc("create_daily_level", {
         p_date: forDayKey,
-        p_difficulty_id: difficultyId,
+        p_difficulty_id: levelData.difficulty_id,
         p_rule_id: levelData.rule_id,
         p_start_id: levelData.start_id,
         p_target_id: levelData.target_id,
