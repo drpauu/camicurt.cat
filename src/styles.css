@@ -1524,11 +1524,12 @@ h1 {
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 8px;
-  min-width: 56px;
-  min-height: 56px;
-  padding: 11px 13px;
+  min-width: 52px;
+  min-height: 52px;
+  padding: 10px 12px;
   cursor: pointer;
   font-family: inherit;
+  font-size: 0.94rem;
   font-weight: 700;
   box-shadow: 0 1px 4px var(--shadow);
   transition:
