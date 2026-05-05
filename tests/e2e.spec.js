@@ -367,7 +367,9 @@ test("obre el modal si el nivell ja està completat", async ({ page }) => {
         playerPath: [{ id: "alt-camp", name: "Alt Camp" }],
         shortestPath: ["Alt Camp", "Barcelonès"],
         shortestCount: 2,
-        distance: 1
+        distance: 1,
+        difficulty: "cap-colla-rutes",
+        ruleComarques: ["Alt Camp"]
       },
       shortestPath: ["Alt Camp", "Barcelonès"],
       shortestCount: 2
@@ -386,7 +388,8 @@ test("obre el modal si el nivell ja està completat", async ({ page }) => {
   await expect(modal).toContainText("Intents: 3");
   await expect(modal).toContainText("Temps: 0:12");
   await expect(modal).toContainText("67% precisió");
-  await expect(modal).toContainText("Has trobat 3 comarques; l'òptim en tenia 2.");
+  await expect(modal).toContainText("Comarca de referència: Alt Camp.");
+  await expect(modal).not.toContainText("Has trobat");
   await expect(modal).toContainText("Un camí òptim");
   await expect(modal).toContainText("Alt Camp");
   await expect(modal).toContainText("Següent mapa");
@@ -441,9 +444,80 @@ test("el modal no mostra cami optim si la ruta ja es curta", async ({ page }) =>
   await expect(modal).toBeVisible();
   await expect(modal).toContainText("Repte diari completat");
   await expect(modal).toContainText("100% precisió");
-  await expect(modal).toContainText("Has trobat el camí òptim amb 1 comarques.");
+  await expect(modal).not.toContainText("Has trobat");
   await expect(modal).not.toContainText("Un camí òptim");
   await expect(modal).not.toContainText("estrelles");
+});
+
+test("repetir nivell restaura exactament el nivell del modal", async ({ page }) => {
+  const dayKey = getTodayKey();
+  await page.addInitScript((key) => {
+    const snapshot = {
+      mode: "daily",
+      difficulty: "cap-colla-rutes",
+      dayKey: key,
+      startId: "baix-camp",
+      targetId: "valles-occidental",
+      shortestPath: [
+        "baix-camp",
+        "alt-camp",
+        "alt-penedes",
+        "baix-llobregat",
+        "valles-occidental"
+      ],
+      shortestPaths: [
+        [
+          "baix-camp",
+          "alt-camp",
+          "alt-penedes",
+          "baix-llobregat",
+          "valles-occidental"
+        ]
+      ],
+      rule: null
+    };
+    const winningAttempt = {
+      attempts: 4,
+      timeMs: 15000,
+      playerPath: [{ id: "alt-camp", name: "Alt Camp" }],
+      shortestPath: ["Alt Camp", "Alt Penedès", "Baix Llobregat"],
+      shortestCount: 3,
+      distance: 1,
+      mode: "daily",
+      difficulty: "cap-colla-rutes",
+      dayKey: key,
+      startName: "Baix Camp",
+      targetName: "Vallès Occidental",
+      ruleLabel: "Sense norma",
+      ruleComarques: [],
+      levelSnapshot: snapshot
+    };
+    localStorage.setItem(
+      "rumb-completion-records-v1",
+      JSON.stringify({
+        [`daily:${key}`]: {
+          levelKey: `daily:${key}`,
+          dayKey: key,
+          mode: "daily",
+          attemptsList: [winningAttempt],
+          winningAttempt,
+          shortestPath: winningAttempt.shortestPath,
+          shortestCount: 3
+        }
+      })
+    );
+  }, dayKey);
+  await gotoHome(page);
+  await page.waitForSelector("svg.map");
+  await page.getByRole("button", { name: /^Diari$/i }).click();
+  const modal = page.locator(".result-modal");
+  await expect(modal).toBeVisible();
+  await modal.getByRole("button", { name: /Repetir nivell/i }).click();
+  await expect(modal).toBeHidden();
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");
+  await expect(page.locator(".map-brief .route")).toContainText("Baix Camp");
+  await expect(page.locator(".map-brief .route")).toContainText("Vallès Occidental");
+  await expect(page.locator(".map-brief .rule-line")).toContainText("Sense norma");
 });
 
 test("el modal de resultat no talla accions a amplades petites", async ({ page }) => {
@@ -1019,11 +1093,23 @@ test("la barra mobil no talla accions ni solapa el mapa", async ({ page }) => {
   await expect(page.locator(".modal")).toBeVisible();
   const completedMetrics = await page.evaluate(() => {
     const prompt = document.querySelector(".map-brief")?.getBoundingClientRect();
+    const svg = document.querySelector("svg.map")?.getBoundingClientRect();
+    const clipToSvg = (box) => {
+      if (!box || !svg) return null;
+      const left = Math.max(box.left, svg.left);
+      const right = Math.min(box.right, svg.right);
+      const top = Math.max(box.top, svg.top);
+      const bottom = Math.min(box.bottom, svg.bottom);
+      if (left >= right || top >= bottom) return null;
+      return { left, right, top, bottom };
+    };
     const completed = [
       ...document.querySelectorAll(
         ".comarca.is-start, .comarca.is-target, .comarca.is-complete-route"
       )
-    ].map((path) => path.getBoundingClientRect());
+    ]
+      .map((path) => clipToSvg(path.getBoundingClientRect()))
+      .filter(Boolean);
     const overlaps = (a, b) =>
       Boolean(
         a &&

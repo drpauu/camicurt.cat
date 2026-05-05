@@ -170,14 +170,9 @@ const POWERUPS = [
     }
   }
 ];
+const HARDEST_DIFFICULTY_ID = DIFFICULTIES[DIFFICULTIES.length - 1]?.id || "cap-colla-rutes";
 
 const COMPLETION_MODAL_DELAY_MS = 520;
-
-const RESULT_REWARD_MESSAGES = [
-  "Mapa reforçat.",
-  "Connexió clara.",
-  "Ruta fresca per al següent repte."
-];
 
 const MUSIC_TRACKS = [
   {
@@ -1046,6 +1041,39 @@ function mergeCalendarEntries(currentEntries, incomingEntries) {
   return [...byDate.values()].sort((a, b) => String(b.date).localeCompare(String(a.date)));
 }
 
+function cloneRuleForSnapshot(rule) {
+  if (!rule) return null;
+  return {
+    ...rule,
+    comarques: Array.isArray(rule.comarques) ? [...rule.comarques] : [],
+    comarcaIds: Array.isArray(rule.comarcaIds) ? [...rule.comarcaIds] : [],
+    tags: Array.isArray(rule.tags) ? [...rule.tags] : []
+  };
+}
+
+function normalizeLevelSnapshot(snapshot) {
+  if (!snapshot?.startId || !snapshot?.targetId) return null;
+  const shortestPath = Array.isArray(snapshot.shortestPath)
+    ? snapshot.shortestPath.filter(Boolean)
+    : [];
+  if (!shortestPath.length) return null;
+  const shortestPaths = Array.isArray(snapshot.shortestPaths)
+    ? snapshot.shortestPaths
+        .filter((path) => Array.isArray(path) && path.length)
+        .map((path) => path.filter(Boolean))
+    : [];
+  return {
+    mode: snapshot.mode || "normal",
+    difficulty: snapshot.difficulty || HARDEST_DIFFICULTY_ID,
+    dayKey: snapshot.dayKey || null,
+    startId: snapshot.startId,
+    targetId: snapshot.targetId,
+    shortestPath,
+    shortestPaths: shortestPaths.length ? shortestPaths : [shortestPath],
+    rule: cloneRuleForSnapshot(snapshot.rule)
+  };
+}
+
 function buildMonthGrid(date) {
   const first = new Date(date.getFullYear(), date.getMonth(), 1);
   const startOffset = (first.getDay() + 6) % 7;
@@ -1338,22 +1366,6 @@ function getRouteAccuracy(result) {
   const attempts = Math.max(Number(result?.attempts) || 0, optimal);
   if (!optimal || !attempts) return 100;
   return Math.max(0, Math.min(100, Math.round((optimal / attempts) * 100)));
-}
-
-function pickResultReward(result) {
-  if (result?.unlockLabel) return result.unlockLabel;
-  if (result?.isNewBest) return "Nou record personal.";
-  const seed = [
-    result?.entryId,
-    result?.mode,
-    result?.difficulty,
-    result?.timeMs,
-    result?.attempts
-  ]
-    .filter(Boolean)
-    .join(":");
-  const index = hashString(seed || "result") % RESULT_REWARD_MESSAGES.length;
-  return RESULT_REWARD_MESSAGES[index];
 }
 
 function mulberry32(seed) {
@@ -1750,6 +1762,7 @@ export default function App() {
   const calendarAutoSetRef = useRef({ daily: false });
   const calendarLoadingRef = useRef(false);
   const calendarDetailRequestsRef = useRef(new Map());
+  const pendingRepeatSnapshotRef = useRef(null);
   const calendarCountsRef = useRef({ daily: 0 });
   const calendarMonthRef = useRef(calendarMonth);
   const telemetryFlushRef = useRef(false);
@@ -2298,7 +2311,8 @@ export default function App() {
           distance: 0,
           mode: gameMode,
           difficulty: activeDifficulty,
-          streak: displayStreak
+          streak: displayStreak,
+          levelSnapshot: buildCurrentLevelSnapshot()
         }
       );
       enqueueTelemetry("level_fail", {
@@ -2329,6 +2343,18 @@ export default function App() {
     pendingStartNextRef.current = null;
     resetGame(forceNew ?? false);
   }, [comarques, adjacency, gameMode, activeDifficulty, isCalendarModeActive]);
+
+  useEffect(() => {
+    const snapshot = pendingRepeatSnapshotRef.current;
+    if (!snapshot || !comarques.length || !adjacency.size) return;
+    const targetMode = snapshot.mode || gameMode;
+    const targetDifficulty = snapshot.difficulty || difficulty;
+    const modeReady = targetMode === gameMode;
+    const difficultyReady = targetMode === "daily" || targetDifficulty === difficulty;
+    if (!modeReady || !difficultyReady) return;
+    pendingRepeatSnapshotRef.current = null;
+    applyRepeatSnapshot(snapshot);
+  }, [comarques, adjacency, gameMode, difficulty]);
 
   useEffect(() => {
     if (!calendarSelection || !activeCalendarEntry?.level) return;
@@ -3169,6 +3195,29 @@ export default function App() {
         : null;
     const level = calendarEntry?.level || null;
     const levelRule = level ? buildRuleFromLevel(level, comarcaById, normalizedToId) : null;
+    const levelSnapshot = level
+      ? (() => {
+          const storedShortest = Array.isArray(level.shortest_path)
+            ? level.shortest_path
+            : [];
+          const pathResult = resolveShortestPaths(
+            level.start_id,
+            level.target_id,
+            levelRule,
+            storedShortest
+          );
+          return normalizeLevelSnapshot({
+            mode: record.mode || context.mode || "daily",
+            difficulty: level.difficulty_id || HARDEST_DIFFICULTY_ID,
+            dayKey: dayKeyForRecord,
+            startId: level.start_id,
+            targetId: level.target_id,
+            shortestPath: pathResult.primaryPath,
+            shortestPaths: pathResult.paths,
+            rule: levelRule
+          });
+        })()
+      : normalizeLevelSnapshot(record.winningAttempt.levelSnapshot);
     const levelStartName = level?.start_id
       ? comarcaById.get(level.start_id)?.properties.name || ""
       : "";
@@ -3191,7 +3240,12 @@ export default function App() {
       shortestCount:
         typeof record.shortestCount === "number"
           ? record.shortestCount
-          : record.winningAttempt.shortestCount || 0
+          : record.winningAttempt.shortestCount || 0,
+      difficulty:
+        record.winningAttempt.difficulty ||
+        level?.difficulty_id ||
+        (record.mode === "daily" || context.mode === "daily" ? HARDEST_DIFFICULTY_ID : ""),
+      levelSnapshot
     };
     if (level) {
       applyCalendarLevel(level, { result: payload, showResult: false });
@@ -3207,6 +3261,19 @@ export default function App() {
     setCountdownValue(5);
     setIsCountdownActive(true);
     setStartedAt(null);
+  }
+
+  function buildCurrentLevelSnapshot(overrides = {}) {
+    return normalizeLevelSnapshot({
+      mode: overrides.mode || gameMode,
+      difficulty: overrides.difficulty || activeDifficulty,
+      dayKey: overrides.dayKey ?? (isDailyMode ? activeDayKey : null),
+      startId: overrides.startId || startId,
+      targetId: overrides.targetId || targetId,
+      shortestPath: overrides.shortestPath || shortestPath,
+      shortestPaths: overrides.shortestPaths || shortestPaths,
+      rule: overrides.rule === undefined ? activeRule : overrides.rule
+    });
   }
 
   function resetGame(forceNew = false) {
@@ -3578,7 +3645,8 @@ export default function App() {
             distance: 0,
             mode: gameMode,
             difficulty: activeDifficulty,
-            streak: displayStreak
+            streak: displayStreak,
+            levelSnapshot: buildCurrentLevelSnapshot()
           }
         );
       }
@@ -3682,7 +3750,8 @@ export default function App() {
       mode: gameMode,
       difficulty: activeDifficulty,
       dayKey: isDailyMode ? activeDayKey : null,
-      streak: displayStreak
+      streak: displayStreak,
+      levelSnapshot: buildCurrentLevelSnapshot()
     });
     enqueueTelemetry("level_fail", {
       reason: "attempt_limit",
@@ -3927,11 +3996,45 @@ export default function App() {
   }
 
   function handleRepeatLevel() {
-    if (!startId || !targetId || !shortestPath.length) return;
+    const snapshot =
+      normalizeLevelSnapshot(resultData?.levelSnapshot) ||
+      buildCurrentLevelSnapshot();
+    if (!snapshot) return;
     playManifestSfx("repeat", 0.75);
+    const targetMode = snapshot.mode || gameMode;
+    const targetDifficulty = snapshot.difficulty || difficulty;
+    pendingRepeatSnapshotRef.current = snapshot;
+    if (targetMode === "daily") {
+      setCalendarSelection({ mode: "daily", key: snapshot.dayKey || dayKey });
+      calendarApplyRef.current = `repeat:${snapshot.dayKey || dayKey}`;
+    } else {
+      setCalendarSelection(null);
+      calendarApplyRef.current = null;
+    }
+    if (targetMode !== gameMode) {
+      setGameMode(targetMode);
+    }
+    if (targetMode !== "daily" && targetDifficulty && targetDifficulty !== difficulty) {
+      setDifficulty(targetDifficulty);
+    }
+    if (
+      targetMode !== gameMode ||
+      (targetMode !== "daily" && targetDifficulty && targetDifficulty !== difficulty)
+    ) {
+      return;
+    }
+    pendingRepeatSnapshotRef.current = null;
+    applyRepeatSnapshot(snapshot);
+  }
+
+  function applyRepeatSnapshot(snapshot) {
+    const repeatSnapshot = normalizeLevelSnapshot(snapshot);
+    if (!repeatSnapshot) return;
     clearCompletionModalTimer();
     setCompletionCelebrating(false);
-    setCurrentId(startId);
+    setStartId(repeatSnapshot.startId);
+    setTargetId(repeatSnapshot.targetId);
+    setCurrentId(repeatSnapshot.startId);
     setGuessHistory([]);
     setAttempts(0);
     setHintsUsed(0);
@@ -3942,11 +4045,15 @@ export default function App() {
     setTempRevealId(null);
     setTempNeighborHint(false);
     setTempInitialsHint(false);
-    const basePowerups = getPowerupUses(activeDifficulty);
+    const snapshotDifficulty =
+      repeatSnapshot.mode === "daily"
+        ? HARDEST_DIFFICULTY_ID
+        : repeatSnapshot.difficulty || activeDifficulty;
+    const basePowerups = getPowerupUses(snapshotDifficulty);
     const explorePowerups = Object.fromEntries(
       POWERUPS.map((powerup) => [powerup.id, 99])
     );
-    setPowerups(isExploreMode ? explorePowerups : basePowerups);
+    setPowerups(repeatSnapshot.mode === "explore" ? explorePowerups : basePowerups);
     setReplayMode(null);
     setReplayOrder([]);
     setReplayIndex(0);
@@ -3956,13 +4063,16 @@ export default function App() {
     setIsFailed(false);
     setShowModal(false);
     setResultData(null);
+    setShortestPath(repeatSnapshot.shortestPath);
+    setShortestPaths(repeatSnapshot.shortestPaths);
+    setActiveRule(repeatSnapshot.rule);
     setElapsedMs(0);
     setStartedAt(null);
     setTimePenaltyMs(0);
     setLastEntryId(null);
     setCopyStatus("idle");
-    if (isTimedMode) {
-      const internalCount = Math.max(shortestPath.length - 2, 0);
+    if (repeatSnapshot.mode === "timed") {
+      const internalCount = Math.max(repeatSnapshot.shortestPath.length - 2, 0);
       setTimeLimitMs(Math.max(15000, internalCount * 5000));
       beginTimedCountdown();
     } else {
@@ -4448,7 +4558,8 @@ export default function App() {
       difficulty: activeDifficulty,
       streak: nextStreak.count || 0,
       unlockLabel,
-      isNewBest: shouldReward
+      isNewBest: shouldReward,
+      levelSnapshot: buildCurrentLevelSnapshot()
     };
 
     setResultData(baseResultPayload);
@@ -4566,7 +4677,6 @@ export default function App() {
       typeof resultData.distance === "number"
         ? resultData.distance
         : Math.max(foundCount - shortestCount, 0);
-    const displayFoundCount = Math.max(foundCount, shortestCount + distance);
     const normalizedResult = {
       ...resultData,
       failed,
@@ -4586,32 +4696,22 @@ export default function App() {
       resultStart && resultTarget
         ? t("routeFromTo", { start: resultStart, target: resultTarget })
         : t("routeReviewed");
-    const routeLearning = failed
-      ? failedByAttempts
-        ? t("attemptLimitLearningText", {
-            attempts: resultData.attempts || 0,
-            max: resultMaxAttempts || resultData.attempts || 0
-          })
-        : t("failedLearningText")
-      : distance > 0
-        ? t("foundSuboptimalText", {
-            found: displayFoundCount,
-            optimal: shortestCount
-          })
-        : t("foundOptimalText", { value: shortestCount });
-    const ruleInsight =
-      resultData.ruleExplanation ||
-      (Array.isArray(resultData.ruleComarques) && resultData.ruleComarques.length
-        ? `La pista apuntava a ${resultData.ruleComarques.join(", ")}.`
-        : "");
+    const resultDifficulty =
+      resultData.difficulty || (resultMode === "daily" ? HARDEST_DIFFICULTY_ID : "");
+    const referencedComarques = Array.isArray(resultData.ruleComarques)
+      ? resultData.ruleComarques.filter(Boolean)
+      : [];
     const learningText =
-      !failed && ruleInsight ? `${routeLearning} ${ruleInsight}` : routeLearning;
+      !failed &&
+      resultDifficulty === HARDEST_DIFFICULTY_ID &&
+      referencedComarques.length
+        ? `Comarca de referència: ${referencedComarques.join(", ")}.`
+        : "";
     const accuracy = getRouteAccuracy(normalizedResult);
     return {
       title,
       subtitle,
       learningText,
-      rewardText: failed ? "" : pickResultReward(normalizedResult),
       accuracyText: t("accuracyText", { value: accuracy }),
       attemptsText: resultMaxAttempts
         ? `${t("attempts")}: ${resultData.attempts || 0}/${resultMaxAttempts}`
@@ -5364,15 +5464,12 @@ export default function App() {
               </span>
             </div>
 
-            <div className="modal-section result-learning">
-              <span className="label">{t("learningLabel")}</span>
-              <p className="modal-subtitle">{completionSummary.learningText}</p>
-              {completionSummary.rewardText ? (
-                <p className="modal-subtitle result-reward">
-                  {completionSummary.rewardText}
-                </p>
-              ) : null}
-            </div>
+            {completionSummary.learningText ? (
+              <div className="modal-section result-learning">
+                <span className="label">{t("learningLabel")}</span>
+                <p className="modal-subtitle">{completionSummary.learningText}</p>
+              </div>
+            ) : null}
 
             {completionSummary.showOptimalPath ? (
               <div className="modal-section result-optimal">
@@ -5410,7 +5507,10 @@ export default function App() {
                   className="result-secondary"
                   type="button"
                   onClick={handleRepeatLevel}
-                  disabled={!startId || !targetId || !shortestPath.length}
+                  disabled={
+                    !normalizeLevelSnapshot(resultData?.levelSnapshot) &&
+                    (!startId || !targetId || !shortestPath.length)
+                  }
                 >
                   {t("repeatLevel")}
                 </button>

@@ -1980,11 +1980,6 @@ h1 {
   padding: 10px 12px;
 }
 
-.result-reward {
-  color: var(--success);
-  font-weight: 650;
-}
-
 .result-optimal {
   border-top: 1px solid var(--border);
   padding-top: 10px;
