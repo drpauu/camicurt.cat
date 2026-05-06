@@ -1021,6 +1021,100 @@ test("usa les families de sons del manifest en interaccions reals", async ({ pag
   );
 });
 
+test("els botons desktop encaixen amb el panel lateral", async ({ page }) => {
+  await page.setViewportSize({ width: 945, height: 562 });
+  await gotoHome(page);
+  await page.waitForSelector("svg.map");
+
+  const metrics = await page.evaluate(() => {
+    const box = (selector) => {
+      const element = document.querySelector(selector);
+      const rect = element?.getBoundingClientRect();
+      return rect
+        ? {
+            left: rect.left,
+            right: rect.right,
+            top: rect.top,
+            bottom: rect.bottom,
+            width: rect.width,
+            height: rect.height
+          }
+        : null;
+    };
+    const buttonMetrics = (selector) =>
+      [...document.querySelectorAll(selector)].map((button) => {
+        const rect = button.getBoundingClientRect();
+        const styles = getComputedStyle(button);
+        return {
+          text: button.textContent.trim(),
+          width: rect.width,
+          height: rect.height,
+          scrollWidth: button.scrollWidth,
+          clientWidth: button.clientWidth,
+          whiteSpace: styles.whiteSpace
+        };
+      });
+    const overlaps = (a, b) =>
+      Boolean(
+        a &&
+          b &&
+          a.left < b.right &&
+          a.right > b.left &&
+          a.top < b.bottom &&
+          a.bottom > b.top
+      );
+    const actions = box(".topbar-actions");
+    const playCard = box(".play-card");
+    const prompt = box(".map-brief");
+    const controls = box(".map-controls");
+    const mapStage = box(".map-stage");
+    return {
+      alignDelta: Math.abs((actions?.left || 0) - (playCard?.left || 0)),
+      widthDelta: Math.abs((actions?.width || 0) - (playCard?.width || 0)),
+      topbarButtons: buttonMetrics(".topbar-actions button"),
+      mapControls: buttonMetrics(".map-controls button"),
+      controlsInsideMap:
+        Boolean(controls && mapStage) &&
+        controls.left >= mapStage.left &&
+        controls.right <= mapStage.right &&
+        controls.top >= mapStage.top &&
+        controls.bottom <= mapStage.bottom,
+      controlsOverlapPrompt: overlaps(controls, prompt),
+      submitHeight: box(".submit")?.height || 0,
+      powerupHeights: buttonMetrics(".powerup-button").map((entry) => entry.height),
+      optionsHeight: box(".options-launch-button")?.height || 0
+    };
+  });
+
+  expect(metrics.alignDelta).toBeLessThanOrEqual(1);
+  expect(metrics.widthDelta).toBeLessThanOrEqual(1);
+  expect(metrics.topbarButtons).toHaveLength(3);
+  expect(
+    metrics.topbarButtons.every(
+      (button) =>
+        button.height >= 50 &&
+        button.height <= 56 &&
+        button.whiteSpace === "nowrap" &&
+        button.scrollWidth <= button.clientWidth + 1
+    )
+  ).toBeTruthy();
+  expect(metrics.mapControls[0].width).toBeGreaterThanOrEqual(42);
+  expect(metrics.mapControls[0].width).toBeLessThanOrEqual(44);
+  expect(metrics.mapControls[0].height).toBeLessThanOrEqual(44);
+  expect(metrics.mapControls[1].width).toBeLessThanOrEqual(44);
+  expect(metrics.mapControls[1].height).toBeLessThanOrEqual(44);
+  expect(metrics.mapControls[2].width).toBeGreaterThanOrEqual(84);
+  expect(metrics.mapControls[2].width).toBeLessThanOrEqual(90);
+  expect(metrics.mapControls[2].height).toBeLessThanOrEqual(44);
+  expect(metrics.controlsInsideMap).toBeTruthy();
+  expect(metrics.controlsOverlapPrompt).toBeFalsy();
+  expect(metrics.submitHeight).toBeGreaterThanOrEqual(48);
+  expect(metrics.submitHeight).toBeLessThanOrEqual(52);
+  expect(metrics.powerupHeights.every((height) => height >= 48 && height <= 52)).toBeTruthy();
+  expect(metrics.optionsHeight).toBeGreaterThanOrEqual(46);
+  expect(metrics.optionsHeight).toBeLessThanOrEqual(50);
+});
+
 test("la navegacio mobil te nomes reptes a capcalera i accions a baix", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript(() => {
@@ -1079,6 +1173,7 @@ test("la navegacio mobil te nomes reptes a capcalera i accions a baix", async ({
   await expect(page.locator(".options-launch-button")).toBeHidden();
   await expect(page.locator(".bottom-nav-new-game")).toBeVisible();
   const bottomNavMetrics = await page.evaluate(() => {
+    const nav = document.querySelector(".bottom-nav")?.getBoundingClientRect();
     const calendar = document
       .querySelector(".bottom-nav")
       ?.querySelector("button:nth-of-type(1)")
@@ -1089,15 +1184,25 @@ test("la navegacio mobil te nomes reptes a capcalera i accions a baix", async ({
       ?.querySelector("button:nth-of-type(3)")
       ?.getBoundingClientRect();
     return {
+      navHeight: Math.round(nav?.height || 0),
       calendarWidth: Math.round(calendar?.width || 0),
+      calendarHeight: Math.round(calendar?.height || 0),
       newGameWidth: Math.round(newGame?.width || 0),
+      newGameHeight: Math.round(newGame?.height || 0),
       optionsWidth: Math.round(options?.width || 0),
-      newGameHeight: Math.round(newGame?.height || 0)
+      optionsHeight: Math.round(options?.height || 0)
     };
   });
-  expect(bottomNavMetrics.newGameWidth).toBeGreaterThan(bottomNavMetrics.calendarWidth);
-  expect(bottomNavMetrics.newGameWidth).toBeGreaterThan(bottomNavMetrics.optionsWidth);
-  expect(bottomNavMetrics.newGameHeight).toBeGreaterThanOrEqual(44);
+  expect(bottomNavMetrics.newGameWidth).toBeGreaterThanOrEqual(98);
+  expect(bottomNavMetrics.newGameWidth).toBeLessThanOrEqual(118);
+  expect(bottomNavMetrics.navHeight).toBeGreaterThanOrEqual(60);
+  expect(bottomNavMetrics.navHeight).toBeLessThanOrEqual(64);
+  expect(bottomNavMetrics.calendarHeight).toBeGreaterThanOrEqual(38);
+  expect(bottomNavMetrics.calendarHeight).toBeLessThanOrEqual(42);
+  expect(bottomNavMetrics.newGameHeight).toBeGreaterThanOrEqual(42);
+  expect(bottomNavMetrics.newGameHeight).toBeLessThanOrEqual(46);
+  expect(bottomNavMetrics.optionsHeight).toBeGreaterThanOrEqual(38);
+  expect(bottomNavMetrics.optionsHeight).toBeLessThanOrEqual(42);
 
   await page.locator(".bottom-nav").getByRole("button", { name: /Nou mapa/i }).click();
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "normal");
@@ -1141,6 +1246,17 @@ test("la barra mobil no talla accions ni solapa el mapa", async ({ page }) => {
       const prompt = document.querySelector(".map-brief")?.getBoundingClientRect();
       const svg = document.querySelector("svg.map")?.getBoundingClientRect();
       const controls = document.querySelector(".map-controls")?.getBoundingClientRect();
+      const controlButtons = [...document.querySelectorAll(".map-controls button")].map(
+        (button) => {
+          const box = button.getBoundingClientRect();
+          return {
+            width: Math.round(box.width),
+            height: Math.round(box.height),
+            scrollWidth: Math.round(button.scrollWidth),
+            clientWidth: Math.round(button.clientWidth)
+          };
+        }
+      );
       const markedComarques = [
         ...document.querySelectorAll(".comarca.is-start, .comarca.is-target")
       ].map((path) => path.getBoundingClientRect());
@@ -1162,7 +1278,8 @@ test("la barra mobil no talla accions ni solapa el mapa", async ({ page }) => {
         mapRight: Math.round(map?.right || 0),
         overlapsControls: overlaps(prompt, controls),
         overlapsSvg: overlaps(prompt, svg),
-        overlapsMarkedComarques: markedComarques.some((box) => overlaps(prompt, box))
+        overlapsMarkedComarques: markedComarques.some((box) => overlaps(prompt, box)),
+        controlButtons
       };
     });
     expect(mapBriefMetrics.promptLeft).toBeGreaterThanOrEqual(mapBriefMetrics.mapLeft);
@@ -1171,6 +1288,17 @@ test("la barra mobil no talla accions ni solapa el mapa", async ({ page }) => {
     expect(mapBriefMetrics.overlapsControls).toBeFalsy();
     expect(mapBriefMetrics.overlapsSvg).toBeFalsy();
     expect(mapBriefMetrics.overlapsMarkedComarques).toBeFalsy();
+    expect(mapBriefMetrics.controlButtons[0].width).toBeLessThanOrEqual(40);
+    expect(mapBriefMetrics.controlButtons[0].height).toBeLessThanOrEqual(40);
+    expect(mapBriefMetrics.controlButtons[1].width).toBeLessThanOrEqual(40);
+    expect(mapBriefMetrics.controlButtons[1].height).toBeLessThanOrEqual(40);
+    expect(mapBriefMetrics.controlButtons[2].width).toBeLessThanOrEqual(84);
+    expect(mapBriefMetrics.controlButtons[2].height).toBeLessThanOrEqual(40);
+    expect(
+      mapBriefMetrics.controlButtons.every(
+        (button) => button.scrollWidth <= button.clientWidth + 1
+      )
+    ).toBeTruthy();
   }
 
   await page.setViewportSize({ width: 390, height: 844 });
