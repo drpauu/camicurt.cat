@@ -31,6 +31,13 @@
   --compact-button-padding-y: clamp(9px, calc(5px + 0.65vw), 13px);
   --compact-button-padding-x: clamp(11px, calc(7px + 1vw), 20px);
   --desktop-panel-column: clamp(400px, 31vw, 480px);
+  --map-control-size: clamp(42px, 4.6vw, 48px);
+  --map-recenter-width: clamp(84px, 9.4vw, 102px);
+  --map-control-gap: clamp(6px, 0.75vw, 9px);
+  --map-control-font: clamp(0.82rem, 0.72rem + 0.35vw, 0.95rem);
+  --map-control-offset: clamp(10px, 1.5vw, 14px);
+  --map-control-padding-y: clamp(7px, 0.8vw, 9px);
+  --map-control-padding-x: clamp(9px, 1vw, 12px);
 }
 
 * {
@@ -1535,10 +1542,10 @@ h1 {
 
 .map-controls {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: var(--map-control-offset);
+  right: var(--map-control-offset);
   display: flex;
-  gap: 7px;
+  gap: var(--map-control-gap);
   z-index: 2;
 }
 
@@ -1548,12 +1555,16 @@ h1 {
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 8px;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 8px 10px;
+  width: var(--map-control-size);
+  min-width: var(--map-control-size);
+  min-height: var(--map-control-size);
+  padding: var(--map-control-padding-y) var(--map-control-padding-x);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-family: inherit;
-  font-size: 0.88rem;
+  font-size: var(--map-control-font);
   font-weight: 700;
   box-shadow: 0 1px 4px var(--shadow);
   transition:
@@ -1563,7 +1574,8 @@ h1 {
 }
 
 .map-controls button:nth-child(3) {
-  min-width: 88px;
+  width: var(--map-recenter-width);
+  min-width: var(--map-recenter-width);
 }
 
 .map-controls button:hover {
@@ -2287,20 +2299,15 @@ h1 {
   }
 
   .map-controls {
+    --map-control-size: clamp(38px, 10.2vw, 42px);
+    --map-recenter-width: clamp(76px, 20vw, 84px);
+    --map-control-gap: clamp(5px, 1.7vw, 7px);
+    --map-control-font: clamp(0.76rem, 2.15vw, 0.84rem);
+    --map-control-padding-y: clamp(6px, 1.8vw, 8px);
+    --map-control-padding-x: clamp(8px, 2.2vw, 10px);
     top: auto;
-    bottom: 12px;
-    right: 12px;
-  }
-
-  .map-controls button {
-    min-width: 40px;
-    min-height: 40px;
-    padding: 7px 9px;
-    font-size: 0.82rem;
-  }
-
-  .map-controls button:nth-child(3) {
-    min-width: 80px;
+    right: clamp(10px, 3vw, 12px);
+    bottom: clamp(10px, 3vw, 12px);
   }
 
   .side-panel {

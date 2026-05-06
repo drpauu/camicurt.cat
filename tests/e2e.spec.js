@@ -1099,13 +1099,17 @@ test("els botons desktop encaixen amb el panel lateral", async ({ page }) => {
     )
   ).toBeTruthy();
   expect(metrics.mapControls[0].width).toBeGreaterThanOrEqual(42);
-  expect(metrics.mapControls[0].width).toBeLessThanOrEqual(44);
-  expect(metrics.mapControls[0].height).toBeLessThanOrEqual(44);
-  expect(metrics.mapControls[1].width).toBeLessThanOrEqual(44);
-  expect(metrics.mapControls[1].height).toBeLessThanOrEqual(44);
+  expect(metrics.mapControls[0].width).toBeLessThanOrEqual(45);
+  expect(metrics.mapControls[0].height).toBeGreaterThanOrEqual(42);
+  expect(metrics.mapControls[0].height).toBeLessThanOrEqual(45);
+  expect(metrics.mapControls[1].width).toBeGreaterThanOrEqual(42);
+  expect(metrics.mapControls[1].width).toBeLessThanOrEqual(45);
+  expect(metrics.mapControls[1].height).toBeGreaterThanOrEqual(42);
+  expect(metrics.mapControls[1].height).toBeLessThanOrEqual(45);
   expect(metrics.mapControls[2].width).toBeGreaterThanOrEqual(84);
   expect(metrics.mapControls[2].width).toBeLessThanOrEqual(90);
-  expect(metrics.mapControls[2].height).toBeLessThanOrEqual(44);
+  expect(metrics.mapControls[2].height).toBeGreaterThanOrEqual(42);
+  expect(metrics.mapControls[2].height).toBeLessThanOrEqual(45);
   expect(metrics.controlsInsideMap).toBeTruthy();
   expect(metrics.controlsOverlapPrompt).toBeFalsy();
   expect(metrics.submitHeight).toBeGreaterThanOrEqual(48);
@@ -1113,6 +1117,24 @@ test("els botons desktop encaixen amb el panel lateral", async ({ page }) => {
   expect(metrics.powerupHeights.every((height) => height >= 48 && height <= 52)).toBeTruthy();
   expect(metrics.optionsHeight).toBeGreaterThanOrEqual(46);
   expect(metrics.optionsHeight).toBeLessThanOrEqual(50);
+
+  await page.setViewportSize({ width: 1440, height: 850 });
+  await page.waitForTimeout(150);
+  const largeMapControls = await page.evaluate(() =>
+    [...document.querySelectorAll(".map-controls button")].map((button) => {
+      const box = button.getBoundingClientRect();
+      return {
+        width: Math.round(box.width),
+        height: Math.round(box.height)
+      };
+    })
+  );
+  expect(largeMapControls[0].width).toBeGreaterThan(metrics.mapControls[0].width);
+  expect(largeMapControls[0].width).toBeLessThanOrEqual(48);
+  expect(largeMapControls[0].height).toBeGreaterThan(metrics.mapControls[0].height);
+  expect(largeMapControls[0].height).toBeLessThanOrEqual(48);
+  expect(largeMapControls[2].width).toBeGreaterThan(metrics.mapControls[2].width);
+  expect(largeMapControls[2].width).toBeLessThanOrEqual(102);
 });
 
 test("la navegacio mobil te nomes reptes a capcalera i accions a baix", async ({ page }) => {
@@ -1216,6 +1238,8 @@ test("la barra mobil no talla accions ni solapa el mapa", async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem("rumb-settings-v1", JSON.stringify({ theme: "default" }));
   });
+  const observedZoomWidths = [];
+  const observedRecenterWidths = [];
   for (const width of [320, 390, 459]) {
     await page.setViewportSize({ width, height: 844 });
     await gotoHome(page);
@@ -1288,18 +1312,28 @@ test("la barra mobil no talla accions ni solapa el mapa", async ({ page }) => {
     expect(mapBriefMetrics.overlapsControls).toBeFalsy();
     expect(mapBriefMetrics.overlapsSvg).toBeFalsy();
     expect(mapBriefMetrics.overlapsMarkedComarques).toBeFalsy();
-    expect(mapBriefMetrics.controlButtons[0].width).toBeLessThanOrEqual(40);
-    expect(mapBriefMetrics.controlButtons[0].height).toBeLessThanOrEqual(40);
-    expect(mapBriefMetrics.controlButtons[1].width).toBeLessThanOrEqual(40);
-    expect(mapBriefMetrics.controlButtons[1].height).toBeLessThanOrEqual(40);
+    expect(mapBriefMetrics.controlButtons[0].width).toBeGreaterThanOrEqual(38);
+    expect(mapBriefMetrics.controlButtons[0].width).toBeLessThanOrEqual(42);
+    expect(mapBriefMetrics.controlButtons[0].height).toBeGreaterThanOrEqual(38);
+    expect(mapBriefMetrics.controlButtons[0].height).toBeLessThanOrEqual(42);
+    expect(mapBriefMetrics.controlButtons[1].width).toBeGreaterThanOrEqual(38);
+    expect(mapBriefMetrics.controlButtons[1].width).toBeLessThanOrEqual(42);
+    expect(mapBriefMetrics.controlButtons[1].height).toBeGreaterThanOrEqual(38);
+    expect(mapBriefMetrics.controlButtons[1].height).toBeLessThanOrEqual(42);
+    expect(mapBriefMetrics.controlButtons[2].width).toBeGreaterThanOrEqual(76);
     expect(mapBriefMetrics.controlButtons[2].width).toBeLessThanOrEqual(84);
-    expect(mapBriefMetrics.controlButtons[2].height).toBeLessThanOrEqual(40);
+    expect(mapBriefMetrics.controlButtons[2].height).toBeGreaterThanOrEqual(38);
+    expect(mapBriefMetrics.controlButtons[2].height).toBeLessThanOrEqual(42);
     expect(
       mapBriefMetrics.controlButtons.every(
         (button) => button.scrollWidth <= button.clientWidth + 1
       )
     ).toBeTruthy();
+    observedZoomWidths.push(mapBriefMetrics.controlButtons[0].width);
+    observedRecenterWidths.push(mapBriefMetrics.controlButtons[2].width);
   }
+  expect(observedZoomWidths[0]).toBeLessThan(observedZoomWidths[2]);
+  expect(observedRecenterWidths[0]).toBeLessThan(observedRecenterWidths[2]);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await gotoHome(page);
