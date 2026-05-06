@@ -19,15 +19,18 @@
   --comarca-stroke: #AFA392;
   --shadow:         rgba(31, 42, 48, 0.10);
   --border:         #D8CCBA;
-  --button-font: clamp(0.96rem, 0.82rem + 0.36vw, 1.12rem);
-  --button-font-strong: clamp(1rem, 0.86rem + 0.38vw, 1.16rem);
-  --button-min-height: clamp(50px, calc(12px + 3.8vw), 66px);
-  --button-padding-y: clamp(12px, calc(6px + 0.8vw), 17px);
-  --button-padding-x: clamp(13px, calc(8px + 1.6vw), 28px);
+  --button-font: clamp(0.94rem, 0.82rem + 0.28vw, 1.04rem);
+  --button-font-strong: clamp(0.98rem, 0.84rem + 0.32vw, 1.08rem);
+  --header-button-min-height: clamp(50px, calc(42px + 1vw), 56px);
+  --header-button-padding-y: clamp(10px, calc(6px + 0.55vw), 13px);
+  --header-button-padding-x: clamp(12px, calc(8px + 1vw), 18px);
+  --action-button-min-height: clamp(48px, calc(40px + 1vw), 52px);
+  --action-button-padding-y: clamp(10px, calc(6px + 0.55vw), 13px);
+  --action-button-padding-x: clamp(12px, calc(8px + 1vw), 18px);
   --compact-button-min-height: clamp(44px, calc(12px + 3vw), 54px);
   --compact-button-padding-y: clamp(9px, calc(5px + 0.65vw), 13px);
   --compact-button-padding-x: clamp(11px, calc(7px + 1vw), 20px);
-  --desktop-panel-column: minmax(clamp(460px, 31vw, 540px), 0.72fr);
+  --desktop-panel-column: clamp(400px, 31vw, 480px);
 }
 
 * {
@@ -126,7 +129,7 @@ html[data-weather="wind"] body::before {
 
 .topbar {
   display: grid;
-  grid-template-columns: minmax(0, 1.72fr) var(--desktop-panel-column);
+  grid-template-columns: minmax(0, 1fr) var(--desktop-panel-column);
   gap: 20px;
   align-items: end;
 }
@@ -204,8 +207,8 @@ html[data-weather="wind"] body::before {
 
 .topbar-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.72fr) minmax(0, 1.32fr);
-  gap: 12px;
+  grid-template-columns: minmax(0, 1.16fr) minmax(0, 0.76fr) minmax(0, 1.34fr);
+  gap: 10px;
   align-items: center;
   width: 100%;
 }
@@ -214,10 +217,10 @@ html[data-weather="wind"] body::before {
   border: none;
   background: var(--accent);
   color: #ffffff;
-  min-height: var(--button-min-height);
+  min-height: var(--header-button-min-height);
   font-size: var(--button-font-strong);
   font-weight: 700;
-  padding: var(--button-padding-y) var(--button-padding-x);
+  padding: var(--header-button-padding-y) var(--header-button-padding-x);
   border-radius: 8px;
   cursor: pointer;
   display: inline-flex;
@@ -236,10 +239,10 @@ html[data-weather="wind"] body::before {
   border: 1px solid var(--border);
   background: var(--panel);
   color: var(--text);
-  min-height: var(--button-min-height);
+  min-height: var(--header-button-min-height);
   font-size: var(--button-font-strong);
   font-weight: 700;
-  padding: var(--button-padding-y) var(--button-padding-x);
+  padding: var(--header-button-padding-y) var(--header-button-padding-x);
   border-radius: 8px;
   cursor: pointer;
   width: 100%;
@@ -266,10 +269,10 @@ html[data-weather="wind"] body::before {
   border: 1px solid var(--border);
   background: var(--panel);
   color: var(--text);
-  min-height: var(--button-min-height);
+  min-height: var(--header-button-min-height);
   font-size: var(--button-font-strong);
   font-weight: 700;
-  padding: var(--button-padding-y) var(--button-padding-x);
+  padding: var(--header-button-padding-y) var(--header-button-padding-x);
   border-radius: 8px;
   cursor: pointer;
   display: inline-flex;
@@ -664,7 +667,7 @@ h1 {
 
 .game-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.72fr) var(--desktop-panel-column);
+  grid-template-columns: minmax(0, 1fr) var(--desktop-panel-column);
   gap: 20px;
   align-items: start;
   min-height: 0;
@@ -763,8 +766,8 @@ h1 {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
-  min-height: 52px;
-  padding: 13px 14px;
+  min-height: clamp(46px, calc(38px + 1vw), 50px);
+  padding: clamp(9px, calc(5px + 0.55vw), 12px) 14px;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
@@ -901,8 +904,8 @@ h1 {
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  min-height: var(--button-min-height);
-  padding: var(--button-padding-y) var(--button-padding-x);
+  min-height: var(--action-button-min-height);
+  padding: var(--action-button-padding-y) var(--action-button-padding-x);
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
@@ -924,8 +927,8 @@ h1 {
   border: none;
   background: var(--accent-strong);
   color: #fff;
-  min-height: var(--button-min-height);
-  padding: var(--button-padding-y) var(--button-padding-x);
+  min-height: var(--action-button-min-height);
+  padding: var(--action-button-padding-y) var(--action-button-padding-x);
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
@@ -1176,8 +1179,8 @@ h1 {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  min-height: 52px;
-  padding: 11px 12px;
+  min-height: clamp(48px, calc(42px + 0.7vw), 52px);
+  padding: 8px 12px;
   color: var(--text);
   cursor: pointer;
   font-family: inherit;
@@ -1535,7 +1538,7 @@ h1 {
   top: 14px;
   right: 14px;
   display: flex;
-  gap: 8px;
+  gap: 7px;
   z-index: 2;
 }
 
@@ -1545,18 +1548,22 @@ h1 {
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 8px;
-  min-width: 52px;
-  min-height: 52px;
-  padding: 10px 12px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 10px;
   cursor: pointer;
   font-family: inherit;
-  font-size: 0.94rem;
+  font-size: 0.88rem;
   font-weight: 700;
   box-shadow: 0 1px 4px var(--shadow);
   transition:
     background 0.12s,
     border-color 0.12s,
     transform 0.12s;
+}
+
+.map-controls button:nth-child(3) {
+  min-width: 88px;
 }
 
 .map-controls button:hover {
@@ -2102,6 +2109,12 @@ h1 {
   display: none;
 }
 
+@media (min-width: 901px) and (max-width: 1080px) {
+  .brand-date {
+    display: none;
+  }
+}
+
 /* ── MOBILE ── */
 @media (max-width: 900px) {
   body {
@@ -2111,7 +2124,7 @@ h1 {
   }
 
   .page {
-    padding: 13px 13px 90px;
+    padding: 13px 13px 82px;
     height: auto;
     min-height: 100vh;
   }
@@ -2280,14 +2293,14 @@ h1 {
   }
 
   .map-controls button {
-    min-width: 44px;
-    min-height: 44px;
-    padding: 8px 10px;
-    font-size: 0.88rem;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 7px 9px;
+    font-size: 0.82rem;
   }
 
   .map-controls button:nth-child(3) {
-    min-width: 86px;
+    min-width: 80px;
   }
 
   .side-panel {
@@ -2304,7 +2317,8 @@ h1 {
 
   .submit {
     border-radius: 8px;
-    padding: 13px 12px;
+    min-height: 46px;
+    padding: 10px 12px;
   }
 
   .options-launch-button {
@@ -2342,13 +2356,13 @@ h1 {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
-    gap: 7px;
+    gap: 6px;
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    min-height: 68px;
-    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    min-height: 62px;
+    padding: 7px 9px calc(7px + env(safe-area-inset-bottom));
     background: var(--panel);
     border-top: 1px solid var(--border);
     box-shadow: 0 -2px 12px var(--shadow);
@@ -2362,13 +2376,13 @@ h1 {
     justify-content: center;
     gap: 0;
     min-width: 0;
-    min-height: clamp(40px, 10vw, 44px);
+    min-height: clamp(38px, 9.5vw, 42px);
     border: 1px solid transparent;
     border-radius: 8px;
     background: transparent;
     color: var(--muted);
     cursor: pointer;
-    padding: 0 clamp(4px, 1.5vw, 6px);
+    padding: 0 clamp(3px, 1.2vw, 5px);
     font-family: inherit;
     transition:
       border-color 0.15s,
@@ -2386,14 +2400,14 @@ h1 {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: clamp(104px, 31vw, 126px);
-    min-height: clamp(44px, 11.5vw, 48px);
+    min-width: clamp(98px, 29vw, 118px);
+    min-height: clamp(42px, 10.8vw, 46px);
     border: 1px solid color-mix(in srgb, var(--accent) 70%, var(--stroke));
     border-radius: 8px;
     background: var(--accent);
     color: #fff;
     cursor: pointer;
-    padding: clamp(8px, 2.5vw, 11px) clamp(10px, 3.2vw, 14px);
+    padding: clamp(7px, 2.2vw, 10px) clamp(9px, 2.8vw, 12px);
     font-family: inherit;
     box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 24%, transparent);
     transition:
@@ -2419,7 +2433,7 @@ h1 {
   .bottom-nav-label {
     min-width: 0;
     max-width: 100%;
-    font-size: clamp(0.66rem, 2.25vw, 0.78rem);
+    font-size: clamp(0.64rem, 2.1vw, 0.74rem);
     font-weight: 650;
     letter-spacing: 0;
     line-height: 1.08;
@@ -2429,7 +2443,7 @@ h1 {
   }
 
   .bottom-nav-new-game .bottom-nav-label {
-    font-size: clamp(0.7rem, 2.45vw, 0.88rem);
+    font-size: clamp(0.68rem, 2.25vw, 0.82rem);
     font-weight: 750;
   }
 }
