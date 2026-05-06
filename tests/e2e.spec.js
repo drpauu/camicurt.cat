@@ -1,4 +1,4 @@
-﻿import { test, expect } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -154,7 +154,7 @@ test("carrega el mapa i la UI base", async ({ page }) => {
   );
   await expect((await page.request.get("/logo/favicon-simple-96.png")).ok()).toBeTruthy();
   await expect((await page.request.get("/logo/favicon-simple.svg")).ok()).toBeTruthy();
-  await expect(page.getByRole("button", { name: /Nova partida/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Nou mapa/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /^Diari$/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /^Setmanal$/i })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Calendari/i })).toBeVisible();
@@ -173,7 +173,7 @@ test("carrega el mapa i la UI base", async ({ page }) => {
   await expect(page.locator("body")).not.toContainText("â€");
 });
 
-test("nova partida genera un repte nou mantenint mode i dificultat", async ({ page }) => {
+test("Nou mapa genera un repte nou mantenint mode i dificultat", async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem("rumb-mode", "normal");
     localStorage.setItem("rumb-difficulty", "pixapi");
@@ -184,13 +184,13 @@ test("nova partida genera un repte nou mantenint mode i dificultat", async ({ pa
   const before = (await route.textContent())?.trim();
   expect(before).toBeTruthy();
 
-  await page.getByRole("button", { name: /Nova partida/i }).click();
+  await page.getByRole("button", { name: /Nou mapa/i }).click();
   await expect.poll(async () => (await route.textContent())?.trim()).not.toBe(before);
   expect(await page.evaluate(() => localStorage.getItem("rumb-mode"))).toBe("normal");
   expect(await page.evaluate(() => localStorage.getItem("rumb-difficulty"))).toBe("pixapi");
 });
 
-test("nova partida surt del repte diari cap a un nivell normal aleatori", async ({ page }) => {
+test("Nou mapa surt del repte diari cap a un nivell normal aleatori", async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem("rumb-mode", "normal");
     localStorage.setItem("rumb-difficulty", "pixapi");
@@ -203,7 +203,7 @@ test("nova partida surt del repte diari cap a un nivell normal aleatori", async 
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");
   const dailyRoute = (await route.textContent())?.trim();
   expect(dailyRoute).toBeTruthy();
-  await page.getByRole("button", { name: /Nova partida/i }).click();
+  await page.getByRole("button", { name: /Nou mapa/i }).click();
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "normal");
   await expect.poll(async () => (await route.textContent())?.trim()).not.toBe(dailyRoute);
 
@@ -829,7 +829,7 @@ test("el calendari permet clicar disponibilitat abans del detall del nivell", as
   await expect(page.locator(".map-brief .route")).toContainText("Vallès Occidental");
 });
 
-test("arrenca amb l'audio silenciat i el volum funciona en mobil", async ({ page }) => {
+test("arrenca amb l'audio silenciat i nomes mostra botons en mobil", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await gotoHome(page);
   await page.waitForSelector("svg.map");
@@ -855,44 +855,32 @@ test("arrenca amb l'audio silenciat i el volum funciona en mobil", async ({ page
   await page.getByRole("button", { name: /Configuraci/i }).click();
   const ranges = page.locator('.config-content input[type="range"]');
   const toggles = page.locator(".config-content .toggle-button");
-  await expect(ranges).toHaveCount(2);
+  await expect(ranges).toHaveCount(0);
   await expect(toggles).toHaveCount(2);
   await expect(page.locator(".config-content select")).toHaveValue("random");
-  await expect(ranges.nth(0)).toHaveValue("0");
-  await expect(ranges.nth(1)).toHaveValue("0");
   await expect(toggles.nth(0)).toHaveAttribute("aria-pressed", "false");
   await expect(toggles.nth(1)).toHaveAttribute("aria-pressed", "false");
 
-  const setRangeValue = async (range, value) => {
-    await range.evaluate((input, nextValue) => {
-      input.value = nextValue;
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-    }, value);
-  };
-
-  await setRangeValue(ranges.nth(0), "0.42");
-  await expect(ranges.nth(0)).toHaveValue("0.42");
-  await page.waitForFunction(() => {
-    const settings = JSON.parse(localStorage.getItem("rumb-settings-v1") || "{}");
-    return settings.musicEnabled === false && settings.musicVolume === 0.42;
-  });
   await toggles.nth(0).click();
   await page.waitForFunction(() => {
     const settings = JSON.parse(localStorage.getItem("rumb-settings-v1") || "{}");
-    return settings.musicEnabled === true && settings.musicVolume === 0.42;
+    return (
+      settings.musicEnabled === true &&
+      settings.musicVolume === 1 &&
+      settings.musicTrack === "random"
+    );
   });
 
-  await setRangeValue(ranges.nth(1), "0.35");
-  await expect(ranges.nth(1)).toHaveValue("0.35");
-  await page.waitForFunction(() => {
-    const sound = JSON.parse(localStorage.getItem("rumb-sound-settings-v1") || "{}");
-    return sound.enabled === false && sound.sfxVolume === 0.35;
-  });
   await toggles.nth(1).click();
   await page.waitForFunction(() => {
+    const settings = JSON.parse(localStorage.getItem("rumb-settings-v1") || "{}");
     const sound = JSON.parse(localStorage.getItem("rumb-sound-settings-v1") || "{}");
-    return sound.enabled === true && sound.sfxVolume === 0.35;
+    return (
+      settings.sfxEnabled === true &&
+      settings.sfxVolume === 1 &&
+      sound.enabled === true &&
+      sound.sfxVolume === 1
+    );
   });
 });
 
@@ -1085,7 +1073,7 @@ test("la navegacio mobil te nomes reptes a capcalera i accions a baix", async ({
   const bottomLabels = await page
     .locator(".bottom-nav .bottom-nav-label")
     .evaluateAll((items) => items.map((item) => item.textContent.trim()));
-  expect(bottomLabels).toEqual(["Calendari", "Nova partida", "Opcions"]);
+  expect(bottomLabels).toEqual(["Calendari", "Nou mapa", "Opcions"]);
   expect(bottomLabels).not.toContain("Joc");
   await expect(page.locator(".bottom-nav-icon:visible")).toHaveCount(0);
   await expect(page.locator(".options-launch-button")).toBeHidden();
@@ -1111,7 +1099,7 @@ test("la navegacio mobil te nomes reptes a capcalera i accions a baix", async ({
   expect(bottomNavMetrics.newGameWidth).toBeGreaterThan(bottomNavMetrics.optionsWidth);
   expect(bottomNavMetrics.newGameHeight).toBeGreaterThanOrEqual(44);
 
-  await page.locator(".bottom-nav").getByRole("button", { name: /Nova partida/i }).click();
+  await page.locator(".bottom-nav").getByRole("button", { name: /Nou mapa/i }).click();
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "normal");
   expect(await page.evaluate(() => localStorage.getItem("rumb-difficulty"))).toBe("pixapi");
 });
@@ -1192,7 +1180,7 @@ test("la barra mobil no talla accions ni solapa el mapa", async ({ page }) => {
   for (let index = 0; index < 6; index += 1) {
     guesses = resolveOptimalGuessNames(await getRouteAndRule(page));
     if (guesses.length) break;
-    await page.locator(".bottom-nav").getByRole("button", { name: /Nova partida/i }).click();
+    await page.locator(".bottom-nav").getByRole("button", { name: /Nou mapa/i }).click();
   }
   expect(guesses.length).toBeGreaterThan(0);
   await playGuesses(page, guesses);

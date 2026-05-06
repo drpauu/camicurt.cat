@@ -62,7 +62,7 @@ export const caStandard = {
   "sounds": "Sons",
   "sfxVolume": "Volum de sons",
   "volume": "Volum",
-  "newGame": "Nova partida",
+  "newGame": "Nou mapa",
   "challenge": "Repte",
   "action": "Jugada",
   "options": "Opcions",

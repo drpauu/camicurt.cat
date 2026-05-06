@@ -2485,18 +2485,6 @@ export default function App() {
     }, COMPLETION_MODAL_DELAY_MS);
   }
 
-  function handleMusicVolumeInput(event) {
-    const nextVolume = clampVolumeValue(Number(event.currentTarget.value));
-    setMusicVolume(nextVolume);
-    if (musicEnabled && nextVolume > 0) {
-      if (musicBlockedRef.current || !musicStartedRef.current) {
-        startMusic(musicTrack, nextVolume, { force: true });
-      }
-      return;
-    }
-    if (nextVolume <= 0) stopMusic();
-  }
-
   function handleMusicToggle(nextEnabled) {
     playManifestSfx("toggle", 0.55);
     setMusicEnabled(nextEnabled);
@@ -2516,11 +2504,6 @@ export default function App() {
     setSfxEnabled(nextEnabled);
     if (!nextEnabled) return;
     if (sfxVolume <= 0) setSfxVolume(1);
-  }
-
-  function handleSfxVolumeInput(event) {
-    const nextVolume = clampVolumeValue(Number(event.currentTarget.value));
-    setSfxVolume(nextVolume);
   }
 
   function applyCalendarLevel(level, options = {}) {
@@ -4846,20 +4829,6 @@ export default function App() {
                   </option>
                 ))}
               </select>
-              <div className="range-row">
-                <span className="label">{t("musicVolume")}</span>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={musicVolume}
-                  aria-label={t("musicVolume")}
-                  onInput={handleMusicVolumeInput}
-                  onChange={handleMusicVolumeInput}
-                />
-              </div>
-
               <span className="label">{t("sounds")}</span>
               <button
                 type="button"
@@ -4869,19 +4838,6 @@ export default function App() {
               >
                 {sfxEnabled ? t("on") : t("off")}
               </button>
-              <div className="range-row">
-                <span className="label">{t("sfxVolume")}</span>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={sfxVolume}
-                  aria-label={t("sfxVolume")}
-                  onInput={handleSfxVolumeInput}
-                  onChange={handleSfxVolumeInput}
-                />
-              </div>
             </div>
           </div>
         </div>
