@@ -148,17 +148,12 @@ test("carrega el mapa i la UI base", async ({ page }) => {
   expect(faviconLinks).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
-        href: "/logo/favicon-simple-96.png",
-        sizes: "96x96"
-      }),
-      expect.objectContaining({
-        href: "/logo/favicon-simple-48.png",
-        sizes: "48x48"
+        href: "/logo/favicon.ico"
       })
     ])
   );
-  await expect((await page.request.get("/logo/favicon-simple-96.png")).ok()).toBeTruthy();
-  await expect((await page.request.get("/logo/favicon-simple.svg")).ok()).toBeTruthy();
+  await expect((await page.request.get("/logo/favicon.ico")).ok()).toBeTruthy();
+  await expect((await page.request.get("/logo/logo%2032x32_transparent.png")).ok()).toBeTruthy();
   await expect(page.getByRole("button", { name: /Nou mapa/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /^Diari$/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /^Setmanal$/i })).toHaveCount(0);

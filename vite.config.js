@@ -9,20 +9,7 @@ const logoDir = path.resolve(projectRoot, "logo");
 const logoRoute = "/logo/";
 const logoAssetFiles = [
   "favicon.ico",
-  "favicon-simple.svg",
-  "favicon-simple-96.png",
-  "favicon-simple-48.png",
-  "favicon-simple-32.png",
-  "favicon-simple-16.png",
-  "favicon-32x32.png",
-  "favicon-16x16.png",
-  "apple-touch-icon.png",
-  "site.webmanifest",
-  "android-chrome-192x192.png",
-  "android-chrome-512x512.png",
-  "maskable-192x192.png",
-  "maskable-512x512.png",
-  "logo-512.png"
+  "logo 32x32_transparent.png"
 ];
 
 const contentTypes = {
@@ -35,14 +22,7 @@ const contentTypes = {
 function logoAssetsPlugin() {
   function keepStableLogoUrls(html) {
     return html
-      .replace(/href="\/assets\/favicon-simple-96-[^"]+\.png"/g, 'href="/logo/favicon-simple-96.png"')
-      .replace(/href="\/assets\/favicon-simple-48-[^"]+\.png"/g, 'href="/logo/favicon-simple-48.png"')
-      .replace(/href="\/assets\/favicon-simple-32-[^"]+\.png"/g, 'href="/logo/favicon-simple-32.png"')
-      .replace(/href="\/assets\/favicon-simple-16-[^"]+\.png"/g, 'href="/logo/favicon-simple-16.png"')
-      .replace(/href="\/assets\/favicon-simple-[^"]+\.svg"/g, 'href="/logo/favicon-simple.svg"')
-      .replace(/href="\/assets\/favicon-[^"]+\.ico"/g, 'href="/logo/favicon.ico"')
-      .replace(/href="\/assets\/apple-touch-icon-[^"]+\.png"/g, 'href="/logo/apple-touch-icon.png"')
-      .replace(/href="\/assets\/site-[^"]+\.webmanifest"/g, 'href="/logo/site.webmanifest"');
+      .replace(/href="\/assets\/favicon-[^"]+\.ico"/g, 'href="/logo/favicon.ico"');
   }
 
   return {

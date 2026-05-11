@@ -184,21 +184,21 @@ html[data-weather="wind"] body::before {
 .brand-logo {
   display: block;
   width: 76px;
-  height: 60px;
+  height: 64px;
   flex: 0 0 76px;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
 }
 
 .brand-logo-image {
   display: block;
-  width: 174px;
-  height: 174px;
+  width: 92px;
+  height: 92px;
   max-width: none;
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -44%);
+  transform: translate(-50%, -50%);
 }
 
 .topbar-right {
@@ -2169,8 +2169,13 @@ h1 {
 
   .brand-logo {
     width: 62px;
-    height: 48px;
+    height: 54px;
     flex-basis: 62px;
+  }
+
+  .brand-logo-image {
+    width: 76px;
+    height: 76px;
   }
 
   .topbar-right {
