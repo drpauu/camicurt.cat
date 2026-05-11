@@ -22,6 +22,17 @@ const OUT_PATHS = [
   path.resolve("supabase", "functions", "generate-level", "rules.json")
 ];
 
+const BAD_COPY_PATTERNS = [
+  /\bon també\b/i,
+  /\bmentre amb\b/i,
+  /\bamb el detall que\b/i,
+  /\bsense oblidar(?: que)?\b/i,
+  /\bi sobretot\b/i,
+  /;\s*amb\b/i,
+  /\balhora\s+(?:amb|en|entre|quan|per|a )/i,
+  /\bon\s+(?:amb|en|per|entre)\b/i
+];
+
 function normalizeText(value) {
   return String(value || "")
     .normalize("NFC")
@@ -38,6 +49,16 @@ function buildExplanation(type, comarques) {
   if (type === "FORBID") return `La comarca a evitar era ${names}.`;
   if (type === "ONE_OF") return `Una comarca valida era ${names}.`;
   return `La norma feia referencia a ${names}.`;
+}
+
+function assertReadableRuleText(text, inputPath, index) {
+  for (const pattern of BAD_COPY_PATTERNS) {
+    if (pattern.test(text)) {
+      throw new Error(
+        `Norma amb redaccio sospitosa a ${inputPath}#${index + 1}: ${text}`
+      );
+    }
+  }
 }
 
 function readRules(input) {
@@ -61,9 +82,12 @@ function readRules(input) {
       throw new Error(`Norma sense comarques a ${input.path}#${index + 1}.`);
     }
 
+    const text = normalizeText(rule.text);
+    assertReadableRuleText(text, input.path, index);
+
     return {
       id: `${input.prefix}-${String(index + 1).padStart(4, "0")}`,
-      text: normalizeText(rule.text),
+      text,
       type,
       comarques,
       explanation: buildExplanation(type, comarques),
