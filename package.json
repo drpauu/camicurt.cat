@@ -25,6 +25,10 @@
     "levels:health": "node scripts/check-level-health.mjs",
     "levels:repair-invalid-rules": "node scripts/generate-level.mjs repair-all-invalid-rules",
     "audio:generate": "node scripts/generate-audio-placeholders.mjs",
+    "perf:psi:mobile": "node scripts/perf-pagespeed.mjs mobile",
+    "perf:psi:desktop": "node scripts/perf-pagespeed.mjs desktop",
+    "perf:lighthouse": "node scripts/perf-lighthouse.mjs",
+    "perf:summary": "node scripts/perf-summary.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {

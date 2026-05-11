@@ -154,6 +154,31 @@ html[data-weather="wind"] body::before {
   min-width: 0;
 }
 
+.brand-summary {
+  margin: 6px 0 0 90px;
+  max-width: 700px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.25;
+}
+
+.brand-summary h2 {
+  display: inline;
+  margin: 0;
+  color: var(--text);
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.brand-summary h2::after {
+  content: " ";
+}
+
+.brand-summary p {
+  display: inline;
+  margin: 0;
+}
+
 .brand-date {
   flex: 0 0 auto;
   align-self: flex-end;
@@ -2144,6 +2169,14 @@ h1 {
   .brand-row {
     display: flex;
     justify-content: center;
+  }
+
+  .brand-summary {
+    margin: 4px auto 0;
+    max-width: 360px;
+    text-align: center;
+    font-size: 0.75rem;
+    line-height: 1.22;
   }
 
   .brand-date {

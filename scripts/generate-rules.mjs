@@ -19,6 +19,7 @@ const TYPE_MAP = {
 const OUT_PATHS = [
   path.resolve("src", "data", "rules.json"),
   path.resolve("data", "rules.json"),
+  path.resolve("public", "rules.json"),
   path.resolve("supabase", "functions", "generate-level", "rules.json")
 ];
 

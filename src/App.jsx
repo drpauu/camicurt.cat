@@ -3,7 +3,7 @@ import { geoMercator, geoPath } from "d3-geo";
 import { select } from "d3-selection";
 import { zoom, zoomIdentity } from "d3-zoom";
 import { feature, mesh, neighbors as topoNeighbors } from "topojson-client";
-import { supabase, supabaseEnabled } from "./lib/supabase.js";
+import { getSupabaseClient, supabaseEnabled } from "./lib/supabase.js";
 import { buildCentroidMap, buildNeighborSet } from "./lib/geography.js";
 import { normalizeName, slugifyName } from "./lib/names.js";
 import {
@@ -17,8 +17,8 @@ import { loadSettings, saveSettings } from "./lib/settings.js";
 import { DEFAULT_LOCALE, translate } from "./lib/locales.js";
 import { TOMAS_THEME_ID } from "./lib/themes.js";
 import {
-  RULES,
   getRulePayloadKind,
+  loadRulesCatalog,
   normalizeRule,
   pickRuleForKey
 } from "./lib/rules.js";
@@ -91,8 +91,8 @@ function BrandLogo({ className = "" }) {
       <img
         className="brand-logo-image"
         src={BRAND_LOGO_SRC}
-        width="990"
-        height="990"
+        width="256"
+        height="256"
         alt=""
         decoding="async"
       />
@@ -281,8 +281,6 @@ const REGIONS = [
     ]
   }
 ];
-
-const RULE_DEFS = RULES.map((rule) => normalizeRule(rule)).filter(Boolean);
 
 function pickRandom(list, rng = Math.random) {
   return list[Math.floor(rng() * list.length)];
@@ -826,14 +824,14 @@ function prepareRule(def, ctx) {
   return { ...resolved, comarcaIds, difficulty, tags };
 }
 
-function buildRuleFromLevel(level, comarcaById, normalizedToId) {
+function buildRuleFromLevel(level, comarcaById, normalizedToId, ruleDefs = []) {
   if (!level?.rule_id) return null;
   if (isDisabledRule(level.rule_id)) return null;
-  const base = RULE_DEFS.find((def) => def.id === level.rule_id) || null;
+  const base = ruleDefs.find((def) => def.id === level.rule_id) || null;
   if (!base || isDisabledRule(base)) return null;
   const avoidIds = Array.isArray(level.avoid_ids) ? level.avoid_ids : [];
   const mustPassIds = Array.isArray(level.must_pass_ids) ? level.must_pass_ids : [];
-  const kind = getRulePayloadKind(level.rule_id, avoidIds, mustPassIds, RULE_DEFS);
+  const kind = getRulePayloadKind(level.rule_id, avoidIds, mustPassIds, ruleDefs);
   let comarcaIds = kind === "avoid" ? avoidIds : mustPassIds;
   if (!comarcaIds.length && base?.comarques?.length && normalizedToId) {
     comarcaIds = base.comarques
@@ -1031,6 +1029,8 @@ export default function App() {
   const [shortestPath, setShortestPath] = useState([]);
   const [shortestPaths, setShortestPaths] = useState([]);
   const [activeRule, setActiveRule] = useState(null);
+  const [ruleDefs, setRuleDefs] = useState([]);
+  const [rulesReady, setRulesReady] = useState(false);
   const [resultData, setResultData] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [completionCelebrating, setCompletionCelebrating] = useState(false);
@@ -1146,6 +1146,7 @@ export default function App() {
   const [leaderboardStatus, setLeaderboardStatus] = useState("idle");
   const [lastEntryId, setLastEntryId] = useState(null);
   const [copyStatus, setCopyStatus] = useState("idle");
+  const [supabase, setSupabase] = useState(null);
   const [supabaseUserId, setSupabaseUserId] = useState(null);
   const [supabaseBlocked, setSupabaseBlocked] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
@@ -1186,7 +1187,7 @@ export default function App() {
   const leaderboardEndpoint = import.meta.env.VITE_LEADERBOARD_URL || "";
   const isSupabaseReady = useMemo(
     () => Boolean(supabaseEnabled && supabase && !supabaseBlocked),
-    [supabaseBlocked]
+    [supabase, supabaseBlocked]
   );
   const isExploreMode = gameMode === "explore";
   const isTimedMode = gameMode === "timed";
@@ -1197,6 +1198,55 @@ export default function App() {
     shortestPath.length ? Math.max(shortestPath.length - 2, 0) : 0
   );
   const activeDifficulty = isFixedMode ? routeDifficulty : difficulty;
+
+  useEffect(() => {
+    if (!supabaseEnabled || supabase || supabaseBlocked) return;
+    let cancelled = false;
+    let idleId = null;
+    let timeoutId = null;
+    const loadClient = () => {
+      getSupabaseClient()
+        .then((client) => {
+          if (!cancelled) setSupabase(client);
+        })
+        .catch(() => {
+          if (!cancelled) setSupabaseBlocked(true);
+        });
+    };
+
+    if (calendarOpen || isDailyMode) {
+      timeoutId = setTimeout(loadClient, 0);
+    } else if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(loadClient, { timeout: 1800 });
+    } else {
+      timeoutId = setTimeout(loadClient, 900);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleId && typeof window !== "undefined" && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [calendarOpen, isDailyMode, supabase, supabaseBlocked]);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadRulesCatalog()
+      .then((rules) => {
+        if (cancelled) return;
+        setRuleDefs(rules.map((rule) => normalizeRule(rule)).filter(Boolean));
+        setRulesReady(true);
+      })
+      .catch(() => {
+        if (!cancelled) setRulesReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const difficultyConfig = useMemo(() => {
     return DIFFICULTIES.find((entry) => entry.id === activeDifficulty) || DIFFICULTIES[0];
   }, [activeDifficulty]);
@@ -1742,11 +1792,21 @@ export default function App() {
 
   useEffect(() => {
     if (!comarques.length || !adjacency.size) return;
+    if (!isExploreMode && !rulesReady) return;
     if (isCalendarModeActive) return;
     const forceNew = pendingStartNextRef.current;
     pendingStartNextRef.current = null;
     resetGame(forceNew ?? false);
-  }, [comarques, adjacency, gameMode, activeDifficulty, isCalendarModeActive]);
+  }, [
+    comarques,
+    adjacency,
+    gameMode,
+    activeDifficulty,
+    isCalendarModeActive,
+    isExploreMode,
+    rulesReady,
+    ruleDefs.length
+  ]);
 
   useEffect(() => {
     const snapshot = pendingRepeatSnapshotRef.current;
@@ -2517,7 +2577,7 @@ export default function App() {
     const { result, showResult } = options;
     const start = level.start_id;
     const target = level.target_id;
-    const rule = buildRuleFromLevel(level, comarcaById, normalizedToId);
+    const rule = buildRuleFromLevel(level, comarcaById, normalizedToId, ruleDefs);
     const storedShortest = Array.isArray(level.shortest_path) ? level.shortest_path : [];
     const pathResult = resolveShortestPaths(start, target, rule, storedShortest);
     const nextShortest = pathResult.primaryPath;
@@ -2604,7 +2664,9 @@ export default function App() {
         ? calendarDailyMap.get(dayKeyForRecord)
         : null;
     const level = calendarEntry?.level || null;
-    const levelRule = level ? buildRuleFromLevel(level, comarcaById, normalizedToId) : null;
+    const levelRule = level
+      ? buildRuleFromLevel(level, comarcaById, normalizedToId, ruleDefs)
+      : null;
     const levelSnapshot = level
       ? (() => {
           const storedShortest = Array.isArray(level.shortest_path)
@@ -2690,6 +2752,7 @@ export default function App() {
 
   function resetGame(forceNew = false) {
     if (!comarques.length) return;
+    if (!isExploreMode && !ruleDefs.length) return;
     if (guessFeedbackTimerRef.current) clearTimeout(guessFeedbackTimerRef.current);
     setGuessFeedback(null);
     lastGuessRef.current = null;
@@ -2704,7 +2767,7 @@ export default function App() {
         ? { minInternal: EXPLORE_MIN_INTERNAL, maxInternal: Infinity }
         : getDifficultyDistanceRange(activeDifficulty);
     const comarcaNames = comarques.map((featureItem) => featureItem.properties.name);
-    const pool = RULE_DEFS;
+    const pool = ruleDefs;
     const isPathInTargetRange = (path) => {
       const internalCount = getShortestInternalCount(path);
       return (
@@ -2726,7 +2789,6 @@ export default function App() {
       const assignedId = assignments[modeKey]?.[fixedKey];
       fixedRuleDef =
         pool.find((def) => def.id === assignedId) ||
-        RULE_DEFS.find((def) => def.id === assignedId) ||
         null;
       if (!fixedRuleDef) {
         const picked = pickRuleForKey(pool, fixedKey, history[modeKey], mulberry32);
@@ -4388,6 +4450,13 @@ export default function App() {
             </button>
             <span className="brand-date">{todayLabel}</span>
           </div>
+          <section className="brand-summary" aria-labelledby="brand-summary-title">
+            <h2 id="brand-summary-title">Què és Camicurt?</h2>
+            <p>
+              Joc gratuït en català al navegador. Uneix Inici i Destí triant comarques
+              veïnes i acosta't al camí òptim.
+            </p>
+          </section>
         </div>
         <div className="topbar-right">
           <div className="topbar-actions">

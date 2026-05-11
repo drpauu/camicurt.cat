@@ -1,4 +1,3 @@
-import RAW_RULES from "../data/rules.json";
 import { isActiveRuleSource } from "./ruleValidation.js";
 export {
   GENERIC_RULE_TEXT_PATTERN,
@@ -9,9 +8,51 @@ export {
   isLevelRulePayloadValid
 } from "./ruleValidation.js";
 
-export const RULES = Array.isArray(RAW_RULES)
-  ? RAW_RULES.filter((rule) => isActiveRuleSource(rule))
-  : [];
+const RULES_VERSION = "2026-05-11";
+const RULES_URL = `/rules.json?v=${RULES_VERSION}`;
+const RULES_CACHE_KEY = `rumb-rules-catalog-${RULES_VERSION}`;
+
+let rulesPromise = null;
+
+export const RULES = [];
+
+function readCachedRules() {
+  if (typeof localStorage === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(RULES_CACHE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedRules(rules) {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(RULES_CACHE_KEY, JSON.stringify(rules));
+  } catch {
+    // Cache best-effort: storage may be full or disabled.
+  }
+}
+
+export async function loadRulesCatalog() {
+  const cached = readCachedRules();
+  if (cached?.length) return cached.filter((rule) => isActiveRuleSource(rule));
+  if (!rulesPromise) {
+    rulesPromise = fetch(RULES_URL, { cache: "force-cache" })
+      .then((response) => {
+        if (!response.ok) throw new Error("No s'ha pogut carregar el cataleg de normes.");
+        return response.json();
+      })
+      .then((rules) => {
+        const list = Array.isArray(rules) ? rules : [];
+        writeCachedRules(list);
+        return list.filter((rule) => isActiveRuleSource(rule));
+      });
+  }
+  return rulesPromise;
+}
 
 function hashString(value) {
   if (typeof value !== "string") return 0;

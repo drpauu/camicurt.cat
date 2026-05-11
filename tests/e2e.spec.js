@@ -125,6 +125,55 @@ test("carrega el mapa i la UI base", async ({ page }) => {
   expect(logoBox?.height).toBeGreaterThanOrEqual(42);
   await expect(page.locator(".brand-date")).toBeVisible();
   await expect(page.locator(".brand-mode-description")).toHaveCount(0);
+  await expect(page).toHaveTitle("Camicurt - Joc de rutes entre comarques");
+  await expect(page.getByRole("heading", { name: "Què és Camicurt?" })).toBeVisible();
+  await expect(page.locator(".brand-summary")).toContainText(
+    "Joc gratuït en català al navegador"
+  );
+  const metaDescription = await page
+    .locator('meta[name="description"]')
+    .getAttribute("content");
+  expect(metaDescription).toBe(
+    "Camicurt és un joc gratuït en català per trobar rutes entre comarques catalanes al navegador."
+  );
+  const canonicalHref = await page.locator('link[rel="canonical"]').getAttribute("href");
+  expect(canonicalHref).toBe("https://www.camicurt.cat/");
+  const structuredDataText = await page
+    .locator('script[type="application/ld+json"]')
+    .textContent();
+  const structuredData = JSON.parse(structuredDataText || "{}");
+  const graph = structuredData["@graph"] || [];
+  expect(graph.map((item) => item["@type"])).toEqual(
+    expect.arrayContaining(["WebSite", "SoftwareApplication", "Organization"])
+  );
+  expect(graph.find((item) => item["@id"] === "https://www.camicurt.cat/#website")).toEqual(
+    expect.objectContaining({
+      "@type": "WebSite",
+      name: "Camicurt",
+      url: "https://www.camicurt.cat/",
+      inLanguage: "ca"
+    })
+  );
+  const appSchema = graph.find(
+    (item) => item["@id"] === "https://www.camicurt.cat/#app"
+  );
+  expect(appSchema).toEqual(
+    expect.objectContaining({
+      "@type": "SoftwareApplication",
+      applicationCategory: "GameApplication",
+      operatingSystem: "Web",
+      isAccessibleForFree: true
+    })
+  );
+  expect(appSchema.offers).toEqual(
+    expect.objectContaining({
+      "@type": "Offer",
+      price: 0,
+      priceCurrency: "EUR"
+    })
+  );
+  expect(appSchema.aggregateRating).toBeUndefined();
+  expect(appSchema.review).toBeUndefined();
   const headerAlignment = await page.evaluate(() => {
     const titleBox = document.querySelector(".brand h1")?.getBoundingClientRect();
     const dateBox = document.querySelector(".brand-date")?.getBoundingClientRect();
@@ -152,8 +201,12 @@ test("carrega el mapa i la UI base", async ({ page }) => {
       })
     ])
   );
-  await expect((await page.request.get("/logo/favicon.ico")).ok()).toBeTruthy();
+  const faviconResponse = await page.request.get("/logo/favicon.ico");
+  await expect(faviconResponse.ok()).toBeTruthy();
+  const faviconBytes = new Uint8Array(await faviconResponse.body());
+  expect([...faviconBytes.slice(0, 4)]).toEqual([0, 0, 1, 0]);
   await expect((await page.request.get("/logo/logo.png")).ok()).toBeTruthy();
+  await expect((await page.request.get("/rules.json")).ok()).toBeTruthy();
   await expect(page.getByRole("button", { name: /Nou mapa/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /^Diari$/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /^Setmanal$/i })).toHaveCount(0);
