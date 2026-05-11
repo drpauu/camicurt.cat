@@ -3423,8 +3423,75 @@ export default function App() {
     }
   }
 
-  function handleStartNext() {
+  function getNextDailyCalendarKey(fromKey) {
+    const normalizedKey = normalizeDayKey(fromKey);
+    if (!normalizedKey || normalizedKey >= dayKey) return null;
+    return (
+      calendarDaily
+        .filter((entry) => entry?.levelId && entry.date > normalizedKey && entry.date <= dayKey)
+        .map((entry) => entry.date)
+        .sort((a, b) => String(a).localeCompare(String(b)))[0] || null
+    );
+  }
+
+  async function startDailyCalendarKey(key) {
+    const normalizedKey = normalizeDayKey(key);
+    if (!normalizedKey || normalizedKey > dayKey) return false;
+    const entry = calendarDailyMap.get(normalizedKey);
+    if (!entry?.levelId) return false;
+
+    let level = entry.level;
+    if (!level) {
+      setCalendarLoadingDayKey(normalizedKey);
+      level = await fetchCalendarDetail(normalizedKey);
+      setCalendarLoadingDayKey((current) =>
+        current === normalizedKey ? null : current
+      );
+    }
+    if (!level) return false;
+
+    setCalendarDaily((prev) =>
+      mergeCalendarEntries(prev, [
+        {
+          date: normalizedKey,
+          levelId: entry.levelId,
+          level
+        }
+      ])
+    );
+
+    const selectionKey = `daily:${normalizedKey}`;
+    calendarResetRef.current = selectionKey;
+    calendarApplyRef.current = null;
+    setCalendarMode("daily");
+    setCalendarSelection({ mode: "daily", key: normalizedKey });
+    if (gameMode !== "daily") {
+      setGameMode("daily");
+      return true;
+    }
+
+    calendarResetRef.current = null;
+    applyCalendarLevel(level);
+    calendarApplyRef.current = selectionKey;
+    return true;
+  }
+
+  function startRandomNormalMap() {
+    setCalendarSelection(null);
+    calendarApplyRef.current = null;
+    calendarResetRef.current = null;
+    if (gameMode !== "normal") {
+      pendingStartNextRef.current = true;
+      setGameMode("normal");
+      return;
+    }
+    resetGame(true);
+  }
+
+  async function handleStartNext() {
     playManifestSfx("click");
+    const resultMode = resultData?.mode || (isDailyMode ? "daily" : gameMode);
+    const resultDayKey = resultData?.dayKey || (isDailyMode ? activeDayKey : null);
     clearCompletionModalTimer();
     setCompletionCelebrating(false);
     setShowModal(false);
@@ -3434,11 +3501,13 @@ export default function App() {
     setCalendarOpen(false);
     setOptionsOpen(false);
 
-    if (isDailyMode) {
-      pendingStartNextRef.current = true;
-      setCalendarSelection(null);
-      calendarApplyRef.current = null;
-      setGameMode("normal");
+    if (resultMode === "daily") {
+      const nextDailyKey = getNextDailyCalendarKey(resultDayKey);
+      if (nextDailyKey) {
+        const startedDaily = await startDailyCalendarKey(nextDailyKey);
+        if (startedDaily) return;
+      }
+      startRandomNormalMap();
       return;
     }
 

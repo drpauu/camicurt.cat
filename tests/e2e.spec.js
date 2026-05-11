@@ -93,7 +93,12 @@ const playGuesses = async (page, names) => {
 };
 
 const getTodayKey = () => {
+  return getDayKeyOffset(0);
+};
+
+const getDayKeyOffset = (offsetDays) => {
   const now = new Date();
+  now.setDate(now.getDate() + offsetDays);
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   return `${now.getFullYear()}-${month}-${day}`;
@@ -423,6 +428,164 @@ test("obre el modal si el nivell ja està completat", async ({ page }) => {
   expect(resetStyles.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
   expect(resetStyles.borderRadius).toBe("8px");
   expect(Number(resetStyles.fontWeight)).toBeGreaterThanOrEqual(600);
+});
+
+test("Seguent mapa des d'un diari antic carrega el dia seguent del calendari", async ({
+  page
+}) => {
+  const previousKey = getDayKeyOffset(-1);
+  const todayKey = getTodayKey();
+  await page.addInitScript(
+    ({ previousKey: prevKey, todayKey: currentKey }) => {
+      const previousLevel = {
+        id: "daily-previous-next",
+        start_id: "baix-camp",
+        target_id: "valles-occidental",
+        shortest_path: [
+          "baix-camp",
+          "alt-camp",
+          "alt-penedes",
+          "baix-llobregat",
+          "valles-occidental"
+        ],
+        rule_id: null,
+        avoid_ids: null,
+        must_pass_ids: null,
+        difficulty_id: "cap-colla-rutes"
+      };
+      const todayLevel = {
+        id: "daily-current-next",
+        start_id: "urgell",
+        target_id: "terra-alta",
+        shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
+        rule_id: null,
+        avoid_ids: null,
+        must_pass_ids: null,
+        difficulty_id: "cap-colla-rutes"
+      };
+      const winningAttempt = {
+        attempts: 2,
+        timeMs: 9000,
+        playerPath: [{ id: "alt-camp", name: "Alt Camp" }],
+        shortestPath: ["Alt Camp", "Alt Penedes", "Baix Llobregat"],
+        shortestCount: 3,
+        distance: 1,
+        mode: "daily",
+        dayKey: prevKey,
+        startName: "Baix Camp",
+        targetName: "Valles Occidental"
+      };
+      localStorage.setItem(
+        "rumb-calendar-cache-v1",
+        JSON.stringify({
+          updatedAt: Date.now(),
+          daily: [
+            { date: currentKey, levelId: todayLevel.id, level: todayLevel },
+            { date: prevKey, levelId: previousLevel.id, level: previousLevel }
+          ]
+        })
+      );
+      localStorage.setItem(
+        "rumb-completion-records-v1",
+        JSON.stringify({
+          [`daily:${prevKey}`]: {
+            levelKey: `daily:${prevKey}`,
+            dayKey: prevKey,
+            mode: "daily",
+            attemptsList: [winningAttempt],
+            winningAttempt,
+            shortestPath: winningAttempt.shortestPath,
+            shortestCount: 3
+          }
+        })
+      );
+    },
+    { previousKey, todayKey }
+  );
+
+  await gotoHome(page);
+  await page.getByRole("button", { name: /Calendari/i }).click();
+  const previousDayButton = page.locator(`[data-calendar-day="${previousKey}"]`);
+  await expect(previousDayButton).toHaveAttribute("data-has-level", "true");
+  await previousDayButton.click();
+  const modal = page.locator(".result-modal");
+  await expect(modal).toBeVisible();
+  await modal.getByRole("button", { name: /Seg.*mapa/i }).click();
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");
+  await expect(modal).toBeHidden();
+  await expect(page.locator(".map-brief .route")).toContainText("Urgell");
+  await expect(page.locator(".map-brief .route")).toContainText("Terra Alta");
+  await expect(page.locator(".guess-history-item")).toHaveCount(0);
+});
+
+test("Seguent mapa des del diari actual obre un mapa aleatori normal", async ({ page }) => {
+  const todayKey = getTodayKey();
+  await page.addInitScript((key) => {
+    const level = {
+      id: "daily-current-random",
+      start_id: "baix-camp",
+      target_id: "valles-occidental",
+      shortest_path: [
+        "baix-camp",
+        "alt-camp",
+        "alt-penedes",
+        "baix-llobregat",
+        "valles-occidental"
+      ],
+      rule_id: null,
+      avoid_ids: null,
+      must_pass_ids: null,
+      difficulty_id: "cap-colla-rutes"
+    };
+    const winningAttempt = {
+      attempts: 2,
+      timeMs: 9000,
+      playerPath: [{ id: "alt-camp", name: "Alt Camp" }],
+      shortestPath: ["Alt Camp", "Alt Penedes", "Baix Llobregat"],
+      shortestCount: 3,
+      distance: 1,
+      mode: "daily",
+      dayKey: key,
+      startName: "Baix Camp",
+      targetName: "Valles Occidental"
+    };
+    localStorage.setItem(
+      "rumb-calendar-cache-v1",
+      JSON.stringify({
+        updatedAt: Date.now(),
+        daily: [{ date: key, levelId: level.id, level }]
+      })
+    );
+    localStorage.setItem(
+      "rumb-completion-records-v1",
+      JSON.stringify({
+        [`daily:${key}`]: {
+          levelKey: `daily:${key}`,
+          dayKey: key,
+          mode: "daily",
+          attemptsList: [winningAttempt],
+          winningAttempt,
+          shortestPath: winningAttempt.shortestPath,
+          shortestCount: 3
+        }
+      })
+    );
+  }, todayKey);
+
+  await gotoHome(page);
+  await page.getByRole("button", { name: /Calendari/i }).click();
+  const todayButton = page.locator(`[data-calendar-day="${todayKey}"]`);
+  await expect(todayButton).toHaveAttribute("data-has-level", "true");
+  await todayButton.click();
+  const modal = page.locator(".result-modal");
+  await expect(modal).toBeVisible();
+  const routeBefore = (await page.locator(".map-brief .route").textContent())?.trim();
+  await modal.getByRole("button", { name: /Seg.*mapa/i }).click();
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "normal");
+  await expect(modal).toBeHidden();
+  await expect
+    .poll(async () => (await page.locator(".map-brief .route").textContent())?.trim())
+    .not.toBe(routeBefore);
 });
 
 test("el modal no mostra cami optim si la ruta ja es curta", async ({ page }) => {
