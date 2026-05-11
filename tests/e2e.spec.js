@@ -153,7 +153,7 @@ test("carrega el mapa i la UI base", async ({ page }) => {
     ])
   );
   await expect((await page.request.get("/logo/favicon.ico")).ok()).toBeTruthy();
-  await expect((await page.request.get("/logo/logo%20264x264_transparent.png")).ok()).toBeTruthy();
+  await expect((await page.request.get("/logo/logo.png")).ok()).toBeTruthy();
   await expect(page.getByRole("button", { name: /Nou mapa/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /^Diari$/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /^Setmanal$/i })).toHaveCount(0);

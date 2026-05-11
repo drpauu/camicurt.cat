@@ -9,7 +9,7 @@ const logoDir = path.resolve(projectRoot, "logo");
 const logoRoute = "/logo/";
 const logoAssetFiles = [
   "favicon.ico",
-  "logo 264x264_transparent.png"
+  "logo.png"
 ];
 
 const contentTypes = {
