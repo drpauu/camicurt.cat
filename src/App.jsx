@@ -16,7 +16,12 @@ import {
 import { loadSettings, saveSettings } from "./lib/settings.js";
 import { DEFAULT_LOCALE, translate } from "./lib/locales.js";
 import { TOMAS_THEME_ID } from "./lib/themes.js";
-import { RULES, pickRuleForKey, normalizeRule } from "./lib/rules.js";
+import {
+  RULES,
+  getRulePayloadKind,
+  normalizeRule,
+  pickRuleForKey
+} from "./lib/rules.js";
 import { isDisabledRule } from "./lib/disabledRules.js";
 import {
   classifyDifficultyByShortestCount,
@@ -825,26 +830,28 @@ function buildRuleFromLevel(level, comarcaById, normalizedToId) {
   if (!level?.rule_id) return null;
   if (isDisabledRule(level.rule_id)) return null;
   const base = RULE_DEFS.find((def) => def.id === level.rule_id) || null;
-  if (base && isDisabledRule(base)) return null;
+  if (!base || isDisabledRule(base)) return null;
   const avoidIds = Array.isArray(level.avoid_ids) ? level.avoid_ids : [];
   const mustPassIds = Array.isArray(level.must_pass_ids) ? level.must_pass_ids : [];
-  const kind = base?.kind || (avoidIds.length ? "avoid" : "mustIncludeAny");
+  const kind = getRulePayloadKind(level.rule_id, avoidIds, mustPassIds, RULE_DEFS);
   let comarcaIds = kind === "avoid" ? avoidIds : mustPassIds;
   if (!comarcaIds.length && base?.comarques?.length && normalizedToId) {
     comarcaIds = base.comarques
       .map((name) => normalizedToId.get(normalizeName(name)))
       .filter(Boolean);
   }
+  if (!comarcaIds.length) return null;
   const comarques = comarcaIds
     .map((id) => comarcaById.get(id)?.properties.name)
     .filter(Boolean);
+  if (!comarques.length) return null;
   let label = base?.label;
   if (!label) {
+    const name = comarques[0];
     if (kind === "avoid") {
-      const name = comarques[0] || "aquesta comarca";
       label = `No pots passar per ${name}.`;
     } else {
-      label = "Has de passar per algun lloc clau.";
+      label = `Has de passar per ${name}.`;
     }
   }
   const difficulty = "medium";
@@ -1063,7 +1070,6 @@ export default function App() {
   const [musicVolume, setMusicVolume] = useState(initialSettings.musicVolume);
   const [musicTrack, setMusicTrack] = useState(initialSettings.musicTrack);
   const [activeTheme, setActiveTheme] = useState(initialSettings.theme);
-  const [configOpen, setConfigOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [audioManifest, setAudioManifest] = useState(null);
   const audioManagerRef = useRef(null);
@@ -3379,7 +3385,6 @@ export default function App() {
     setIsFailed(false);
     setIsComplete(false);
     setOptionsOpen(false);
-    setConfigOpen(false);
     setCalendarOpen(false);
     const key = dayKey;
     const selectionKey = `daily:${key}`;
@@ -3428,7 +3433,6 @@ export default function App() {
     setIsComplete(false);
     setCalendarOpen(false);
     setOptionsOpen(false);
-    setConfigOpen(false);
 
     if (isDailyMode) {
       pendingStartNextRef.current = true;
@@ -3565,17 +3569,6 @@ export default function App() {
     select(svgRef.current).call(zoomRef.current.translateTo, x, y);
   }
 
-  function handleConfigOpen() {
-    playManifestSfx("open");
-    setOptionsOpen(false);
-    setConfigOpen(true);
-  }
-
-  function handleConfigClose() {
-    playManifestSfx("close", 0.75);
-    setConfigOpen(false);
-  }
-
   function handleDifficultyPick(difficultyId) {
     if (!unlockedDifficulties.has(difficultyId)) {
       playManifestSfx("error");
@@ -3588,7 +3581,6 @@ export default function App() {
   function handleCalendarOpen() {
     playManifestSfx("open");
     setOptionsOpen(false);
-    setConfigOpen(false);
     const now = new Date();
     let targetMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     if (!calendarDailyMap.has(dayKey)) {
@@ -4662,8 +4654,46 @@ export default function App() {
               </div>
 
               <div className="options-section">
-                <button type="button" className="config-button" onClick={handleConfigOpen}>
-                  {t("config")}
+                <span className="label">{t("music")}</span>
+                <div className="options-audio-controls">
+                  <button
+                    type="button"
+                    className={`toggle-button ${musicEnabled ? "active" : ""}`}
+                    aria-pressed={musicEnabled}
+                    onClick={() => handleMusicToggle(!musicEnabled)}
+                  >
+                    {musicEnabled ? t("on") : t("off")}
+                  </button>
+                  <select
+                    className="level-select"
+                    value={musicTrack}
+                    onChange={(event) => {
+                      playManifestSfx("toggle", 0.55);
+                      const nextTrack = event.target.value;
+                      setMusicTrack(nextTrack);
+                      if (musicEnabled && musicVolume > 0) {
+                        startMusic(nextTrack, musicVolume, { force: true });
+                      }
+                    }}
+                  >
+                    {musicOptions.map((track) => (
+                      <option key={track.id} value={track.id}>
+                        {track.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="options-section">
+                <span className="label">{t("sounds")}</span>
+                <button
+                  type="button"
+                  className={`toggle-button ${sfxEnabled ? "active" : ""}`}
+                  aria-pressed={sfxEnabled}
+                  onClick={() => handleSfxToggle(!sfxEnabled)}
+                >
+                  {sfxEnabled ? t("on") : t("off")}
                 </button>
               </div>
             </div>
@@ -4787,62 +4817,6 @@ export default function App() {
         </div>
       ) : null}
 
-      {configOpen ? (
-        <div className="modal-backdrop" onClick={handleConfigClose}>
-          <div className="modal config-modal" onClick={(event) => event.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{t("config")}</h2>
-              <button
-                type="button"
-                className="icon-button"
-                onClick={handleConfigClose}
-                aria-label={t("close")}
-              >
-                {"\u00d7"}
-              </button>
-            </div>
-            <div className="config-content">
-              <span className="label">{t("music")}</span>
-              <button
-                type="button"
-                className={`toggle-button ${musicEnabled ? "active" : ""}`}
-                aria-pressed={musicEnabled}
-                onClick={() => handleMusicToggle(!musicEnabled)}
-              >
-                {musicEnabled ? t("on") : t("off")}
-              </button>
-              <select
-                className="level-select"
-                value={musicTrack}
-                onChange={(event) => {
-                  playManifestSfx("toggle", 0.55);
-                  const nextTrack = event.target.value;
-                  setMusicTrack(nextTrack);
-                  if (musicEnabled && musicVolume > 0) {
-                    startMusic(nextTrack, musicVolume, { force: true });
-                  }
-                }}
-              >
-                {musicOptions.map((track) => (
-                  <option key={track.id} value={track.id}>
-                    {track.label}
-                  </option>
-                ))}
-              </select>
-              <span className="label">{t("sounds")}</span>
-              <button
-                type="button"
-                className={`toggle-button ${sfxEnabled ? "active" : ""}`}
-                aria-pressed={sfxEnabled}
-                onClick={() => handleSfxToggle(!sfxEnabled)}
-              >
-                {sfxEnabled ? t("on") : t("off")}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       {showModal && resultData && completionSummary ? (
         <div className="modal-backdrop result-backdrop">
           <div
@@ -4925,7 +4899,6 @@ export default function App() {
           onClick={() => {
             playManifestSfx("open");
             setCalendarOpen(false);
-            setConfigOpen(false);
             setOptionsOpen(true);
           }}
         >

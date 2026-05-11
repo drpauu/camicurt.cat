@@ -20,7 +20,10 @@
     "calendar:assign": "node scripts/generate-level.mjs assign-year",
     "calendar:assign:2026": "node scripts/generate-level.mjs assign-year 2026",
     "calendar:reassign:2026-2028": "node scripts/generate-level.mjs reassign-years 2026 2027 2028",
+    "calendar:repair-invalid-rules": "node scripts/generate-level.mjs repair-invalid-rules 2026-01-01 2028-12-31",
     "calendar:health": "node scripts/check-daily-calendar-health.mjs",
+    "levels:health": "node scripts/check-level-health.mjs",
+    "levels:repair-invalid-rules": "node scripts/generate-level.mjs repair-all-invalid-rules",
     "audio:generate": "node scripts/generate-audio-placeholders.mjs",
     "test:e2e": "playwright test"
   },

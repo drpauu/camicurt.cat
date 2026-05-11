@@ -54,7 +54,6 @@ export const caStandard = {
   "joinGroup": "Uneix-me",
   "achievements": "Assoliments",
   "collect": "Recollir",
-  "config": "Configuració",
   "theme": "Tema",
   "music": "Música",
   "musicVolume": "Volum de música",

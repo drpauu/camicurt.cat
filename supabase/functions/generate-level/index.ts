@@ -9,6 +9,7 @@ const GROUP_CULTURAL_RULE_ID_PATTERN = /^group-\d+-[01]$/;
 const GROUP_CULTURAL_TEXT_PATTERN = /grup cultural/i;
 const DIRECT_COMARCA_RULE_ID_PATTERN = /-direct-[01]$/;
 const DIRECT_COMARCA_TEXT_PATTERN = /^(Has de passar per|No pots passar per) (.+)\.$/i;
+const GENERIC_RULE_TEXT_PATTERN = /algun lloc clau/i;
 const DIRECT_COMARCA_NAMES = new Set(
   [
     "Alt Camp",
@@ -106,6 +107,22 @@ function isDisabledRule(ruleOrId: any) {
   return isDisabledGroupCulturalRule(ruleOrId) || isDisabledDirectComarcaRule(ruleOrId);
 }
 
+function hasGenericRuleText(rule: any) {
+  const text =
+    !rule || typeof rule === "string"
+      ? ""
+      : String(rule.text || rule.label || "");
+  return GENERIC_RULE_TEXT_PATTERN.test(text);
+}
+
+function hasRuleComarques(rule: any) {
+  return Array.isArray(rule?.comarques) && rule.comarques.length > 0;
+}
+
+function isActiveRuleSource(rule: any) {
+  return Boolean(rule) && !isDisabledRule(rule) && hasRuleComarques(rule) && !hasGenericRuleText(rule);
+}
+
 function getShortestInternalCount(pathOrCount: any) {
   if (Array.isArray(pathOrCount)) return Math.max(pathOrCount.length - 2, 0);
   const count = Number(pathOrCount);
@@ -124,7 +141,7 @@ function classifyDifficultyByShortestCount(shortestCount: any) {
 
 function normalizeRule(schema: any) {
   if (!schema) return null;
-  if (isDisabledRule(schema)) return null;
+  if (!isActiveRuleSource(schema)) return null;
   const type = String(schema.type || "REQUIRE").toUpperCase();
   const kind =
     type === "FORBID" || type === "EXCLUDE" ? "avoid" : "mustIncludeAny";
@@ -137,6 +154,29 @@ function normalizeRule(schema: any) {
     tags: schema.tags || [],
     explanation: schema.explanation || ""
   };
+}
+
+function getRulePayloadKind(
+  ruleId: string | null,
+  avoidIds: string[] = [],
+  mustPassIds: string[] = [],
+  ruleDefs: any[] = RULE_DEFS
+) {
+  const base = ruleDefs.find((def) => def?.id === ruleId) || null;
+  if (base?.kind) return base.kind;
+  return Array.isArray(avoidIds) && avoidIds.length ? "avoid" : "mustIncludeAny";
+}
+
+function isLevelRulePayloadValid(levelData: any, ruleDefs: any[] = RULE_DEFS) {
+  if (!levelData?.rule_id) return true;
+  if (isDisabledRule(levelData.rule_id)) return false;
+  if (!ruleDefs.some((def) => def?.id === levelData.rule_id)) return false;
+  const avoidIds = Array.isArray(levelData.avoid_ids) ? levelData.avoid_ids : [];
+  const mustPassIds = Array.isArray(levelData.must_pass_ids) ? levelData.must_pass_ids : [];
+  const kind = getRulePayloadKind(levelData.rule_id, avoidIds, mustPassIds, ruleDefs);
+  if (kind === "avoid") return avoidIds.length > 0;
+  if (kind === "mustIncludeAny") return mustPassIds.length > 0;
+  return false;
 }
 
 const RULE_DEFS = Array.isArray(rules)
@@ -518,6 +558,21 @@ function pickRuleForKey(rules: any[], seedKey: string, history: string[], rngFac
   return shuffled.find((rule) => !historySet.has(rule.id)) || shuffled[0] || null;
 }
 
+function sanitizeInvalidRuleLevelData(levelData: any, adjacency: Map<string, Set<string>>) {
+  if (isLevelRulePayloadValid(levelData)) return levelData;
+  const shortestPath = findShortestPath(levelData.start_id, levelData.target_id, adjacency);
+  return {
+    ...levelData,
+    difficulty_id: classifyDifficultyByShortestCount(
+      shortestPath.length ? shortestPath : levelData.shortest_path
+    ),
+    rule_id: null,
+    avoid_ids: null,
+    must_pass_ids: null,
+    shortest_path: shortestPath.length ? shortestPath : levelData.shortest_path
+  };
+}
+
 function buildLevel({
   rng,
   ids,
@@ -624,7 +679,7 @@ function buildLevel({
   const mustPassIds =
     selectedRule?.kind === "mustIncludeAny" ? selectedRule.comarcaIds || [] : [];
 
-  return {
+  const levelData = {
     difficulty_id: classifyDifficultyByShortestCount(shortest),
     start_id: start,
     target_id: target,
@@ -633,6 +688,7 @@ function buildLevel({
     avoid_ids: avoidIds.length ? avoidIds : null,
     must_pass_ids: mustPassIds.length ? mustPassIds : null
   };
+  return sanitizeInvalidRuleLevelData(levelData, adjacency);
 }
 
 function getMadridParts(date = new Date()) {

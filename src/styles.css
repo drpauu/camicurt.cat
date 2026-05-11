@@ -810,6 +810,13 @@ h1 {
   gap: 14px;
 }
 
+.options-audio-controls {
+  display: grid;
+  grid-template-columns: minmax(130px, auto) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
 .value.start {
   color: var(--accent-strong);
   font-weight: 600;
@@ -949,24 +956,6 @@ h1 {
 .new-game-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-.config-button {
-  width: 100%;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  min-height: var(--compact-button-min-height);
-  padding: var(--compact-button-padding-y) var(--compact-button-padding-x);
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 1px 3px var(--shadow);
-  transition: background 0.15s;
-}
-
-.config-button:hover {
-  background: color-mix(in srgb, var(--surface) 90%, var(--text));
 }
 
 .feedback {
@@ -1852,6 +1841,7 @@ h1 {
 }
 
 .level-select {
+  width: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -1942,15 +1932,6 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-}
-
-.config-modal {
-  max-width: 700px;
-}
-
-.config-content {
-  display: grid;
-  gap: 16px;
 }
 
 .modal .path-list,
@@ -2252,6 +2233,10 @@ h1 {
   }
 
   .difficulty-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .options-audio-controls {
     grid-template-columns: 1fr;
   }
 

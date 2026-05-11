@@ -636,7 +636,7 @@ test("el modal de resultat no talla accions a amplades petites", async ({ page }
   }
 });
 
-test("la configuració es persisteix", async ({ page }) => {
+test("les opcions de so es persisteixen dins d'Opcions", async ({ page }) => {
   await gotoHome(page);
   await page.getByRole("button", { name: /Opcions/i }).click();
   const optionsDialog = page.getByRole("dialog", { name: /Opcions/i });
@@ -646,16 +646,15 @@ test("la configuració es persisteix", async ({ page }) => {
   await expect(optionsDialog.locator(".difficulty-grid .difficulty-button").first()).toContainText(
     "Pixapí"
   );
-  await optionsDialog.getByRole("button", { name: /^Configuració$/i }).click();
-  const configModal = page.locator(".config-modal");
-  await expect(configModal.getByRole("heading", { name: /^Configuració$/i })).toBeVisible();
-  await expect(configModal.locator(".config-content select")).toHaveCount(1);
-  await expect(configModal.locator(".config-content .toggle-button")).toHaveCount(2);
-  await expect(configModal).not.toContainText("Idioma");
+  await expect(optionsDialog.getByRole("button", { name: /Configuraci/i })).toHaveCount(0);
+  await expect(page.locator(".config-modal")).toHaveCount(0);
+  await expect(optionsDialog.locator(".options-body select")).toHaveCount(1);
+  await expect(optionsDialog.locator(".options-body .toggle-button")).toHaveCount(2);
+  await expect(optionsDialog).not.toContainText("Idioma");
   const routeBefore = await getRouteAndRule(page);
-  await configModal.locator(".config-content .toggle-button").nth(1).click();
+  await optionsDialog.locator(".options-body .toggle-button").nth(1).click();
   expect(await getRouteAndRule(page)).toEqual(routeBefore);
-  await page.getByRole("button", { name: /Tanca/i }).click();
+  await optionsDialog.getByRole("button", { name: /Tanca/i }).click();
   await page.waitForFunction(() => {
     const raw = localStorage.getItem("rumb-settings-v1");
     if (!raw) return false;
@@ -674,9 +673,10 @@ test("la configuració es persisteix", async ({ page }) => {
   expect(savedSettings?.language).toBeUndefined();
   expect(savedSettings?.sfxEnabled).toBe(true);
   await page.getByRole("button", { name: /Opcions/i }).click();
-  await page.getByRole("button", { name: /Config/i }).click();
-  await expect(page.locator(".config-content select")).toHaveCount(1);
-  await expect(page.locator(".config-modal")).not.toContainText("Idioma");
+  const reopenedOptions = page.getByRole("dialog", { name: /Opcions/i });
+  await expect(reopenedOptions.getByRole("button", { name: /Configuraci/i })).toHaveCount(0);
+  await expect(reopenedOptions.locator(".options-body select")).toHaveCount(1);
+  await expect(reopenedOptions).not.toContainText("Idioma");
 });
 
 test("els valors antics d'idioma s'ignoren i conserva la descripcio original", async ({ page }) => {
@@ -694,9 +694,10 @@ test("els valors antics d'idioma s'ignoren i conserva la descripcio original", a
   await gotoHome(page);
   await page.waitForSelector("svg.map");
   await page.getByRole("button", { name: /Opcions/i }).click();
-  await page.getByRole("button", { name: /Configuraci/i }).click();
-  await expect(page.locator(".config-content select")).toHaveCount(1);
-  await expect(page.locator(".config-modal")).not.toContainText("Idioma");
+  const optionsDialog = page.getByRole("dialog", { name: /Opcions/i });
+  await expect(optionsDialog.getByRole("button", { name: /Configuraci/i })).toHaveCount(0);
+  await expect(optionsDialog.locator(".options-body select")).toHaveCount(1);
+  await expect(optionsDialog).not.toContainText("Idioma");
   await page.waitForFunction(() => {
     const raw = localStorage.getItem("rumb-settings-v1");
     if (!raw) return false;
@@ -852,12 +853,13 @@ test("arrenca amb l'audio silenciat i nomes mostra botons en mobil", async ({ pa
   });
 
   await page.locator(".bottom-nav").getByRole("button", { name: /Opcions/i }).click();
-  await page.getByRole("button", { name: /Configuraci/i }).click();
-  const ranges = page.locator('.config-content input[type="range"]');
-  const toggles = page.locator(".config-content .toggle-button");
+  const optionsDialog = page.getByRole("dialog", { name: /Opcions/i });
+  await expect(optionsDialog.getByRole("button", { name: /Configuraci/i })).toHaveCount(0);
+  const ranges = optionsDialog.locator('input[type="range"]');
+  const toggles = optionsDialog.locator(".toggle-button");
   await expect(ranges).toHaveCount(0);
   await expect(toggles).toHaveCount(2);
-  await expect(page.locator(".config-content select")).toHaveValue("random");
+  await expect(optionsDialog.locator("select")).toHaveValue("random");
   await expect(toggles.nth(0)).toHaveAttribute("aria-pressed", "false");
   await expect(toggles.nth(1)).toHaveAttribute("aria-pressed", "false");
 
@@ -946,8 +948,8 @@ test("usa les families de sons del manifest en interaccions reals", async ({ pag
   optionsDialog = page.getByRole("dialog", { name: /Opcions/i });
   await optionsDialog.getByRole("button", { name: /^Explora$/i }).click();
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "explore");
-  await optionsDialog.getByRole("button", { name: /Configuraci/i }).click();
-  await page.locator(".config-modal").getByRole("button", { name: /Tanca/i }).click();
+  await expect(optionsDialog.getByRole("button", { name: /Configuraci/i })).toHaveCount(0);
+  await optionsDialog.getByRole("button", { name: /Tanca/i }).click();
   await expectKind("close");
 
   const input = page.locator("#guess-input");

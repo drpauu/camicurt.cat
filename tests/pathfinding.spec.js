@@ -14,6 +14,12 @@ import {
   isDisabledRule
 } from "../src/lib/disabledRules.js";
 import { classifyDifficultyByShortestCount } from "../src/lib/difficulty.js";
+import {
+  hasGenericRuleText,
+  hasRuleComarques,
+  isActiveRuleSource,
+  isLevelRulePayloadValid
+} from "../src/lib/ruleValidation.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -107,6 +113,81 @@ test("les regles directes que revelen comarca queden deshabilitades", () => {
   expect(isDisabledRule({ text: "Has de passar per Gironès." })).toBeTruthy();
 });
 
+test("les normes actives sempre apunten a comarques concretes", () => {
+  const jsonPaths = [
+    "src/data/rules.json",
+    "data/rules.json",
+    "supabase/functions/generate-level/rules.json",
+    ...fs
+      .readdirSync(path.join(rootDir, "normes"))
+      .filter((name) => name.endsWith(".json"))
+      .map((name) => path.join("normes", name))
+  ];
+  const offenders = [];
+  jsonPaths.forEach((relativePath) => {
+    const rules = JSON.parse(fs.readFileSync(path.join(rootDir, relativePath), "utf8"));
+    if (!Array.isArray(rules)) return;
+    rules.forEach((rule, index) => {
+      if (isDisabledRule(rule)) return;
+      if (!hasRuleComarques(rule) || hasGenericRuleText(rule)) {
+        offenders.push(`${relativePath}#${rule.id || index}`);
+      }
+    });
+  });
+  expect(offenders).toEqual([]);
+});
+
+test("els payloads de norma sense ids de comarca queden invalidats", () => {
+  const mustRuleSource = {
+    id: "must-test",
+    type: "REQUIRE",
+    text: "Has de passar per una comarca de prova.",
+    comarques: ["Alt Camp"]
+  };
+  const avoidRuleSource = {
+    id: "avoid-test",
+    type: "FORBID",
+    text: "No pots passar per una comarca de prova.",
+    comarques: ["Alt Camp"]
+  };
+  const mustRule = { id: mustRuleSource.id, kind: "mustIncludeAny" };
+  const avoidRule = { id: avoidRuleSource.id, kind: "avoid" };
+  expect(isActiveRuleSource(mustRuleSource)).toBeTruthy();
+  expect(isActiveRuleSource(avoidRuleSource)).toBeTruthy();
+  expect(
+    isLevelRulePayloadValid(
+      { rule_id: mustRule.id, avoid_ids: null, must_pass_ids: [] },
+      [mustRule, avoidRule]
+    )
+  ).toBeFalsy();
+  expect(
+    isLevelRulePayloadValid(
+      { rule_id: mustRule.id, avoid_ids: null, must_pass_ids: ["alt-camp"] },
+      [mustRule, avoidRule]
+    )
+  ).toBeTruthy();
+  expect(
+    isLevelRulePayloadValid(
+      { rule_id: avoidRule.id, avoid_ids: [], must_pass_ids: null },
+      [mustRule, avoidRule]
+    )
+  ).toBeFalsy();
+  expect(
+    isLevelRulePayloadValid(
+      { rule_id: avoidRule.id, avoid_ids: ["alt-camp"], must_pass_ids: null },
+      [mustRule, avoidRule]
+    )
+  ).toBeTruthy();
+  expect(
+    isActiveRuleSource({
+      id: "generic-test",
+      type: "REQUIRE",
+      text: "Has de passar per algun lloc clau.",
+      comarques: ["Alt Camp"]
+    })
+  ).toBeFalsy();
+});
+
 test("la dificultat es classifica nomes per distancia del cami curt", () => {
   expect(classifyDifficultyByShortestCount(3)).toBe("pixapi");
   expect(classifyDifficultyByShortestCount(4)).toBe("dominguero");
@@ -135,6 +216,53 @@ test("els seeds del banc guarden difficulty_id segons el shortest_path", () => {
     return difficultyId !== classifyDifficultyByShortestCount(pathIds);
   });
   expect(mismatches.slice(0, 5)).toEqual([]);
+});
+
+test("els seeds del banc no contenen cap rule_id sense ids de comarca", () => {
+  const rules = JSON.parse(fs.readFileSync(path.join(rootDir, "data", "rules.json"), "utf8"));
+  const kindByRuleId = new Map(
+    rules.filter(isActiveRuleSource).map((rule) => {
+      const type = String(rule.type || "REQUIRE").toUpperCase();
+      return [rule.id, type === "FORBID" || type === "EXCLUDE" ? "avoid" : "mustIncludeAny"];
+    })
+  );
+  const seedPaths = [
+    "supabase/seed_level_bank_20000.sql",
+    ...fs
+      .readdirSync(path.join(rootDir, "supabase", "seed_level_bank_20000_chunks"))
+      .filter((name) => name.endsWith(".sql"))
+      .map((name) => path.join("supabase", "seed_level_bank_20000_chunks", name))
+  ];
+  const rowPattern =
+    /^\s*\('[^']+', '[^']+', (null|'[^']+'), '[^']+', '[^']+', (array\[[^\]]+\]::text\[]|null), (array\[[^\]]*\]::text\[]|null), (array\[[^\]]*\]::text\[]|null),/;
+  const hasIds = (value) => value !== "null" && /'[^']+'/.test(value);
+  const offenders = [];
+
+  seedPaths.forEach((relativePath) => {
+    fs.readFileSync(path.join(rootDir, relativePath), "utf8")
+      .split(/\r?\n/)
+      .forEach((line, index) => {
+        const match = line.match(rowPattern);
+        if (!match) return;
+        const ruleId = match[1] === "null" ? null : match[1].slice(1, -1);
+        if (!ruleId) return;
+        const kind = kindByRuleId.get(ruleId);
+        if (!kind) {
+          offenders.push(`${relativePath}:${index + 1}:rule_id desconegut ${ruleId}`);
+          return;
+        }
+        const avoidHasIds = hasIds(match[3]);
+        const mustHasIds = hasIds(match[4]);
+        if (kind === "avoid" && !avoidHasIds) {
+          offenders.push(`${relativePath}:${index + 1}:avoid sense ids`);
+        }
+        if (kind === "mustIncludeAny" && !mustHasIds) {
+          offenders.push(`${relativePath}:${index + 1}:mustIncludeAny sense ids`);
+        }
+      });
+  });
+
+  expect(offenders.slice(0, 5)).toEqual([]);
 });
 
 test("les dades i seeds no tornen a introduir regles deshabilitades", () => {

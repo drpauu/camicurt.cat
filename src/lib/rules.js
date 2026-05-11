@@ -1,8 +1,16 @@
 import RAW_RULES from "../data/rules.json";
-import { isDisabledRule } from "./disabledRules.js";
+import { isActiveRuleSource } from "./ruleValidation.js";
+export {
+  GENERIC_RULE_TEXT_PATTERN,
+  getRulePayloadKind,
+  hasGenericRuleText,
+  hasRuleComarques,
+  isActiveRuleSource,
+  isLevelRulePayloadValid
+} from "./ruleValidation.js";
 
 export const RULES = Array.isArray(RAW_RULES)
-  ? RAW_RULES.filter((rule) => !isDisabledRule(rule))
+  ? RAW_RULES.filter((rule) => isActiveRuleSource(rule))
   : [];
 
 function hashString(value) {
@@ -29,7 +37,7 @@ export function pickRuleForKey(rules, seedKey, history = [], rngFactory) {
 
 export function normalizeRule(schema) {
   if (!schema) return null;
-  if (isDisabledRule(schema)) return null;
+  if (!isActiveRuleSource(schema)) return null;
   const type = String(schema.type || "REQUIRE").toUpperCase();
   const kind =
     type === "FORBID" || type === "EXCLUDE"

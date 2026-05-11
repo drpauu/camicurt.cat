@@ -21,11 +21,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const RULES_PATH = path.resolve(__dirname, "..", "data", "rules.json");
 const RAW_RULES = JSON.parse(fs.readFileSync(RULES_PATH, "utf8"));
+const GENERIC_RULE_TEXT_PATTERN = /algun lloc clau/i;
 const RULE_DEFS = Array.isArray(RAW_RULES)
   ? RAW_RULES.map((rule) => normalizeRule(rule)).filter(Boolean)
   : [];
 const DEFAULT_BANK_COUNT = 20000;
 const DEFAULT_BANK_ADD_COUNT = 10000;
+const REPAIR_UPDATE_BATCH_SIZE = 500;
 const LOCAL_ENV = loadLocalEnvFiles([
   path.resolve(__dirname, "..", ".env"),
   path.resolve(__dirname, "..", ".env.local")
@@ -56,7 +58,7 @@ const DIFFICULTY_CONFIGS = [
 
 function normalizeRule(schema) {
   if (!schema) return null;
-  if (isDisabledRule(schema)) return null;
+  if (!isActiveRuleSource(schema)) return null;
   const type = String(schema.type || "REQUIRE").toUpperCase();
   const kind =
     type === "FORBID" || type === "EXCLUDE" ? "avoid" : "mustIncludeAny";
@@ -69,6 +71,58 @@ function normalizeRule(schema) {
     tags: schema.tags || [],
     explanation: schema.explanation || ""
   };
+}
+
+function getRuleText(rule) {
+  if (!rule || typeof rule === "string") return "";
+  return String(rule.text || rule.label || "");
+}
+
+function hasGenericRuleText(rule) {
+  return GENERIC_RULE_TEXT_PATTERN.test(getRuleText(rule));
+}
+
+function hasRuleComarques(rule) {
+  return Array.isArray(rule?.comarques) && rule.comarques.length > 0;
+}
+
+function isActiveRuleSource(rule) {
+  return Boolean(rule) && !isDisabledRule(rule) && hasRuleComarques(rule) && !hasGenericRuleText(rule);
+}
+
+function getRulePayloadKind(ruleId, avoidIds = [], mustPassIds = [], ruleDefs = RULE_DEFS) {
+  const base = ruleDefs.find((def) => def?.id === ruleId) || null;
+  if (base?.kind) return base.kind;
+  return Array.isArray(avoidIds) && avoidIds.length ? "avoid" : "mustIncludeAny";
+}
+
+function isLevelRulePayloadValid(levelData, ruleDefs = RULE_DEFS) {
+  if (!levelData?.rule_id) return true;
+  if (isDisabledRule(levelData.rule_id)) return false;
+  if (!ruleDefs.some((def) => def?.id === levelData.rule_id)) return false;
+  const avoidIds = Array.isArray(levelData.avoid_ids) ? levelData.avoid_ids : [];
+  const mustPassIds = Array.isArray(levelData.must_pass_ids) ? levelData.must_pass_ids : [];
+  const kind = getRulePayloadKind(levelData.rule_id, avoidIds, mustPassIds, ruleDefs);
+  if (kind === "avoid") return avoidIds.length > 0;
+  if (kind === "mustIncludeAny") return mustPassIds.length > 0;
+  return false;
+}
+
+function getLevelRulePayloadIssue(levelData, ruleDefs = RULE_DEFS) {
+  if (!levelData?.rule_id) return null;
+  if (isDisabledRule(levelData.rule_id)) return "regla deshabilitada";
+  if (!ruleDefs.some((def) => def?.id === levelData.rule_id)) {
+    return "rule_id desconegut";
+  }
+  const avoidIds = Array.isArray(levelData.avoid_ids) ? levelData.avoid_ids : [];
+  const mustPassIds = Array.isArray(levelData.must_pass_ids) ? levelData.must_pass_ids : [];
+  const kind = getRulePayloadKind(levelData.rule_id, avoidIds, mustPassIds, ruleDefs);
+  if (kind === "avoid" && !avoidIds.length) return "avoid sense avoid_ids";
+  if (kind === "mustIncludeAny" && !mustPassIds.length) {
+    return "mustIncludeAny sense must_pass_ids";
+  }
+  if (kind !== "avoid" && kind !== "mustIncludeAny") return `tipus desconegut: ${kind}`;
+  return null;
 }
 
 function parseEnvLine(line) {
@@ -183,8 +237,8 @@ function getLevelFingerprint(levelData) {
   ].join("|");
 }
 
-function sanitizeDisabledRuleLevelData(levelData, adjacency) {
-  if (!isDisabledRule(levelData?.rule_id)) return levelData;
+function sanitizeInvalidRuleLevelData(levelData, adjacency) {
+  if (isLevelRulePayloadValid(levelData)) return levelData;
   const shortestPath = findShortestPath(levelData.start_id, levelData.target_id, adjacency);
   return {
     ...levelData,
@@ -475,7 +529,7 @@ function buildLevel({
   const mustPassIds =
     selectedRule?.kind === "mustIncludeAny" ? selectedRule.comarcaIds || [] : [];
 
-  return {
+  const levelData = {
     difficulty_id: classifyDifficultyByShortestCount(shortest),
     start_id: start,
     target_id: target,
@@ -484,6 +538,7 @@ function buildLevel({
     avoid_ids: avoidIds.length ? avoidIds : null,
     must_pass_ids: mustPassIds.length ? mustPassIds : null
   };
+  return sanitizeInvalidRuleLevelData(levelData, adjacency);
 }
 
 async function run() {
@@ -501,11 +556,13 @@ async function run() {
       "bank-sql-chunks",
       "assign-year",
       "reassign-year",
-      "reassign-years"
+      "reassign-years",
+      "repair-invalid-rules",
+      "repair-all-invalid-rules"
     ].includes(mode)
   ) {
     console.error(
-      "Usa: node scripts/generate-level.mjs daily|backfill-2025|backfill-year YYYY|backfill-dates|bank [count] [offset]|bank-add [count]|bank-sql [count] [output.sql]|bank-sql-chunks [count] [output-dir]|assign-year [YYYY]|reassign-year YYYY|reassign-years YYYY [...]"
+      "Usa: node scripts/generate-level.mjs daily|backfill-2025|backfill-year YYYY|backfill-dates|bank [count] [offset]|bank-add [count]|bank-sql [count] [output.sql]|bank-sql-chunks [count] [output-dir]|assign-year [YYYY]|reassign-year YYYY|reassign-years YYYY [...]|repair-invalid-rules [YYYY-MM-DD] [YYYY-MM-DD]|repair-all-invalid-rules"
     );
     process.exit(1);
   }
@@ -867,13 +924,17 @@ async function run() {
         process.exit(1);
       }
       rows.push(...(result.data || []));
+      if (rows.length && rows.length % 5000 === 0) {
+        console.log(`Llegint ${table}: ${rows.length} files...`);
+      }
       if (!result.data || result.data.length < pageSize) break;
     }
+    console.log(`Llegit ${table}: ${rows.length} files.`);
     return rows;
   }
 
   async function assignDailyFromBank(forDayKey, bankRow) {
-    const levelData = sanitizeDisabledRuleLevelData(bankRow, adjacencyMap);
+    const levelData = sanitizeInvalidRuleLevelData(bankRow, adjacencyMap);
     const result = await supabase
       .rpc("create_daily_level", {
         p_date: forDayKey,
@@ -1066,6 +1127,218 @@ async function run() {
     };
   }
 
+  async function fetchInvalidDailyRuleRows(startKey, endKey) {
+    const rows = [];
+    const pageSize = 1000;
+    for (let start = 0; ; start += pageSize) {
+      const result = await supabase
+        .from("daily_calendar_public")
+        .select(
+          "date, level_id, start_id, target_id, difficulty_id, shortest_path, rule_id, avoid_ids, must_pass_ids"
+        )
+        .gte("date", startKey)
+        .lte("date", endKey)
+        .order("date", { ascending: true })
+        .range(start, start + pageSize - 1);
+      if (result.error) {
+        console.error("Error auditant daily_calendar_public:", result.error.message);
+        process.exit(1);
+      }
+      rows.push(...(result.data || []));
+      if (!result.data || result.data.length < pageSize) break;
+    }
+    return rows
+      .map((row) => ({ ...row, issue: getLevelRulePayloadIssue(row) }))
+      .filter((row) => row.issue);
+  }
+
+  async function reassignDailyKeysFromBank(keys) {
+    if (!keys.length) {
+      return {
+        createdKeys: [],
+        freedBankRows: 0,
+        deleted: { calendarRows: 0, levelRows: 0 }
+      };
+    }
+    const freedBankRows = await clearBankUsageForKeys(keys);
+    const availableRows = await fetchUnusedBankRows();
+    if (availableRows.length < keys.length) {
+      console.error(
+        `Falten nivells lliures al banc: calen ${keys.length}, disponibles ${availableRows.length}.`
+      );
+      process.exit(1);
+    }
+    shuffleInPlace(availableRows);
+    const deleted = await deleteDailyLevelsForKeys(keys);
+    const createdKeys = [];
+    for (const key of keys) {
+      const bankRow = availableRows.pop();
+      const result = await assignDailyFromBank(key, bankRow);
+      if (result.created) createdKeys.push(key);
+      console.log(
+        `Calendari daily ${key}: ${result.created ? "reparat" : result.reason}`
+      );
+    }
+    return { createdKeys, freedBankRows, deleted };
+  }
+
+  function getPlayableLevelIssue(row) {
+    const hasPlayableLevel =
+      row?.start_id &&
+      row?.target_id &&
+      row?.difficulty_id &&
+      Array.isArray(row?.shortest_path) &&
+      row.shortest_path.length >= 2;
+    return hasPlayableLevel ? null : "nivell incomplet";
+  }
+
+  function getLevelIssues(row) {
+    return [getPlayableLevelIssue(row), getLevelRulePayloadIssue(row)].filter(Boolean);
+  }
+
+  async function fetchAllTableRows(table, columns) {
+    const rows = [];
+    const pageSize = 1000;
+    for (let start = 0; ; start += pageSize) {
+      const result = await supabase
+        .from(table)
+        .select(columns)
+        .order("created_at", { ascending: true })
+        .range(start, start + pageSize - 1);
+      if (result.error) {
+        console.error(`Error llegint ${table}:`, result.error.message);
+        process.exit(1);
+      }
+      rows.push(...(result.data || []));
+      if (!result.data || result.data.length < pageSize) break;
+    }
+    return rows;
+  }
+
+  function chunkRows(rows, size) {
+    const chunks = [];
+    for (let index = 0; index < rows.length; index += size) {
+      chunks.push(rows.slice(index, index + size));
+    }
+    return chunks;
+  }
+
+  async function upsertRepairRowsInBatches(table, label, entries, getPayload) {
+    if (!entries.length) return 0;
+    const chunks = chunkRows(entries, REPAIR_UPDATE_BATCH_SIZE);
+    let repaired = 0;
+    console.log(`Reparant ${label}: 0/${entries.length}`);
+    for (const chunk of chunks) {
+      const payload = chunk.map(({ row }) => getPayload(row));
+      const result = await supabase
+        .from(table)
+        .upsert(payload, { onConflict: "id" })
+        .select("id");
+      if (result.error) {
+        console.error(`Error reparant ${label}:`, result.error.message);
+        process.exit(1);
+      }
+      repaired += result.data?.length || payload.length;
+      console.log(`Reparant ${label}: ${Math.min(repaired, entries.length)}/${entries.length}`);
+    }
+    return repaired;
+  }
+
+  async function repairAllInvalidRuleRows() {
+    console.log("Llegint levels i level_bank...");
+    const [levels, bankRows] = await Promise.all([
+      fetchAllTableRows(
+        "levels",
+        "id, level_type, date, difficulty_id, rule_id, start_id, target_id, shortest_path, avoid_ids, must_pass_ids, created_at"
+      ),
+      fetchAllTableRows(
+        "level_bank",
+        "id, seed_key, difficulty_id, rule_id, start_id, target_id, shortest_path, avoid_ids, must_pass_ids, fingerprint, used_on, created_at"
+      )
+    ]);
+
+    const invalidLevels = levels
+      .map((row) => ({ row, issues: getLevelIssues(row) }))
+      .filter((entry) => entry.issues.length);
+    const invalidBankRows = bankRows
+      .map((row) => ({ row, issues: getLevelIssues(row) }))
+      .filter((entry) => entry.issues.length);
+    console.log(
+      `Files llegides: levels ${levels.length}, level_bank ${bankRows.length}. Invalides: levels ${invalidLevels.length}, level_bank ${invalidBankRows.length}.`
+    );
+
+    const unrepairable = [
+      ...invalidLevels
+        .filter((entry) => entry.issues.includes("nivell incomplet"))
+        .map((entry) => `levels:${entry.row.id}`),
+      ...invalidBankRows
+        .filter((entry) => entry.issues.includes("nivell incomplet"))
+        .map((entry) => `level_bank:${entry.row.seed_key || entry.row.id}`)
+    ];
+    if (unrepairable.length) {
+      console.error(
+        `Hi ha nivells incomplets que no puc reparar automaticament: ${unrepairable
+          .slice(0, 50)
+          .join(", ")}`
+      );
+      process.exit(1);
+    }
+
+    const repairedLevels = await upsertRepairRowsInBatches(
+      "levels",
+      "levels",
+      invalidLevels,
+      (row) => {
+        const levelData = sanitizeInvalidRuleLevelData(row, adjacencyMap);
+        return {
+          id: row.id,
+          level_type: row.level_type,
+          date: row.date,
+          start_id: row.start_id,
+          target_id: row.target_id,
+          created_at: row.created_at,
+          difficulty_id: levelData.difficulty_id,
+          rule_id: levelData.rule_id,
+          shortest_path: levelData.shortest_path,
+          avoid_ids: levelData.avoid_ids,
+          must_pass_ids: levelData.must_pass_ids
+        };
+      }
+    );
+
+    const repairedBankRows = await upsertRepairRowsInBatches(
+      "level_bank",
+      "level_bank",
+      invalidBankRows,
+      (row) => {
+        const levelData = sanitizeInvalidRuleLevelData(row, adjacencyMap);
+        const bankData = {
+          ...levelData,
+          fingerprint: getLevelFingerprint(levelData)
+        };
+        return {
+          id: row.id,
+          seed_key: row.seed_key,
+          start_id: row.start_id,
+          target_id: row.target_id,
+          used_on: row.used_on,
+          created_at: row.created_at,
+          difficulty_id: bankData.difficulty_id,
+          rule_id: bankData.rule_id,
+          shortest_path: bankData.shortest_path,
+          avoid_ids: bankData.avoid_ids,
+          must_pass_ids: bankData.must_pass_ids,
+          fingerprint: bankData.fingerprint
+        };
+      }
+    );
+
+    return {
+      levels: { total: levels.length, invalid: invalidLevels.length, repaired: repairedLevels },
+      bank: { total: bankRows.length, invalid: invalidBankRows.length, repaired: repairedBankRows }
+    };
+  }
+
   if (mode === "daily") {
     const startDate = addDays(today, -20);
     const dailyBatch = await ensureDailyRange(startDate, 21);
@@ -1206,6 +1479,39 @@ async function run() {
     const result = await reassignDailyRangeFromBank(startDate, totalDays);
     console.log(
       `Calendari ${year} reassignat: ${result.createdKeys.length}/${result.total} nous, ${result.deleted.calendarRows} calendaris antics, ${result.deleted.levelRows} nivells antics, ${result.freedBankRows} banc alliberats`
+    );
+    return;
+  }
+
+  if (mode === "repair-invalid-rules") {
+    const startKey = normalizeDayKeyInput(process.argv[3]) || "2026-01-01";
+    const endKey = normalizeDayKeyInput(process.argv[4]) || "2028-12-31";
+    if (startKey > endKey) {
+      console.error("El rang de dates no es valid: la data inicial supera la final.");
+      process.exit(1);
+    }
+    const invalidRows = await fetchInvalidDailyRuleRows(startKey, endKey);
+    if (!invalidRows.length) {
+      console.log(`Cap nivell daily amb norma incoherent entre ${startKey} i ${endKey}.`);
+      return;
+    }
+    const keys = [...new Set(invalidRows.map((row) => row.date))];
+    console.log(
+      `Nivells daily amb norma incoherent: ${invalidRows
+        .map((row) => `${row.date} (${row.issue})`)
+        .join(", ")}`
+    );
+    const result = await reassignDailyKeysFromBank(keys);
+    console.log(
+      `Calendari reparat: ${result.createdKeys.length}/${keys.length} dies, ${result.deleted.calendarRows} calendaris antics, ${result.deleted.levelRows} nivells antics, ${result.freedBankRows} banc alliberats`
+    );
+    return;
+  }
+
+  if (mode === "repair-all-invalid-rules") {
+    const result = await repairAllInvalidRuleRows();
+    console.log(
+      `Reparacio global: levels ${result.levels.repaired}/${result.levels.invalid} reparats de ${result.levels.total}; level_bank ${result.bank.repaired}/${result.bank.invalid} reparats de ${result.bank.total}.`
     );
     return;
   }
