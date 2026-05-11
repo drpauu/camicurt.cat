@@ -69,7 +69,7 @@ const MAP_CACHE_KEY = "rumb-map-cache-v1";
 const MAP_CACHE_VERSION = "2026-01-05";
 const MAP_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 const MAP_TOPO_URL = `/catalunya-comarques.topojson?v=${MAP_CACHE_VERSION}`;
-const BRAND_LOGO_SRC = "/logo/logo%2032x32_transparent.png";
+const BRAND_LOGO_SRC = "/logo/logo%20264x264_transparent.png";
 const PING_URL = import.meta.env.VITE_PING_URL || "";
 const TELEMETRY_QUEUE_KEY = "rumb-telemetry-queue-v1";
 const ATTEMPTS_QUEUE_KEY = "rumb-attempts-queue-v1";
@@ -91,8 +91,8 @@ function BrandLogo({ className = "" }) {
       <img
         className="brand-logo-image"
         src={BRAND_LOGO_SRC}
-        width="32"
-        height="32"
+        width="264"
+        height="264"
         alt=""
         decoding="async"
       />
