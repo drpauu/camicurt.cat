@@ -2018,6 +2018,7 @@ h1 {
 }
 
 .result-primary {
+  color: #fff;
   box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
@@ -2605,14 +2606,6 @@ button.tutorial-shot {
   font-weight: 800;
 }
 
-.tutorial-result-card ol {
-  margin: 0;
-  padding-left: 20px;
-  display: grid;
-  gap: 5px;
-  color: var(--muted);
-}
-
 .tutorial-route-toggle {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2652,14 +2645,42 @@ button.tutorial-shot {
 }
 
 .tutorial-result-list {
+  counter-reset: route-item;
+  list-style: none;
   margin: 0;
-  padding: 14px 14px 14px 28px;
+  padding: 14px;
   display: grid;
   gap: 6px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
   color: var(--muted);
+}
+
+.tutorial-result-list li {
+  counter-increment: route-item;
+  display: grid;
+  grid-template-columns: 3ch minmax(0, 1fr);
+  gap: 5px;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.tutorial-result-list li::before {
+  content: counter(route-item) ".";
+  color: currentColor;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.tutorial-result-list li.is-route-start {
+  color: var(--accent-strong);
+  font-weight: 800;
+}
+
+.tutorial-result-list li.is-route-target {
+  color: var(--error);
+  font-weight: 800;
 }
 
 .tutorial-result-list.is-optimal {
@@ -2683,9 +2704,12 @@ button.tutorial-shot {
   opacity: 1;
 }
 
-.tutorial-result-actions .result-secondary:disabled,
-.tutorial-result-actions .reset:disabled {
+.tutorial-result-actions .result-secondary:disabled {
   color: inherit;
+}
+
+.tutorial-result-actions .reset:disabled {
+  color: #fff;
 }
 
 @keyframes tutorial-enter {
@@ -3035,9 +3059,17 @@ button.tutorial-shot {
 
   .tutorial-shell {
     grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: minmax(260px, 42%) minmax(0, 1fr);
     height: 100%;
     min-height: 0;
+  }
+
+  .tutorial-modal.tutorial-step-goal .tutorial-shell {
+    grid-template-rows: minmax(320px, 48%) minmax(0, 1fr);
+  }
+
+  .tutorial-modal.tutorial-step-improve .tutorial-shell {
+    grid-template-rows: minmax(380px, 56%) minmax(0, 1fr);
   }
 
   .tutorial-visual {
@@ -3045,6 +3077,7 @@ button.tutorial-shot {
     padding: 12px 12px 10px;
     border-right: none;
     border-bottom: 1px solid var(--border);
+    overflow: hidden;
   }
 
   .tutorial-copy {
@@ -3055,20 +3088,34 @@ button.tutorial-shot {
   }
 
   .tutorial-shot {
-    width: min(330px, 100%);
+    width: min(318px, 100%);
     max-width: 100%;
+    max-height: 100%;
     min-height: 0;
     aspect-ratio: 1.08;
   }
 
   .tutorial-goal-shot {
+    width: min(318px, 100%);
+    height: 100%;
+    aspect-ratio: auto;
+    grid-template-rows: auto minmax(0, 1fr);
     gap: 12px;
     padding: 12px;
   }
 
+  .tutorial-goal-shot .tutorial-route-card {
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .tutorial-goal-shot .tutorial-card-line {
+    padding: 4px 8px;
+  }
+
   .tutorial-mini-map {
     min-height: 0;
-    height: clamp(164px, 31vh, 220px);
+    height: 100%;
   }
 
   .tutorial-goal-label text {
@@ -3106,6 +3153,32 @@ button.tutorial-shot {
 
   .tutorial-score-row {
     grid-template-columns: 1fr;
+  }
+
+  .tutorial-improve-shot {
+    width: min(318px, 100%);
+    height: 100%;
+    max-height: 100%;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+
+  .tutorial-improve-shot .tutorial-result-card {
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .tutorial-improve-shot .tutorial-result-title {
+    font-size: 1.28rem;
+  }
+
+  .tutorial-improve-shot .tutorial-result-subtitle,
+  .tutorial-improve-shot .tutorial-rule-card p {
+    font-size: 0.84rem;
+  }
+
+  .tutorial-improve-shot .tutorial-score-row span {
+    min-height: 36px;
   }
 
   .result-modal {

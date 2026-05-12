@@ -101,14 +101,14 @@ const TUTORIAL_STEPS = [
     title: "Construeix la ruta",
     body:
       "Avança pas a pas fins arribar al Destí. Cada comarca bona acosta el camí i manté la ruta contínua.",
-    hint: "Clica la mini captura per afegir passos."
+    hint: "Clica la mini captura per afegir comarques."
   },
   {
     id: "improve",
     title: "Millora el camí",
     body:
-      "Quan connectes Inici i Destí, compara la teva ruta amb un camí òptim i intenta fer-la més curta.",
-    hint: "Canvia entre La teva ruta i Un camí òptim per veure com retallar passos."
+      "Quan connectes Inici i Destí, compara la teva ruta amb un camí òptim i entén una solució millor.",
+    hint: "Canvia entre La teva ruta i Un camí òptim per comparar les dues solucions."
   }
 ];
 
@@ -385,8 +385,7 @@ function TutorialPreview({ stepId, demoState, onInteract, goalMap }) {
         statItems={[
           "67% precisió",
           "3 intents",
-          "Temps: 0:18",
-          compared ? "4 passos" : "6 passos"
+          "Temps: 0:18"
         ]}
         ruleLabel="Norma: passa per Osona"
         referenceText="Referència de la norma: Osona."
@@ -3983,19 +3982,21 @@ export default function App() {
       playManifestSfx("error");
       return;
     }
-    const record = getCompletionRecord(mode, key);
-    if (record?.winningAttempt) {
-      openCompletionModal(record, { mode, key });
-      return;
-    }
     const entry = calendarDailyMap.get(key);
+    const selectionKey = `${mode}:${key}`;
     calendarApplyRef.current = null;
+    calendarResetRef.current = selectionKey;
+    setShowModal(false);
+    setResultData(null);
+    setIsFailed(false);
+    setIsComplete(false);
     setCalendarMode("daily");
     if (!entry?.level) {
       if (entry?.levelId) {
         handleCalendarAction("daily", key);
         return;
       }
+      calendarResetRef.current = null;
       setCalendarSelection(null);
       if (gameMode !== "daily") {
         setGameMode("daily");
@@ -4009,9 +4010,9 @@ export default function App() {
       setGameMode("daily");
       return;
     }
-    const result = record?.winningAttempt || null;
-    applyCalendarLevel(entry.level, { result, showResult: Boolean(result) });
-    calendarApplyRef.current = `daily:${key}`;
+    applyCalendarLevel(entry.level);
+    calendarResetRef.current = null;
+    calendarApplyRef.current = selectionKey;
   }
 
   async function handlePlayToday() {
@@ -4330,12 +4331,6 @@ export default function App() {
     const hasCalendarData = calendarDaily.length > 0;
     if (!hasCalendarData && calendarStatus !== "ready") return;
     playManifestSfx("click");
-    const record = getCompletionRecord("daily", key);
-    if (record?.winningAttempt) {
-      openCompletionModal(record, { mode, key });
-      setCalendarOpen(false);
-      return;
-    }
     const entry = calendarDailyMap.get(key);
     if (!entry?.levelId) return;
     let level = entry.level;
@@ -4354,6 +4349,13 @@ export default function App() {
         }
       ])
     );
+    const selectionKey = `${mode}:${key}`;
+    calendarResetRef.current = selectionKey;
+    calendarApplyRef.current = null;
+    setShowModal(false);
+    setResultData(null);
+    setIsFailed(false);
+    setIsComplete(false);
     setCalendarSelection({ mode: "daily", key });
     setCalendarOpen(false);
     if (gameMode !== "daily") {
@@ -4361,7 +4363,8 @@ export default function App() {
       return;
     }
     applyCalendarLevel(level);
-    calendarApplyRef.current = `daily:${key}`;
+    calendarResetRef.current = null;
+    calendarApplyRef.current = selectionKey;
   }
 
   function handleCalendarClose() {
@@ -4875,11 +4878,7 @@ export default function App() {
       ...(!failed && resultTarget ? [resultTarget] : [])
     ]);
     const accuracy = getRouteAccuracy(normalizedResult);
-    const showOptimalPath = !failed && distance > 0 && optimalRouteNames.length > 0;
-    const routeStatValue =
-      resultView === "optimal" && showOptimalPath
-        ? `${optimalRouteNames.length} passos`
-        : `${playerRouteNames.length} passos`;
+    const showOptimalPath = !failed && optimalRouteNames.length > 1;
     return {
       title,
       subtitle,
@@ -4887,7 +4886,6 @@ export default function App() {
       attemptsText: resultMaxAttempts
         ? `${t("attempts")}: ${resultData.attempts || 0}/${resultMaxAttempts}`
         : `${t("attempts")}: ${resultData.attempts || 0}`,
-      routeStatText: routeStatValue,
       ruleLabel: resultData.ruleLabel || "",
       referenceText,
       playerRouteNames,
@@ -4897,7 +4895,6 @@ export default function App() {
     };
   }, [
     resultData,
-    resultView,
     isFailed,
     gameMode,
     startName,
@@ -5311,7 +5308,7 @@ export default function App() {
         <div className="modal-backdrop tutorial-backdrop" onClick={closeTutorial}>
           <div
             ref={tutorialDialogRef}
-            className="modal tutorial-modal"
+            className={`modal tutorial-modal tutorial-step-${currentTutorialStep.id}`}
             role="dialog"
             aria-modal="true"
             aria-labelledby="tutorial-title"
@@ -5663,8 +5660,7 @@ export default function App() {
               statItems={[
                 completionSummary.accuracyText,
                 completionSummary.attemptsText,
-                `${t("time")}: ${formatTime(resultData.timeMs)}`,
-                completionSummary.routeStatText
+                `${t("time")}: ${formatTime(resultData.timeMs)}`
               ]}
               ruleLabel={completionSummary.ruleLabel}
               referenceText={completionSummary.referenceText}

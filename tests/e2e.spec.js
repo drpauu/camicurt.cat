@@ -274,6 +274,19 @@ test("el tutorial inicial apareix una vegada i es pot reobrir des d'Opcions", as
   await dialog.getByRole("tab", { name: /Un cam/i }).click();
   await expect(dialog.locator('.tutorial-result-card[data-route-view="optimal"]')).toBeVisible();
   await expect(dialog).toContainText("Un camí òptim");
+  await expect(dialog.locator(".tutorial-improve-shot")).not.toContainText("passos");
+  const tutorialRouteColors = await dialog
+    .locator(".tutorial-improve-shot .tutorial-result-list li")
+    .evaluateAll((items) =>
+      items.map((item) => ({
+        text: item.textContent.trim(),
+        color: getComputedStyle(item).color
+      }))
+    );
+  expect(tutorialRouteColors[0].text).toContain("Segarra");
+  expect(tutorialRouteColors.at(-1).text).toContain("Terra Alta");
+  expect(tutorialRouteColors[0].color).not.toBe(tutorialRouteColors[1].color);
+  expect(tutorialRouteColors.at(-1).color).not.toBe(tutorialRouteColors[1].color);
 
   await dialog.getByRole("button", { name: /Comença/i }).click();
   await expect(dialog).toBeHidden();
@@ -302,6 +315,7 @@ test("el tutorial inicial encaixa en mobil sense tallar accions", async ({ page 
   const metrics = await page.evaluate(() => {
     const modal = document.querySelector(".tutorial-modal")?.getBoundingClientRect();
     const visual = document.querySelector(".tutorial-visual")?.getBoundingClientRect();
+    const shot = document.querySelector(".tutorial-shot")?.getBoundingClientRect();
     const actions = document.querySelector(".tutorial-actions")?.getBoundingClientRect();
     const buttons = [...document.querySelectorAll(".tutorial-actions button")].map(
       (button) => ({
@@ -316,6 +330,9 @@ test("el tutorial inicial encaixa en mobil sense tallar accions", async ({ page 
       modalHeight: Math.round(modal?.height || 0),
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
+      shotTop: Math.round(shot?.top || 0),
+      shotBottom: Math.round(shot?.bottom || 0),
+      visualTop: Math.round(visual?.top || 0),
       visualBottom: Math.round(visual?.bottom || 0),
       actionsBottom: Math.round(actions?.bottom || 0),
       modalBottom: Math.round(modal?.bottom || 0),
@@ -324,6 +341,8 @@ test("el tutorial inicial encaixa en mobil sense tallar accions", async ({ page 
   });
   expect(metrics.modalWidth).toBeLessThanOrEqual(metrics.viewportWidth);
   expect(metrics.modalHeight).toBeLessThanOrEqual(metrics.viewportHeight);
+  expect(metrics.shotTop).toBeGreaterThanOrEqual(metrics.visualTop - 1);
+  expect(metrics.shotBottom).toBeLessThanOrEqual(metrics.visualBottom + 1);
   expect(metrics.visualBottom).toBeLessThanOrEqual(metrics.modalBottom);
   expect(metrics.actionsBottom).toBeLessThanOrEqual(metrics.modalBottom);
   expect(metrics.buttons).toHaveLength(3);
@@ -331,6 +350,28 @@ test("el tutorial inicial encaixa en mobil sense tallar accions", async ({ page 
     true
   );
   expect(metrics.buttons.every((button) => button.height >= 44)).toBe(true);
+
+  for (let index = 0; index < 3; index += 1) {
+    await dialog.getByRole("button", { name: /Seg/i }).click();
+  }
+  await expect(dialog.getByRole("heading", { name: /Millora/i })).toBeVisible();
+  const improveMetrics = await page.evaluate(() => {
+    const visual = document.querySelector(".tutorial-visual")?.getBoundingClientRect();
+    const shot = document.querySelector(".tutorial-improve-shot")?.getBoundingClientRect();
+    const actions = document.querySelector(".tutorial-actions")?.getBoundingClientRect();
+    const modal = document.querySelector(".tutorial-modal")?.getBoundingClientRect();
+    return {
+      shotTop: Math.round(shot?.top || 0),
+      shotBottom: Math.round(shot?.bottom || 0),
+      visualTop: Math.round(visual?.top || 0),
+      visualBottom: Math.round(visual?.bottom || 0),
+      actionsBottom: Math.round(actions?.bottom || 0),
+      modalBottom: Math.round(modal?.bottom || 0)
+    };
+  });
+  expect(improveMetrics.shotTop).toBeGreaterThanOrEqual(improveMetrics.visualTop - 1);
+  expect(improveMetrics.shotBottom).toBeLessThanOrEqual(improveMetrics.visualBottom + 1);
+  expect(improveMetrics.actionsBottom).toBeLessThanOrEqual(improveMetrics.modalBottom);
 });
 
 test("Nou mapa genera un repte nou mantenint mode i dificultat", async ({ page }) => {
@@ -491,7 +532,7 @@ test("contrarellotge tanca opcions i mostra compte enrere des de 5", async ({ pa
   expect(values).toEqual(["5", "4", "3", "2", "1"]);
 });
 
-test("obre el modal si el nivell ja està completat", async ({ page }) => {
+test("clicar un nivell completat al calendari el reinicia i conserva el dia verd", async ({ page }) => {
   const dayKey = getTodayKey();
   await page.addInitScript((key) => {
     const level = {
@@ -552,39 +593,17 @@ test("obre el modal si el nivell ja està completat", async ({ page }) => {
   await page.getByRole("button", { name: /Calendari/i }).click();
   const dayButton = page.locator(`[data-calendar-day="${dayKey}"]`);
   await expect(dayButton).toHaveAttribute("data-has-level", "true");
+  await expect(dayButton.locator(".calendar-dot")).toHaveClass(/done/);
   await dayButton.click();
-  const modal = page.locator(".modal");
-  await expect(modal).toBeVisible();
-  await expect(modal).toContainText("Repte diari completat");
-  await expect(modal).toContainText(/(De .+ a .+|Ruta revisada)/);
-  await expect(modal).toContainText("Intents: 3");
-  await expect(modal).toContainText("Temps: 0:12");
-  await expect(modal).toContainText("67% precisió");
-  await expect(modal).toContainText("Referència de la norma: Alt Camp.");
-  await expect(modal).not.toContainText("Has trobat");
-  await expect(modal).toContainText("Un camí òptim");
-  await expect(modal).toContainText("Alt Camp");
-  await expect(modal).toContainText("Següent nivell");
-  await expect(modal).not.toContainText("Repetir nivell");
-  await expect(modal).toContainText("Veure mapa");
-  await expect(modal).not.toContainText("Top temps");
-  await expect(modal).not.toContainText("Distribució");
-  await expect(modal).toContainText("La teva ruta");
-  await modal.getByRole("tab", { name: /Un cam/i }).click();
-  await expect(modal.locator('.tutorial-result-card[data-route-view="optimal"]')).toBeVisible();
-  await expect(modal.locator(".tutorial-result-list")).toContainText("Baix Camp");
-  await expect(modal.locator(".tutorial-result-list")).toContainText(/Vall.s Occidental/);
-  const resetStyles = await modal.locator(".reset.result-primary").evaluate((button) => {
-    const styles = getComputedStyle(button);
-    return {
-      backgroundColor: styles.backgroundColor,
-      borderRadius: styles.borderRadius,
-      fontWeight: styles.fontWeight
-    };
-  });
-  expect(resetStyles.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
-  expect(resetStyles.borderRadius).toBe("8px");
-  expect(Number(resetStyles.fontWeight)).toBeGreaterThanOrEqual(600);
+  await expect(page.locator(".result-modal")).toBeHidden();
+  await expect(page.locator(".map-brief .route")).toContainText("Baix Camp");
+  await expect(page.locator(".map-brief .route")).toContainText(/Vall.s Occidental/);
+  await expect(page.locator(".guess-history-item")).toHaveCount(0);
+
+  await page.getByRole("button", { name: /Calendari/i }).click();
+  const completedDay = page.locator(`[data-calendar-day="${dayKey}"]`);
+  await expect(completedDay).toHaveClass(/done/);
+  await expect(completedDay.locator(".calendar-dot")).toHaveClass(/done/);
 });
 
 test("Seguent mapa des d'un diari antic carrega el dia seguent del calendari", async ({
@@ -665,6 +684,8 @@ test("Seguent mapa des d'un diari antic carrega el dia seguent del calendari", a
   const previousDayButton = page.locator(`[data-calendar-day="${previousKey}"]`);
   await expect(previousDayButton).toHaveAttribute("data-has-level", "true");
   await previousDayButton.click();
+  await expect(page.locator(".map-brief .route")).toContainText("Baix Camp");
+  await playGuesses(page, ["Alt Camp", "Alt Pened\u00e8s", "Baix Llobregat"]);
   const modal = page.locator(".result-modal");
   await expect(modal).toBeVisible();
   await modal.getByRole("button", { name: /Seg.*nivell/i }).click();
@@ -734,6 +755,8 @@ test("Seguent mapa des del diari actual obre un mapa aleatori normal", async ({ 
   const todayButton = page.locator(`[data-calendar-day="${todayKey}"]`);
   await expect(todayButton).toHaveAttribute("data-has-level", "true");
   await todayButton.click();
+  await expect(page.locator(".map-brief .route")).toContainText("Baix Camp");
+  await playGuesses(page, ["Alt Camp", "Alt Pened\u00e8s", "Baix Llobregat"]);
   const modal = page.locator(".result-modal");
   await expect(modal).toBeVisible();
   const routeBefore = (await page.locator(".map-brief .route").textContent())?.trim();
@@ -745,35 +768,18 @@ test("Seguent mapa des del diari actual obre un mapa aleatori normal", async ({ 
     .not.toBe(routeBefore);
 });
 
-test("el modal no mostra cami optim si la ruta ja es curta", async ({ page }) => {
+test("el modal mostra cami optim encara que la ruta ja sigui optima", async ({ page }) => {
   const dayKey = getTodayKey();
   await page.addInitScript((key) => {
     const level = {
       id: "daily-short",
-      start_id: "baix-camp",
-      target_id: "valles-occidental",
-      shortest_path: ["baix-camp", "valles-occidental"],
+      start_id: "urgell",
+      target_id: "terra-alta",
+      shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
       rule_id: null,
       avoid_ids: null,
       must_pass_ids: null,
       difficulty_id: "pixapi"
-    };
-    const winningAttempt = {
-      attempts: 1,
-      timeMs: 9000,
-      playerPath: [{ id: "alt-camp", name: "Alt Camp" }],
-      shortestPath: ["Alt Camp"],
-      shortestCount: 1,
-      distance: 0
-    };
-    const record = {
-      levelKey: `daily:${key}`,
-      dayKey: key,
-      mode: "daily",
-      attemptsList: [winningAttempt],
-      winningAttempt,
-      shortestPath: ["Alt Camp"],
-      shortestCount: 1
     };
     localStorage.setItem(
       "rumb-calendar-cache-v1",
@@ -782,20 +788,34 @@ test("el modal no mostra cami optim si la ruta ja es curta", async ({ page }) =>
         daily: [{ date: key, levelId: level.id, level }]
       })
     );
-    localStorage.setItem(
-      "rumb-completion-records-v1",
-      JSON.stringify({ [`daily:${key}`]: record })
-    );
   }, dayKey);
   await gotoHome(page);
   await page.getByRole("button", { name: /Calendari/i }).click();
   await page.locator(`[data-calendar-day="${dayKey}"]`).click();
+  await playGuesses(page, ["Garrigues", "Ribera d'Ebre"]);
   const modal = page.locator(".modal");
   await expect(modal).toBeVisible();
   await expect(modal).toContainText("Repte diari completat");
   await expect(modal).toContainText("100% precisió");
   await expect(modal).not.toContainText("Has trobat");
-  await expect(modal).not.toContainText("Un camí òptim");
+  await expect(modal).toContainText("Un camí òptim");
+  await expect(modal).not.toContainText("passos");
+  const resultRouteColors = await modal.locator(".tutorial-result-list li").evaluateAll((items) =>
+    items.map((item) => ({
+      text: item.textContent.trim(),
+      color: getComputedStyle(item).color
+    }))
+  );
+  expect(resultRouteColors[0].text).toContain("Urgell");
+  expect(resultRouteColors.at(-1).text).toContain("Terra Alta");
+  expect(resultRouteColors[0].color).not.toBe(resultRouteColors[1].color);
+  expect(resultRouteColors.at(-1).color).not.toBe(resultRouteColors[1].color);
+  const primaryColor = await modal
+    .getByRole("button", { name: /Seg.*nivell/i })
+    .evaluate((button) => getComputedStyle(button).color);
+  expect(primaryColor).toBe("rgb(255, 255, 255)");
+  await modal.getByRole("tab", { name: /Un cam/i }).click();
+  await expect(modal.locator('.tutorial-result-card[data-route-view="optimal"]')).toBeVisible();
   await expect(modal).not.toContainText("estrelles");
 });
 
@@ -897,8 +917,8 @@ test("el modal de resultat no talla accions a amplades petites", async ({ page }
       attempts: 2,
       timeMs: 9000,
       playerPath: [{ id: "alt-camp", name: "Alt Camp" }],
-      shortestPath: ["Alt Camp"],
-      shortestCount: 1,
+      shortestPath: ["Alt Camp", "Alt Pened\u00e8s", "Baix Llobregat"],
+      shortestCount: 3,
       distance: 0,
       mode: "daily",
       dayKey: key
@@ -909,8 +929,8 @@ test("el modal de resultat no talla accions a amplades petites", async ({ page }
       mode: "daily",
       attemptsList: [winningAttempt],
       winningAttempt,
-      shortestPath: ["Alt Camp"],
-      shortestCount: 1
+      shortestPath: winningAttempt.shortestPath,
+      shortestCount: 3
     };
     localStorage.setItem(
       "rumb-calendar-cache-v1",
@@ -930,6 +950,7 @@ test("el modal de resultat no talla accions a amplades petites", async ({ page }
     await gotoHome(page);
     await page.getByRole("button", { name: /Calendari/i }).click();
     await page.locator(`[data-calendar-day="${dayKey}"]`).click();
+    await playGuesses(page, ["Alt Camp", "Alt Pened\u00e8s", "Baix Llobregat"]);
     const modal = page.locator(".result-modal");
     await expect(modal).toBeVisible();
     await expect(modal.getByRole("button", { name: /Següent nivell/i })).toBeVisible();
@@ -954,6 +975,55 @@ test("el modal de resultat no talla accions a amplades petites", async ({ page }
     expect(metrics.every((entry) => entry.scrollWidth <= entry.clientWidth + 1)).toBeTruthy();
     await modal.getByRole("button", { name: /Veure mapa/i }).click();
   }
+});
+
+test("la llista de resultat alinea numeracio llarga dins del recuadre", async ({ page }) => {
+  await gotoHome(page);
+  const metrics = await page.evaluate(() => {
+    const list = document.createElement("ol");
+    list.className = "tutorial-result-list";
+    list.style.width = "190px";
+    list.style.boxSizing = "border-box";
+    list.style.position = "fixed";
+    list.style.left = "10px";
+    list.style.top = "10px";
+    const names = [
+      "Baix Camp",
+      "Pla de l'Estany",
+      "Gironès",
+      "Selva",
+      "Vallès Oriental",
+      "Baix Llobregat",
+      "Alt Penedès",
+      "Priorat",
+      "Tarragonès",
+      "Pla d'Urgell",
+      "Alt Camp",
+      "Vallès Occidental"
+    ];
+    names.forEach((name, index) => {
+      const item = document.createElement("li");
+      item.textContent = name;
+      if (index === 0) item.className = "is-route-start";
+      if (index === names.length - 1) item.className = "is-route-target";
+      list.appendChild(item);
+    });
+    document.body.appendChild(list);
+    const listBox = list.getBoundingClientRect();
+    const itemBoxes = [...list.querySelectorAll("li")].map((item) =>
+      item.getBoundingClientRect()
+    );
+    return {
+      listLeft: Math.round(listBox.left),
+      listRight: Math.round(listBox.right),
+      minItemLeft: Math.round(Math.min(...itemBoxes.map((box) => box.left))),
+      maxItemRight: Math.round(Math.max(...itemBoxes.map((box) => box.right))),
+      tenthDisplay: getComputedStyle(list.querySelectorAll("li")[9]).display
+    };
+  });
+  expect(metrics.minItemLeft).toBeGreaterThanOrEqual(metrics.listLeft);
+  expect(metrics.maxItemRight).toBeLessThanOrEqual(metrics.listRight);
+  expect(metrics.tenthDisplay).toBe("grid");
 });
 
 test("el comodi revelar norma marca la comarca correcta en una norma simple", async ({
