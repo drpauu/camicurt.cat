@@ -11,6 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const topoPath = path.resolve(__dirname, "..", "public", "catalunya-comarques.topojson");
 const rulesPath = path.resolve(__dirname, "..", "src", "data", "rules.json");
 const RULES = JSON.parse(fs.readFileSync(rulesPath, "utf8"));
+const TUTORIAL_SEEN_KEY = "rumb-tutorial-seen-v1";
 const STANDARD_DESCRIPTION =
   "uneix Inici i Destí triant comarques veïnes, completa una ruta vàlida i intenta millorar-la fins acostar-te al camí òptim.";
 const topology = JSON.parse(fs.readFileSync(topoPath, "utf8"));
@@ -104,7 +105,12 @@ const getDayKeyOffset = (offsetDays) => {
   return `${now.getFullYear()}-${month}-${day}`;
 };
 
-const gotoHome = (page) => page.goto("/", { waitUntil: "domcontentloaded" });
+const gotoHome = async (page) => {
+  await page.addInitScript((key) => {
+    localStorage.setItem(key, "1");
+  }, TUTORIAL_SEEN_KEY);
+  return page.goto("/", { waitUntil: "domcontentloaded" });
+};
 
 test("carrega el mapa i la UI base", async ({ page }) => {
   await gotoHome(page);
@@ -126,10 +132,8 @@ test("carrega el mapa i la UI base", async ({ page }) => {
   await expect(page.locator(".brand-date")).toBeVisible();
   await expect(page.locator(".brand-mode-description")).toHaveCount(0);
   await expect(page).toHaveTitle("Camicurt - Joc de rutes entre comarques");
-  await expect(page.getByRole("heading", { name: "Què és Camicurt?" })).toBeVisible();
-  await expect(page.locator(".brand-summary")).toContainText(
-    "Joc gratuït en català al navegador"
-  );
+  await expect(page.locator(".brand-summary")).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: /Mira l'objectiu/i })).toHaveCount(0);
   const metaDescription = await page
     .locator('meta[name="description"]')
     .getAttribute("content");
@@ -224,6 +228,86 @@ test("carrega el mapa i la UI base", async ({ page }) => {
   await expect(page.getByText(/Òptim:/i)).toHaveCount(0);
   await expect(page.locator("body")).not.toContainText("Ã");
   await expect(page.locator("body")).not.toContainText("â€");
+});
+
+test("el tutorial inicial apareix una vegada i es pot reobrir des d'Opcions", async ({
+  page
+}) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  const dialog = page.locator(".tutorial-modal");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: /Mira l'objectiu/i })).toBeVisible();
+  await expect(dialog.locator(".tutorial-dot")).toHaveCount(4);
+  await page.waitForSelector("svg.map");
+  await expect(page.locator(".map-brief .route")).toBeVisible();
+  const routeBefore = await getRouteAndRule(page);
+
+  await dialog.locator(".tutorial-goal-shot").click();
+  await dialog.getByRole("button", { name: /Seg/i }).click();
+  await expect(dialog.getByRole("heading", { name: /Tria comarques ve/i })).toBeVisible();
+  await dialog.getByRole("button", { name: /Prova-ho/i }).click();
+  await expect(dialog.locator(".tutorial-choose-shot")).toHaveClass(/is-played/);
+
+  await dialog.getByRole("button", { name: /Seg/i }).click();
+  await expect(dialog.getByRole("heading", { name: /Construeix/i })).toBeVisible();
+  const activeBefore = await dialog.locator(".tutorial-route-node.is-active").count();
+  await dialog.locator(".tutorial-route-shot").click();
+  await expect
+    .poll(async () => dialog.locator(".tutorial-route-node.is-active").count())
+    .toBeGreaterThan(activeBefore);
+
+  await dialog.getByRole("button", { name: /Seg/i }).click();
+  await expect(dialog.getByRole("heading", { name: /Millora/i })).toBeVisible();
+  await dialog.getByRole("button", { name: /Compara/i }).click();
+  await expect(dialog).toContainText("Un camí òptim");
+
+  await dialog.getByRole("button", { name: /Comença/i }).click();
+  await expect(dialog).toBeHidden();
+  expect(await page.evaluate((key) => localStorage.getItem(key), TUTORIAL_SEEN_KEY)).toBe(
+    "1"
+  );
+  expect(await getRouteAndRule(page)).toEqual(routeBefore);
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator(".tutorial-modal")).toHaveCount(0);
+
+  await page.getByRole("button", { name: /Opcions/i }).click();
+  await page.getByRole("dialog", { name: /Opcions/i }).getByRole("button", {
+    name: /Tutorial/i
+  }).click();
+  await expect(page.locator(".tutorial-modal")).toBeVisible();
+});
+
+test("el tutorial inicial encaixa en mobil sense tallar accions", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  const dialog = page.locator(".tutorial-modal");
+  await expect(dialog).toBeVisible();
+  const metrics = await page.evaluate(() => {
+    const modal = document.querySelector(".tutorial-modal")?.getBoundingClientRect();
+    const buttons = [...document.querySelectorAll(".tutorial-actions button")].map(
+      (button) => ({
+        text: button.textContent.trim(),
+        scrollWidth: button.scrollWidth,
+        clientWidth: button.clientWidth,
+        height: Math.round(button.getBoundingClientRect().height)
+      })
+    );
+    return {
+      modalWidth: Math.round(modal?.width || 0),
+      modalHeight: Math.round(modal?.height || 0),
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      buttons
+    };
+  });
+  expect(metrics.modalWidth).toBeLessThanOrEqual(metrics.viewportWidth);
+  expect(metrics.modalHeight).toBeLessThanOrEqual(metrics.viewportHeight);
+  expect(metrics.buttons).toHaveLength(3);
+  expect(metrics.buttons.every((button) => button.scrollWidth <= button.clientWidth + 1)).toBe(
+    true
+  );
+  expect(metrics.buttons.every((button) => button.height >= 44)).toBe(true);
 });
 
 test("Nou mapa genera un repte nou mantenint mode i dificultat", async ({ page }) => {

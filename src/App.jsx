@@ -70,12 +70,62 @@ const MAP_CACHE_VERSION = "2026-01-05";
 const MAP_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 const MAP_TOPO_URL = `/catalunya-comarques.topojson?v=${MAP_CACHE_VERSION}`;
 const BRAND_LOGO_SRC = "/logo/logo.png";
+const TUTORIAL_SEEN_KEY = "rumb-tutorial-seen-v1";
 const PING_URL = import.meta.env.VITE_PING_URL || "";
 const TELEMETRY_QUEUE_KEY = "rumb-telemetry-queue-v1";
 const ATTEMPTS_QUEUE_KEY = "rumb-attempts-queue-v1";
 const MAX_TELEMETRY_QUEUE = 200;
 const MAX_ATTEMPTS_QUEUE = 50;
 const LEVEL_STATS_MAX = 200;
+
+const TUTORIAL_STEPS = [
+  {
+    id: "goal",
+    title: "Mira l'objectiu",
+    body:
+      "Comença mirant la targeta: tens una comarca d'Inici, una de Destí i, de vegades, una Norma que has de respectar.",
+    hint: "Clica la mini captura per il·luminar cada pista."
+  },
+  {
+    id: "choose",
+    title: "Tria comarques veïnes",
+    body:
+      "Escriu una comarca que toqui la ruta. Si no és veïna, no entra; si ho és, queda afegida al camí.",
+    hint: "Prem Prova-ho per veure una jugada correcta."
+  },
+  {
+    id: "route",
+    title: "Construeix la ruta",
+    body:
+      "Avança pas a pas fins arribar al Destí. Cada comarca bona acosta el camí i manté la ruta contínua.",
+    hint: "Clica la mini captura per afegir passos."
+  },
+  {
+    id: "improve",
+    title: "Millora el camí",
+    body:
+      "Quan connectes Inici i Destí, compara la teva ruta amb un camí òptim i intenta fer-la més curta.",
+    hint: "Prem Compara per alternar entre ruta i òptim."
+  }
+];
+
+function shouldShowInitialTutorial() {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(TUTORIAL_SEEN_KEY) !== "1";
+  } catch {
+    return false;
+  }
+}
+
+function markTutorialSeen() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(TUTORIAL_SEEN_KEY, "1");
+  } catch {
+    // Navegadors amb privacitat estricta poden bloquejar localStorage.
+  }
+}
 
 function clampVolumeValue(value) {
   const numeric = typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -97,6 +147,115 @@ function BrandLogo({ className = "" }) {
         decoding="async"
       />
     </span>
+  );
+}
+
+function TutorialPreview({ stepId, demoState, onInteract }) {
+  if (stepId === "goal") {
+    const highlight = ["start", "target", "rule"][demoState % 3];
+    return (
+      <button
+        type="button"
+        className={`tutorial-shot tutorial-goal-shot highlight-${highlight}`}
+        onClick={onInteract}
+        aria-label="Animar objectiu del tutorial"
+      >
+        <div className="tutorial-route-card">
+          <span className="tutorial-card-line tutorial-card-start">
+            <strong>Inici:</strong> Segarra
+          </span>
+          <span className="tutorial-card-line tutorial-card-target">
+            <strong>Destí:</strong> Terra Alta
+          </span>
+          <span className="tutorial-card-line tutorial-card-rule">
+            <strong>Norma:</strong> passa per Osona
+          </span>
+        </div>
+        <div className="tutorial-mini-map" aria-hidden="true">
+          <span className="mini-comarca mini-start" />
+          <span className="mini-comarca mini-mid one" />
+          <span className="mini-comarca mini-mid two" />
+          <span className="mini-comarca mini-target" />
+          <span className="mini-route" />
+        </div>
+      </button>
+    );
+  }
+
+  if (stepId === "choose") {
+    const played = demoState > 0;
+    return (
+      <div className={`tutorial-shot tutorial-choose-shot ${played ? "is-played" : ""}`}>
+        <span className="tutorial-field-label">Escriu una comarca</span>
+        <div className="tutorial-input">
+          <span>{played ? "Osona" : ""}</span>
+          <i aria-hidden="true" />
+        </div>
+        <div className="tutorial-suggestions" aria-hidden="true">
+          <span className={played ? "picked" : ""}>Osona</span>
+          <span>Bages</span>
+          <span>Berguedà</span>
+        </div>
+        <button type="button" className="tutorial-demo-button" onClick={onInteract}>
+          Prova-ho
+        </button>
+      </div>
+    );
+  }
+
+  if (stepId === "route") {
+    const activeCount = Math.min(5, 2 + (demoState % 4));
+    const nodes = ["Inici", "1", "2", "3", "Destí"];
+    return (
+      <button
+        type="button"
+        className="tutorial-shot tutorial-route-shot"
+        onClick={onInteract}
+        aria-label="Afegir un pas a la ruta del tutorial"
+      >
+        <div className="tutorial-route-track" aria-hidden="true">
+          {nodes.map((label, index) => (
+            <span
+              key={label}
+              className={`tutorial-route-node ${index < activeCount ? "is-active" : ""} ${
+                index === 0 ? "is-start" : index === nodes.length - 1 ? "is-target" : ""
+              }`}
+            >
+              {label}
+            </span>
+          ))}
+        </div>
+        <div className="tutorial-route-status">
+          {activeCount >= nodes.length ? "Ruta connectada" : "Continua amb una veïna"}
+        </div>
+      </button>
+    );
+  }
+
+  const compared = demoState % 2 === 1;
+  return (
+    <div className={`tutorial-shot tutorial-improve-shot ${compared ? "is-compared" : ""}`}>
+      <div className="tutorial-result-card">
+        <span className="label">Resultat</span>
+        <strong>{compared ? "Un camí òptim" : "La teva ruta"}</strong>
+        <div className="tutorial-score-row">
+          <span>3 intents</span>
+          <span>0:18</span>
+          <span>{compared ? "4 passos" : "6 passos"}</span>
+        </div>
+        <ol>
+          {(compared
+            ? ["Segarra", "Anoia", "Conca de Barberà", "Terra Alta"]
+            : ["Segarra", "Bages", "Osona", "Anoia", "Ribera d'Ebre", "Terra Alta"]
+          ).map((name) => (
+            <li key={name}>{name}</li>
+          ))}
+        </ol>
+      </div>
+      <button type="button" className="tutorial-demo-button" onClick={onInteract}>
+        Compara
+      </button>
+    </div>
   );
 }
 
@@ -1071,6 +1230,9 @@ export default function App() {
   const [musicTrack, setMusicTrack] = useState(initialSettings.musicTrack);
   const [activeTheme, setActiveTheme] = useState(initialSettings.theme);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(() => shouldShowInitialTutorial());
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const [tutorialDemoState, setTutorialDemoState] = useState(0);
   const [audioManifest, setAudioManifest] = useState(null);
   const audioManagerRef = useRef(null);
   const [weatherState, setWeatherState] = useState("clear");
@@ -1162,6 +1324,8 @@ export default function App() {
   const musicTimerRef = useRef(null);
   const musicBlockedRef = useRef(false);
   const musicStartedRef = useRef(false);
+  const tutorialDialogRef = useRef(null);
+  const tutorialReturnFocusRef = useRef(null);
   const guessErrorTimerRef = useRef(null);
   const guessFeedbackTimerRef = useRef(null);
   const completionModalTimerRef = useRef(null);
@@ -1331,6 +1495,92 @@ export default function App() {
     },
     [activeTheme, audioManifest, sfxEnabled, sfxVolume]
   );
+  const currentTutorialStep = TUTORIAL_STEPS[tutorialStep] || TUTORIAL_STEPS[0];
+
+  const openTutorial = useCallback(
+    (event) => {
+      tutorialReturnFocusRef.current = event?.currentTarget || null;
+      setCalendarOpen(false);
+      setOptionsOpen(false);
+      setTutorialStep(0);
+      setTutorialDemoState(0);
+      setTutorialOpen(true);
+      playManifestSfx("open", 0.75);
+    },
+    [playManifestSfx]
+  );
+
+  const closeTutorial = useCallback(() => {
+    markTutorialSeen();
+    setTutorialOpen(false);
+    setTutorialDemoState(0);
+    playManifestSfx("close", 0.75);
+  }, [playManifestSfx]);
+
+  const goToTutorialStep = useCallback(
+    (nextStep) => {
+      const boundedStep = Math.max(0, Math.min(nextStep, TUTORIAL_STEPS.length - 1));
+      setTutorialStep(boundedStep);
+      setTutorialDemoState(0);
+      playManifestSfx("click", 0.45);
+    },
+    [playManifestSfx]
+  );
+
+  const handleTutorialPrevious = useCallback(() => {
+    if (tutorialStep <= 0) return;
+    goToTutorialStep(tutorialStep - 1);
+  }, [goToTutorialStep, tutorialStep]);
+
+  const handleTutorialNext = useCallback(() => {
+    if (tutorialStep >= TUTORIAL_STEPS.length - 1) {
+      closeTutorial();
+      return;
+    }
+    goToTutorialStep(tutorialStep + 1);
+  }, [closeTutorial, goToTutorialStep, tutorialStep]);
+
+  const handleTutorialInteract = useCallback(() => {
+    setTutorialDemoState((value) => value + 1);
+    playManifestSfx("neutral", 0.55);
+  }, [playManifestSfx]);
+
+  useEffect(() => {
+    if (!tutorialOpen || typeof window === "undefined") return undefined;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusTimer = window.setTimeout(() => {
+      const target =
+        tutorialDialogRef.current?.querySelector("[data-tutorial-primary]") ||
+        tutorialDialogRef.current?.querySelector("button");
+      target?.focus?.();
+    }, 0);
+    return () => {
+      window.clearTimeout(focusTimer);
+      const returnTarget = tutorialReturnFocusRef.current || previousFocus;
+      tutorialReturnFocusRef.current = null;
+      if (returnTarget && document.contains(returnTarget)) {
+        window.setTimeout(() => returnTarget.focus?.(), 0);
+      }
+    };
+  }, [tutorialOpen]);
+
+  useEffect(() => {
+    if (!tutorialOpen || typeof window === "undefined") return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeTutorial();
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        handleTutorialNext();
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        handleTutorialPrevious();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [closeTutorial, handleTutorialNext, handleTutorialPrevious, tutorialOpen]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1719,8 +1969,9 @@ export default function App() {
 
   useEffect(() => {
     if (!isMapReady || isComplete || isFailed || isCountdownActive) return;
+    if (tutorialOpen) return;
     focusGuessInput();
-  }, [isMapReady, isComplete, isFailed, isCountdownActive, startId, targetId]);
+  }, [isMapReady, isComplete, isFailed, isCountdownActive, startId, targetId, tutorialOpen]);
 
   useEffect(() => {
     if (!isTimedMode || !isCountdownActive || countdownValue === null) return;
@@ -4450,13 +4701,6 @@ export default function App() {
             </button>
             <span className="brand-date">{todayLabel}</span>
           </div>
-          <section className="brand-summary" aria-labelledby="brand-summary-title">
-            <h2 id="brand-summary-title">Què és Camicurt?</h2>
-            <p>
-              Joc gratuït en català al navegador. Uneix Inici i Destí triant comarques
-              veïnes i acosta't al camí òptim.
-            </p>
-          </section>
         </div>
         <div className="topbar-right">
           <div className="topbar-actions">
@@ -4709,6 +4953,88 @@ export default function App() {
         </aside>
       </section>
 
+      {tutorialOpen ? (
+        <div className="modal-backdrop tutorial-backdrop" onClick={closeTutorial}>
+          <div
+            ref={tutorialDialogRef}
+            className="modal tutorial-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tutorial-title"
+            aria-describedby="tutorial-body"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="tutorial-shell">
+              <div className="tutorial-visual">
+                <TutorialPreview
+                  stepId={currentTutorialStep.id}
+                  demoState={tutorialDemoState}
+                  onInteract={handleTutorialInteract}
+                />
+              </div>
+              <div className="tutorial-copy">
+                <div className="tutorial-header">
+                  <span className="label">{t("tutorial")}</span>
+                  <button
+                    type="button"
+                    className="icon-button tutorial-close"
+                    onClick={closeTutorial}
+                    aria-label={t("close")}
+                  >
+                    {"\u00d7"}
+                  </button>
+                </div>
+                <div className="tutorial-progress" aria-label={t("tutorialProgress")}>
+                  <span>
+                    {tutorialStep + 1} / {TUTORIAL_STEPS.length}
+                  </span>
+                  <div className="tutorial-dots">
+                    {TUTORIAL_STEPS.map((step, index) => (
+                      <button
+                        key={step.id}
+                        type="button"
+                        className={`tutorial-dot ${index === tutorialStep ? "active" : ""}`}
+                        onClick={() => goToTutorialStep(index)}
+                        aria-label={t("tutorialGoToStep", { value: index + 1 })}
+                        aria-current={index === tutorialStep ? "step" : undefined}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="tutorial-text">
+                  <h2 id="tutorial-title">{currentTutorialStep.title}</h2>
+                  <p id="tutorial-body">{currentTutorialStep.body}</p>
+                  <p className="tutorial-hint">{currentTutorialStep.hint}</p>
+                </div>
+                <div className="tutorial-actions">
+                  <button
+                    type="button"
+                    className="result-secondary"
+                    onClick={handleTutorialPrevious}
+                    disabled={tutorialStep === 0}
+                  >
+                    {t("previous")}
+                  </button>
+                  <button type="button" className="result-secondary" onClick={closeTutorial}>
+                    {t("tutorialSkip")}
+                  </button>
+                  <button
+                    type="button"
+                    className="reset tutorial-primary"
+                    onClick={handleTutorialNext}
+                    data-tutorial-primary
+                  >
+                    {tutorialStep === TUTORIAL_STEPS.length - 1
+                      ? t("tutorialStart")
+                      : t("next")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {optionsOpen ? (
         <div
           className="modal-backdrop options-modal-backdrop"
@@ -4832,6 +5158,17 @@ export default function App() {
                   onClick={() => handleSfxToggle(!sfxEnabled)}
                 >
                   {sfxEnabled ? t("on") : t("off")}
+                </button>
+              </div>
+
+              <div className="options-section">
+                <span className="label">{t("help")}</span>
+                <button
+                  type="button"
+                  className="tutorial-open-button"
+                  onClick={openTutorial}
+                >
+                  {t("tutorial")}
                 </button>
               </div>
             </div>
