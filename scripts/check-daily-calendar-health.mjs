@@ -169,6 +169,7 @@ const days = parseDaysArg();
 const today = getMadridDayKey();
 const startKey = startArg || addDays(today, -(days - 1));
 const endKey = endArg || today;
+const publicEndKey = endKey < today ? endKey : today;
 
 if (startKey > endKey) {
   console.error("El rang de dates no es valid: la data inicial supera la final.");
@@ -196,39 +197,65 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: { persistSession: false }
 });
 
-const rows = [];
+const availabilityRows = [];
+const detailRows = [];
 const pageSize = 1000;
+
 for (let start = 0; ; start += pageSize) {
   const { data, error } = await supabase
-    .from("daily_calendar_public")
-    .select(
-      "date, level_id, start_id, target_id, rule_id, difficulty_id, shortest_path, avoid_ids, must_pass_ids"
-    )
+    .from("calendar_daily")
+    .select("date, level_id")
     .gte("date", startKey)
     .lte("date", endKey)
     .order("date", { ascending: false })
     .range(start, start + pageSize - 1);
 
   if (error) {
-    console.error(`Error llegint daily_calendar_public: ${error.message}`);
+    console.error(`Error llegint calendar_daily: ${error.message}`);
     process.exit(1);
   }
 
-  rows.push(...(data || []));
+  availabilityRows.push(...(data || []));
   if (!data || data.length < pageSize) break;
 }
 
-const byDate = new Map(rows.map((row) => [row.date, row]));
+if (publicEndKey >= startKey) {
+  for (let start = 0; ; start += pageSize) {
+    const { data, error } = await supabase
+      .from("daily_calendar_public")
+      .select(
+        "date, level_id, start_id, target_id, rule_id, difficulty_id, shortest_path, avoid_ids, must_pass_ids"
+      )
+      .gte("date", startKey)
+      .lte("date", publicEndKey)
+      .order("date", { ascending: false })
+      .range(start, start + pageSize - 1);
+
+    if (error) {
+      console.error(`Error llegint daily_calendar_public: ${error.message}`);
+      process.exit(1);
+    }
+
+    detailRows.push(...(data || []));
+    if (!data || data.length < pageSize) break;
+  }
+}
+
+const availabilityByDate = new Map(availabilityRows.map((row) => [row.date, row]));
+const detailByDate = new Map(detailRows.map((row) => [row.date, row]));
 const missingDates = [];
 const invalidRows = [];
 
 let cursor = endKey;
 while (cursor >= startKey) {
-  const row = byDate.get(cursor);
+  const row = availabilityByDate.get(cursor);
   if (!row) {
     missingDates.push(cursor);
-  } else {
-    const issues = [getPlayableLevelIssue(row), getLevelRulePayloadIssue(row)].filter(Boolean);
+  } else if (cursor <= publicEndKey) {
+    const detailRow = detailByDate.get(cursor);
+    const issues = detailRow
+      ? [getPlayableLevelIssue(detailRow), getLevelRulePayloadIssue(detailRow)].filter(Boolean)
+      : ["nivell públic no visible"];
     if (issues.length) invalidRows.push({ date: cursor, issues });
   }
   cursor = addDays(cursor, -1);
@@ -249,5 +276,5 @@ if (missingDates.length || invalidRows.length) {
 }
 
 console.log(
-  `Calendari diari correcte: ${rows.length} dies entre ${startKey} i ${endKey}.`
+  `Calendari diari correcte: ${availabilityRows.length} disponibilitats i ${detailRows.length} nivells públics entre ${startKey} i ${endKey}.`
 );

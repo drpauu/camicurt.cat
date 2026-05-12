@@ -53,6 +53,9 @@ const DAILY_RESULTS_KEY = "rumb-daily-results-v1";
 const CALENDAR_WEEKDAYS = ["dl", "dt", "dc", "dj", "dv", "ds", "dg"];
 const CALENDAR_CACHE_KEY = "rumb-calendar-cache-v1";
 const CALENDAR_CACHE_TTL_MS = 1000 * 60 * 15;
+const CALENDAR_AVAILABILITY_LOOKBACK_YEARS = 1;
+const CALENDAR_AVAILABILITY_LOOKAHEAD_YEARS = 6;
+const CALENDAR_AVAILABILITY_PAGE_SIZE = 5000;
 const CALENDAR_AVAILABILITY_COLUMNS = "date, level_id";
 const CALENDAR_DETAIL_COLUMNS =
   "date, level_id, start_id, target_id, shortest_path, rule_id, avoid_ids, must_pass_ids, difficulty_id";
@@ -854,6 +857,15 @@ function getLatestUnlockedCalendarDay(entries, maxDayKey) {
   return entries.find((entry) => entry.date <= maxDayKey)?.date || "";
 }
 
+function getCalendarAvailabilityWindow(dayKey) {
+  const normalized = normalizeDayKey(dayKey) || getLocalDayKey();
+  const [year] = normalized.split("-").map(Number);
+  return {
+    from: `${year - CALENDAR_AVAILABILITY_LOOKBACK_YEARS}-01-01`,
+    to: `${year + CALENDAR_AVAILABILITY_LOOKAHEAD_YEARS}-12-31`
+  };
+}
+
 function serializeAdjacency(adjacencyMap) {
   return [...adjacencyMap.entries()].map(([id, neighbors]) => [id, [...neighbors]]);
 }
@@ -889,17 +901,19 @@ function writeMapCache(payload) {
   }
 }
 
-function readCalendarCache() {
+function readCalendarCache({ allowStale = false } = {}) {
   if (typeof window === "undefined") return null;
   const raw = localStorage.getItem(CALENDAR_CACHE_KEY);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
     if (!parsed?.updatedAt) return null;
-    if (Date.now() - parsed.updatedAt > CALENDAR_CACHE_TTL_MS) return null;
+    const isStale = Date.now() - parsed.updatedAt > CALENDAR_CACHE_TTL_MS;
+    if (isStale && !allowStale) return null;
     return {
       ...parsed,
-      daily: Array.isArray(parsed.daily) ? parsed.daily : []
+      daily: Array.isArray(parsed.daily) ? parsed.daily : [],
+      stale: isStale
     };
   } catch {
     return null;
@@ -930,6 +944,75 @@ function readRuleHistory() {
   } catch {
     return { daily: [] };
   }
+}
+
+async function fetchCalendarAvailabilityEntries(supabase, fromKey, toKey, dayKey) {
+  const normalizedFrom = normalizeDayKey(fromKey);
+  const normalizedTo = normalizeDayKey(toKey);
+  if (!supabase || !normalizedFrom || !normalizedTo) return [];
+
+  const readDirectAvailability = async () => {
+    const result = await withRetry(
+      () =>
+        supabase
+          .from("calendar_daily")
+          .select(CALENDAR_AVAILABILITY_COLUMNS)
+          .gte("date", normalizedFrom)
+          .lte("date", normalizedTo)
+          .order("date", { ascending: false })
+          .range(0, CALENDAR_AVAILABILITY_PAGE_SIZE - 1),
+      { retries: 2, backoffMs: 500 }
+    );
+    if (result.error) throw result.error;
+    return Array.isArray(result.data) ? result.data : [];
+  };
+
+  const readAvailabilityRpc = async () => {
+    const result = await withRetry(
+      () =>
+        supabase.rpc("calendar_daily_availability_public", {
+          p_from: normalizedFrom,
+          p_to: normalizedTo
+        }),
+      { retries: 2, backoffMs: 500 }
+    );
+    if (result.error) throw result.error;
+    return Array.isArray(result.data) ? result.data : [];
+  };
+
+  const readPublicDetailsAvailability = async () => {
+    const publicTo = normalizedTo <= dayKey ? normalizedTo : dayKey;
+    if (publicTo < normalizedFrom) return [];
+    const result = await withRetry(
+      () =>
+        supabase
+          .from("daily_calendar_public")
+          .select(CALENDAR_AVAILABILITY_COLUMNS)
+          .gte("date", normalizedFrom)
+          .lte("date", publicTo)
+          .order("date", { ascending: false })
+          .range(0, CALENDAR_AVAILABILITY_PAGE_SIZE - 1),
+      { retries: 2, backoffMs: 500 }
+    );
+    if (result.error) throw result.error;
+    return Array.isArray(result.data) ? result.data : [];
+  };
+
+  let lastError = null;
+  for (const loader of [
+    readDirectAvailability,
+    readAvailabilityRpc,
+    readPublicDetailsAvailability
+  ]) {
+    try {
+      const rows = await loader();
+      if (rows.length) return rows;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  if (lastError) throw lastError;
+  return [];
 }
 
 function writeRuleHistory(history) {
@@ -2299,11 +2382,11 @@ export default function App() {
     let isMounted = true;
     async function loadCalendar() {
       const canReadCalendar = Boolean(supabaseEnabled && supabase);
-      const cached = readCalendarCache();
+      const cached = readCalendarCache({ allowStale: true });
       const hasCache = Boolean(cached?.daily?.length);
       if (hasCache && isMounted) {
         setCalendarDaily(cached.daily || []);
-        setCalendarStatus("ready");
+        setCalendarStatus(cached.stale ? "refreshing" : "ready");
         setCalendarLoaded(true);
       }
       if (!canReadCalendar) {
@@ -2313,19 +2396,8 @@ export default function App() {
       calendarLoadingRef.current = true;
       setCalendarStatus(hasCache ? "refreshing" : "loading");
       try {
-        const dailyRes = await withRetry(
-          () =>
-            supabase
-              .from("calendar_daily")
-              .select(CALENDAR_AVAILABILITY_COLUMNS)
-              .lte("date", dayKey)
-              .order("date", { ascending: false })
-              .range(0, 1499),
-          { retries: 2, backoffMs: 500 }
-        );
-        if (dailyRes.error) throw dailyRes.error;
-
-        const dailyRows = Array.isArray(dailyRes.data) ? dailyRes.data : [];
+        const { from, to } = getCalendarAvailabilityWindow(dayKey);
+        const dailyRows = await fetchCalendarAvailabilityEntries(supabase, from, to, dayKey);
         const dailyEntries = dailyRows
           .map((row) => calendarAvailabilityEntryFromRow(row))
           .filter(Boolean);
@@ -4897,7 +4969,6 @@ export default function App() {
   }, [audioManifest, t]);
   const todayLabel = useMemo(() => formatFullDayLabel(dayKey), [dayKey]);
   const showDailySkeleton = calendarStatus === "loading" && calendarDaily.length === 0;
-  const hasDailyLevels = calendarDaily.some((entry) => entry.levelId);
   const calendarMonthLabel = useMemo(() => {
     return calendarMonth.toLocaleDateString("ca-ES", {
       month: "long",
@@ -4908,6 +4979,11 @@ export default function App() {
     () => buildMonthGrid(calendarMonth),
     [calendarMonth]
   );
+  const hasVisibleCalendarAvailability = useMemo(() => {
+    return calendarMonthDays.some(
+      (day) => day.inMonth && Boolean(calendarDailyMap.get(day.key)?.levelId)
+    );
+  }, [calendarMonthDays, calendarDailyMap]);
   const canShowNextCalendarMonth = useMemo(() => {
     const latestAssignedDay = calendarDaily[0]?.date || dayKey;
     const latestAssignedDate = new Date(`${latestAssignedDay}T00:00:00`);
@@ -5554,7 +5630,7 @@ export default function App() {
                     })}
               </div>
               {!showDailySkeleton &&
-              !hasDailyLevels &&
+              !hasVisibleCalendarAvailability &&
               (calendarStatus === "ready" || calendarStatus === "error") ? (
                 <p className="muted">{t("calendarEmpty")}</p>
               ) : null}
