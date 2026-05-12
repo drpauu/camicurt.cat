@@ -351,7 +351,33 @@ test("el tutorial inicial encaixa en mobil sense tallar accions", async ({ page 
   );
   expect(metrics.buttons.every((button) => button.height >= 44)).toBe(true);
 
-  for (let index = 0; index < 3; index += 1) {
+  await dialog.getByRole("button", { name: /Seg/i }).click();
+  await expect(dialog.getByRole("heading", { name: /Tria comarques ve/i })).toBeVisible();
+  const chooseMetrics = await page.evaluate(() => {
+    const visual = document.querySelector(".tutorial-visual")?.getBoundingClientRect();
+    const shot = document.querySelector(".tutorial-choose-shot")?.getBoundingClientRect();
+    const input = document.querySelector(".tutorial-input")?.getBoundingClientRect();
+    const suggestions = document.querySelector(".tutorial-suggestions")?.getBoundingClientRect();
+    const demoButton = document.querySelector(".tutorial-demo-button")?.getBoundingClientRect();
+    return {
+      shotTop: Math.round(shot?.top || 0),
+      shotBottom: Math.round(shot?.bottom || 0),
+      visualTop: Math.round(visual?.top || 0),
+      visualBottom: Math.round(visual?.bottom || 0),
+      inputLeft: Math.round(input?.left || 0),
+      suggestionsLeft: Math.round(suggestions?.left || 0),
+      buttonBottom: Math.round(demoButton?.bottom || 0),
+      shotLeft: Math.round(shot?.left || 0),
+      shotRight: Math.round(shot?.right || 0)
+    };
+  });
+  expect(chooseMetrics.shotTop).toBeGreaterThanOrEqual(chooseMetrics.visualTop - 1);
+  expect(chooseMetrics.shotBottom).toBeLessThanOrEqual(chooseMetrics.visualBottom + 1);
+  expect(chooseMetrics.inputLeft).toBeGreaterThanOrEqual(chooseMetrics.shotLeft);
+  expect(chooseMetrics.suggestionsLeft).toBeGreaterThanOrEqual(chooseMetrics.shotLeft);
+  expect(chooseMetrics.buttonBottom).toBeLessThanOrEqual(chooseMetrics.shotBottom + 1);
+
+  for (let index = 0; index < 2; index += 1) {
     await dialog.getByRole("button", { name: /Seg/i }).click();
   }
   await expect(dialog.getByRole("heading", { name: /Millora/i })).toBeVisible();
