@@ -105,7 +105,7 @@ const TUTORIAL_STEPS = [
     title: "Millora el camí",
     body:
       "Quan connectes Inici i Destí, compara la teva ruta amb un camí òptim i intenta fer-la més curta.",
-    hint: "Prem Compara per alternar entre ruta i òptim."
+    hint: "Canvia entre La teva ruta i Un camí òptim per veure com retallar passos."
   }
 ];
 
@@ -150,7 +150,109 @@ function BrandLogo({ className = "" }) {
   );
 }
 
-function TutorialPreview({ stepId, demoState, onInteract }) {
+function RouteResultCard({
+  eyebrow,
+  title,
+  subtitle,
+  headingId,
+  statItems,
+  ruleLabel,
+  referenceText,
+  routeView,
+  playerLabel,
+  optimalLabel,
+  playerRoute,
+  optimalRoute,
+  canCompare,
+  onSelectView,
+  primaryActionLabel,
+  secondaryActionLabel,
+  onPrimaryAction,
+  onSecondaryAction,
+  previewOnly = false
+}) {
+  const activeView = canCompare && routeView === "optimal" ? "optimal" : "player";
+  const routeNames = activeView === "optimal" ? optimalRoute : playerRoute;
+  const routeTitle = activeView === "optimal" ? optimalLabel : playerLabel;
+  const listClassName =
+    activeView === "optimal"
+      ? "tutorial-result-list is-optimal"
+      : "tutorial-result-list is-player";
+
+  return (
+    <div className="tutorial-result-card" data-route-view={activeView}>
+      <span className="label">{eyebrow}</span>
+      {headingId ? (
+        <h2 id={headingId} className="tutorial-result-title">
+          {title}
+        </h2>
+      ) : (
+        <strong className="tutorial-result-title">{title}</strong>
+      )}
+      {subtitle ? <p className="tutorial-result-subtitle">{subtitle}</p> : null}
+      <div className="tutorial-score-row">
+        {statItems.map((item) => (
+          <span key={item}>{item}</span>
+        ))}
+      </div>
+      {ruleLabel || referenceText ? (
+        <div className="tutorial-rule-card">
+          {ruleLabel ? <p>{ruleLabel}</p> : null}
+          {referenceText ? <p className="is-reference">{referenceText}</p> : null}
+        </div>
+      ) : null}
+      {canCompare ? (
+        <div className="tutorial-route-toggle" role="tablist" aria-label="Comparar rutes">
+          <button
+            type="button"
+            role="tab"
+            className={activeView === "player" ? "active" : ""}
+            onClick={() => onSelectView?.("player")}
+            aria-selected={activeView === "player"}
+          >
+            {playerLabel}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className={activeView === "optimal" ? "active" : ""}
+            onClick={() => onSelectView?.("optimal")}
+            aria-selected={activeView === "optimal"}
+          >
+            {optimalLabel}
+          </button>
+        </div>
+      ) : (
+        <span className="tutorial-route-caption">{routeTitle}</span>
+      )}
+      <ol className={listClassName}>
+        {routeNames.map((name, index) => (
+          <li key={`${activeView}-${name}-${index}`}>{name}</li>
+        ))}
+      </ol>
+      <div className="tutorial-result-actions result-actions">
+        <button
+          type="button"
+          className="reset result-primary tutorial-result-primary"
+          onClick={onPrimaryAction}
+          disabled={previewOnly}
+        >
+          {primaryActionLabel}
+        </button>
+        <button
+          type="button"
+          className="result-secondary"
+          onClick={onSecondaryAction}
+          disabled={previewOnly}
+        >
+          {secondaryActionLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TutorialPreview({ stepId, demoState, onInteract, goalMap }) {
   if (stepId === "goal") {
     const highlight = ["start", "target", "rule"][demoState % 3];
     return (
@@ -172,11 +274,41 @@ function TutorialPreview({ stepId, demoState, onInteract }) {
           </span>
         </div>
         <div className="tutorial-mini-map" aria-hidden="true">
-          <span className="mini-comarca mini-start" />
-          <span className="mini-comarca mini-mid one" />
-          <span className="mini-comarca mini-mid two" />
-          <span className="mini-comarca mini-target" />
-          <span className="mini-route" />
+          {goalMap?.features?.length ? (
+            <svg className={`tutorial-goal-map is-${highlight}`} viewBox={goalMap.viewBox}>
+              {goalMap.features.map((featureItem) => (
+                <path
+                  key={featureItem.id}
+                  d={featureItem.path}
+                  data-tutorial-goal-name={featureItem.name}
+                  data-tutorial-goal-role={featureItem.role || "base"}
+                  className={`tutorial-goal-path ${
+                    featureItem.role ? `is-${featureItem.role}` : "is-base"
+                  }`}
+                />
+              ))}
+              {goalMap.labels.map((label) => (
+                <g
+                  key={label.id}
+                  className={`tutorial-goal-label is-${label.role}`}
+                  data-tutorial-label-name={label.name}
+                  data-tutorial-label-role={label.role}
+                  transform={`translate(${label.x + label.dx}, ${label.y + label.dy})`}
+                >
+                  <circle r="4.5" />
+                  <text x="8" y="4">
+                    {label.name}
+                  </text>
+                </g>
+              ))}
+            </svg>
+          ) : (
+            <div className="tutorial-goal-skeleton">
+              <span />
+              <span />
+              <span />
+            </div>
+          )}
         </div>
       </button>
     );
@@ -235,26 +367,36 @@ function TutorialPreview({ stepId, demoState, onInteract }) {
   const compared = demoState % 2 === 1;
   return (
     <div className={`tutorial-shot tutorial-improve-shot ${compared ? "is-compared" : ""}`}>
-      <div className="tutorial-result-card">
-        <span className="label">Resultat</span>
-        <strong>{compared ? "Un camí òptim" : "La teva ruta"}</strong>
-        <div className="tutorial-score-row">
-          <span>3 intents</span>
-          <span>0:18</span>
-          <span>{compared ? "4 passos" : "6 passos"}</span>
-        </div>
-        <ol>
-          {(compared
-            ? ["Segarra", "Anoia", "Conca de Barberà", "Terra Alta"]
-            : ["Segarra", "Bages", "Osona", "Anoia", "Ribera d'Ebre", "Terra Alta"]
-          ).map((name) => (
-            <li key={name}>{name}</li>
-          ))}
-        </ol>
-      </div>
-      <button type="button" className="tutorial-demo-button" onClick={onInteract}>
-        Compara
-      </button>
+      <RouteResultCard
+        eyebrow="Resultat"
+        title="Ruta completada"
+        subtitle="De Segarra a Terra Alta"
+        statItems={[
+          "67% precisió",
+          "3 intents",
+          "Temps: 0:18",
+          compared ? "4 passos" : "6 passos"
+        ]}
+        ruleLabel="Norma: passa per Osona"
+        referenceText="Referència de la norma: Osona."
+        routeView={compared ? "optimal" : "player"}
+        playerLabel="La teva ruta"
+        optimalLabel="Un camí òptim"
+        playerRoute={[
+          "Segarra",
+          "Bages",
+          "Osona",
+          "Anoia",
+          "Ribera d'Ebre",
+          "Terra Alta"
+        ]}
+        optimalRoute={["Segarra", "Anoia", "Conca de Barberà", "Terra Alta"]}
+        canCompare
+        onSelectView={onInteract}
+        primaryActionLabel="Següent nivell"
+        secondaryActionLabel="Veure mapa"
+        previewOnly
+      />
     </div>
   );
 }
@@ -322,6 +464,18 @@ const POWERUPS = [
     uses: {
       pixapi: 2,
       dominguero: 2,
+      rondinaire: 1,
+      "cap-colla-rutes": 0
+    }
+  },
+  {
+    id: "reveal-rule",
+    labelKey: "powerupRevealRule",
+    durationMs: 5000,
+    penaltyMs: 3000,
+    uses: {
+      pixapi: 1,
+      dominguero: 1,
       rondinaire: 1,
       "cap-colla-rutes": 0
     }
@@ -1191,6 +1345,8 @@ export default function App() {
   const [ruleDefs, setRuleDefs] = useState([]);
   const [rulesReady, setRulesReady] = useState(false);
   const [resultData, setResultData] = useState(null);
+  const [resultView, setResultView] = useState("player");
+  const [levelDifficultyId, setLevelDifficultyId] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [completionCelebrating, setCompletionCelebrating] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -1299,6 +1455,7 @@ export default function App() {
   });
   const [powerups, setPowerups] = useState({});
   const [tempRevealId, setTempRevealId] = useState(null);
+  const [tempRuleRevealIds, setTempRuleRevealIds] = useState([]);
   const [tempNeighborHint, setTempNeighborHint] = useState(false);
   const [tempInitialsHint, setTempInitialsHint] = useState(false);
   const [replayMode, setReplayMode] = useState(null);
@@ -1361,7 +1518,17 @@ export default function App() {
   const routeDifficulty = classifyDifficultyByShortestCount(
     shortestPath.length ? Math.max(shortestPath.length - 2, 0) : 0
   );
-  const activeDifficulty = isFixedMode ? routeDifficulty : difficulty;
+  const activeDifficulty = isFixedMode ? levelDifficultyId || routeDifficulty : difficulty;
+  const visiblePowerups = useMemo(() => {
+    return POWERUPS.filter((powerup) => {
+      if (powerup.id !== "reveal-rule") return true;
+      if (!Array.isArray(activeRule?.comarcaIds) || !activeRule.comarcaIds.length) {
+        return false;
+      }
+      if (isExploreMode) return true;
+      return (powerups[powerup.id] ?? 0) > 0;
+    });
+  }, [activeRule, isExploreMode, powerups]);
 
   useEffect(() => {
     if (!supabaseEnabled || supabase || supabaseBlocked) return;
@@ -1581,6 +1748,10 @@ export default function App() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [closeTutorial, handleTutorialNext, handleTutorialPrevious, tutorialOpen]);
+
+  useEffect(() => {
+    setResultView("player");
+  }, [resultData]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -2473,6 +2644,7 @@ export default function App() {
     if (!replayOrder.length || replayIndex <= 0) return new Set();
     return new Set(replayOrder.slice(0, replayIndex));
   }, [replayOrder, replayIndex]);
+  const ruleRevealSet = useMemo(() => new Set(tempRuleRevealIds), [tempRuleRevealIds]);
 
   const neighborSet = useMemo(() => {
     if (!showNeighborHintActive || !currentId) return new Set();
@@ -2528,6 +2700,47 @@ export default function App() {
     return map;
   }, [paths]);
 
+  const tutorialGoalMap = useMemo(() => {
+    if (!paths.length) return null;
+    const byName = new Map(paths.map((featureItem) => [normalizeName(featureItem.name), featureItem]));
+    const startFeature = byName.get(normalizeName("Segarra")) || null;
+    const ruleFeature = byName.get(normalizeName("Osona")) || null;
+    const targetFeature = byName.get(normalizeName("Terra Alta")) || null;
+    const labels = [
+      startFeature && { ...startFeature, role: "start", dx: -12, dy: -12 },
+      ruleFeature && { ...ruleFeature, role: "rule", dx: 10, dy: -18 },
+      targetFeature && { ...targetFeature, role: "target", dx: -18, dy: 18 }
+    ]
+      .filter(Boolean)
+      .map((item) => ({
+        id: item.id,
+        name: item.name,
+        role: item.role,
+        x: item.centroid?.[0] || 0,
+        y: item.centroid?.[1] || 0,
+        dx: item.dx,
+        dy: item.dy
+      }));
+
+    return {
+      viewBox,
+      features: paths.map((featureItem) => ({
+        id: featureItem.id,
+        name: featureItem.name,
+        path: featureItem.path,
+        role:
+          featureItem.id === startFeature?.id
+            ? "start"
+            : featureItem.id === ruleFeature?.id
+              ? "rule"
+              : featureItem.id === targetFeature?.id
+                ? "target"
+                : null
+      })),
+      labels
+    };
+  }, [paths, viewBox]);
+
   const renderPaths = useMemo(() => {
     return paths.map((featureItem) => {
       const isStart = featureItem.id === startId;
@@ -2536,8 +2749,10 @@ export default function App() {
       const isGuessed = guessedSet.has(featureItem.id);
       const isReplay = replaySet.has(featureItem.id);
       const isPowerReveal = tempRevealId === featureItem.id;
+      const isRuleReveal = ruleRevealSet.has(featureItem.id);
       const isCompletionPath = completedPathSet.has(featureItem.id);
-      const isRevealed = isStart || isTarget || isGuessed || isReplay || isPowerReveal;
+      const isRevealed =
+        isStart || isTarget || isGuessed || isReplay || isPowerReveal || isRuleReveal;
       const isNeighbor =
         showNeighborHintActive &&
         !isRevealed &&
@@ -2558,7 +2773,8 @@ export default function App() {
         isCompletionPath && "is-complete-route",
         isNeighbor && "is-neighbor",
         isReplay && "is-replay",
-        isPowerReveal && "is-reveal"
+        isPowerReveal && "is-reveal",
+        isRuleReveal && "is-rule-reveal"
       ]
         .filter(Boolean)
         .join(" ");
@@ -2577,6 +2793,7 @@ export default function App() {
     completedPathSet,
     replaySet,
     tempRevealId,
+    ruleRevealSet,
     showNeighborHintActive,
     neighborSet,
     isExploreMode,
@@ -2838,6 +3055,7 @@ export default function App() {
       level.difficulty_id ||
       classifyDifficultyByShortestCount(Math.max(nextShortest.length - 2, 0));
     const basePowerups = getPowerupUses(levelDifficulty);
+    setLevelDifficultyId(levelDifficulty);
 
     setStartId(start);
     setTargetId(target);
@@ -2847,6 +3065,7 @@ export default function App() {
     setHintsUsed(result?.hintsUsed || 0);
     setGuessError(false);
     setTempRevealId(null);
+    setTempRuleRevealIds([]);
     setTempNeighborHint(false);
     setTempInitialsHint(false);
     setPowerups(basePowerups);
@@ -3269,6 +3488,7 @@ export default function App() {
       nextShortestPaths = [nextShortest];
     }
     const generatedDifficulty = classifyDifficultyByShortestCount(nextShortest);
+    setLevelDifficultyId(generatedDifficulty);
 
     setStartId(start);
     setTargetId(target);
@@ -3278,6 +3498,7 @@ export default function App() {
     setHintsUsed(0);
     setGuessError(false);
     setTempRevealId(null);
+    setTempRuleRevealIds([]);
     setTempNeighborHint(false);
     setTempInitialsHint(false);
     const basePowerups = getPowerupUses(generatedDifficulty);
@@ -3415,6 +3636,30 @@ export default function App() {
       setTempRevealId(revealId);
       hintTimersRef.current.reveal = setTimeout(() => {
         setTempRevealId(null);
+      }, powerup.durationMs || 5000);
+      return;
+    }
+    if (powerupId === "reveal-rule") {
+      const revealIds = Array.isArray(activeRule?.comarcaIds)
+        ? [...new Set(activeRule.comarcaIds.filter(Boolean))]
+        : [];
+      if (!revealIds.length) return;
+      if (!isExploreMode) {
+        setPowerups((prev) => ({
+          ...prev,
+          [powerupId]: Math.max((prev[powerupId] || 0) - 1, 0)
+        }));
+      }
+      setHintsUsed((prev) => prev + 1);
+      if (isTimedMode) {
+        setTimePenaltyMs((prev) => prev + (powerup.penaltyMs || 0));
+      }
+      if (hintTimersRef.current.ruleReveal) {
+        clearTimeout(hintTimersRef.current.ruleReveal);
+      }
+      setTempRuleRevealIds(revealIds);
+      hintTimersRef.current.ruleReveal = setTimeout(() => {
+        setTempRuleRevealIds([]);
       }, powerup.durationMs || 5000);
       return;
     }
@@ -3877,6 +4122,7 @@ export default function App() {
     Object.values(hintTimersRef.current).forEach((timer) => clearTimeout(timer));
     hintTimersRef.current = {};
     setTempRevealId(null);
+    setTempRuleRevealIds([]);
     setTempNeighborHint(false);
     setTempInitialsHint(false);
     const snapshotDifficulty =
@@ -3884,6 +4130,7 @@ export default function App() {
         ? repeatSnapshot.difficulty ||
           classifyDifficultyByShortestCount(repeatSnapshot.shortestPath)
         : repeatSnapshot.difficulty || activeDifficulty;
+    setLevelDifficultyId(snapshotDifficulty);
     const basePowerups = getPowerupUses(snapshotDifficulty);
     const explorePowerups = Object.fromEntries(
       POWERUPS.map((powerup) => [powerup.id, 99])
@@ -4523,31 +4770,54 @@ export default function App() {
       resultStart && resultTarget
         ? t("routeFromTo", { start: resultStart, target: resultTarget })
         : t("routeReviewed");
-    const resultDifficulty =
-      resultData.difficulty || (resultMode === "daily" ? HARDEST_DIFFICULTY_ID : "");
     const referencedComarques = Array.isArray(resultData.ruleComarques)
       ? resultData.ruleComarques.filter(Boolean)
       : [];
-    const learningText =
-      !failed &&
-      resultDifficulty === HARDEST_DIFFICULTY_ID &&
-      referencedComarques.length
-        ? t("referenceCounty", { value: referencedComarques.join(", ") })
-        : "";
+    const referenceText = referencedComarques.length
+      ? t("ruleReference", { value: referencedComarques.join(", ") })
+      : "";
+    const normalizeRouteNames = (names) =>
+      names.filter(Boolean).filter((name, index, list) => index === 0 || name !== list[index - 1]);
+    const playerRouteNames = normalizeRouteNames([
+      resultStart,
+      ...(Array.isArray(resultData.playerPath)
+        ? resultData.playerPath
+            .map((entry) =>
+              entry && typeof entry === "object" ? entry.name || entry.id || "" : String(entry)
+            )
+            .filter(Boolean)
+        : []),
+      ...(!failed && resultTarget ? [resultTarget] : [])
+    ]);
+    const optimalRouteNames = normalizeRouteNames([
+      resultStart,
+      ...(Array.isArray(resultData.shortestPath) ? resultData.shortestPath.filter(Boolean) : []),
+      ...(!failed && resultTarget ? [resultTarget] : [])
+    ]);
     const accuracy = getRouteAccuracy(normalizedResult);
+    const showOptimalPath = !failed && distance > 0 && optimalRouteNames.length > 0;
+    const routeStatValue =
+      resultView === "optimal" && showOptimalPath
+        ? `${optimalRouteNames.length} passos`
+        : `${playerRouteNames.length} passos`;
     return {
       title,
       subtitle,
-      learningText,
       accuracyText: t("accuracyText", { value: accuracy }),
       attemptsText: resultMaxAttempts
         ? `${t("attempts")}: ${resultData.attempts || 0}/${resultMaxAttempts}`
         : `${t("attempts")}: ${resultData.attempts || 0}`,
-      showOptimalPath: !failed && distance > 0 && resultData.shortestPath?.length,
-      primaryLabel: t("nextMap")
+      routeStatText: routeStatValue,
+      ruleLabel: resultData.ruleLabel || "",
+      referenceText,
+      playerRouteNames,
+      optimalRouteNames,
+      showOptimalPath,
+      primaryLabel: t("nextLevel")
     };
   }, [
     resultData,
+    resultView,
     isFailed,
     gameMode,
     startName,
@@ -4916,7 +5186,7 @@ export default function App() {
             <div className="side-powerups">
               <span className="label">{t("powerups")}</span>
               <div className="powerups">
-                {POWERUPS.map((powerup) => {
+                {visiblePowerups.map((powerup) => {
                   const usesLeft = powerups[powerup.id] ?? 0;
                   const disabled =
                     isComplete ||
@@ -4970,6 +5240,7 @@ export default function App() {
                   stepId={currentTutorialStep.id}
                   demoState={tutorialDemoState}
                   onInteract={handleTutorialInteract}
+                  goalMap={tutorialGoalMap}
                 />
               </div>
               <div className="tutorial-copy">
@@ -5300,54 +5571,31 @@ export default function App() {
             aria-modal="true"
             aria-labelledby="result-title"
           >
-            <div className="result-hero">
-              <span className="label">{t("resultLabel")}</span>
-              <h2 id="result-title">{completionSummary.title}</h2>
-              <p className="modal-subtitle">{completionSummary.subtitle}</p>
-            </div>
-
-            <div className="result-score-row" aria-label={t("stats")}>
-              <span className="result-score-pill">{completionSummary.accuracyText}</span>
-              <span className="result-score-pill">{completionSummary.attemptsText}</span>
-              <span className="result-score-pill">
-                {t("time")}: {formatTime(resultData.timeMs)}
-              </span>
-            </div>
-
-            {completionSummary.learningText ? (
-              <div className="modal-section result-learning">
-                <span className="label">{t("learningLabel")}</span>
-                <p className="modal-subtitle">{completionSummary.learningText}</p>
-              </div>
-            ) : null}
-
-            {completionSummary.showOptimalPath ? (
-              <div className="modal-section result-optimal">
-                <span className="label">{t("optimalPathLabel")}</span>
-                <ol className="shortest-list">
-                  {resultData.shortestPath.map((name, index) => (
-                    <li key={`short-${name}-${index}`}>{name}</li>
-                  ))}
-                </ol>
-              </div>
-            ) : null}
-
-            <div className="modal-actions result-actions">
-              <button
-                className="reset result-primary"
-                type="button"
-                onClick={handleStartNext}
-              >
-                {completionSummary.primaryLabel}
-              </button>
-              <button
-                className="result-secondary"
-                type="button"
-                onClick={handleViewCompletedMap}
-              >
-                {t("viewMap")}
-              </button>
-            </div>
+            <RouteResultCard
+              eyebrow={t("resultLabel")}
+              title={completionSummary.title}
+              subtitle={completionSummary.subtitle}
+              headingId="result-title"
+              statItems={[
+                completionSummary.accuracyText,
+                completionSummary.attemptsText,
+                `${t("time")}: ${formatTime(resultData.timeMs)}`,
+                completionSummary.routeStatText
+              ]}
+              ruleLabel={completionSummary.ruleLabel}
+              referenceText={completionSummary.referenceText}
+              routeView={resultView}
+              playerLabel={t("yourPath")}
+              optimalLabel={t("optimalPathLabel")}
+              playerRoute={completionSummary.playerRouteNames}
+              optimalRoute={completionSummary.optimalRouteNames}
+              canCompare={completionSummary.showOptimalPath}
+              onSelectView={setResultView}
+              primaryActionLabel={completionSummary.primaryLabel}
+              secondaryActionLabel={t("viewMap")}
+              onPrimaryAction={handleStartNext}
+              onSecondaryAction={handleViewCompletedMap}
+            />
           </div>
         </div>
       ) : null}

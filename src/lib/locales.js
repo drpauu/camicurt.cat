@@ -94,7 +94,7 @@ export const caStandard = {
   "noRule": "Sense norma",
   "path": "Camí escrit",
   "fixedDifficulty": "Dificultat fixa per aquest mode.",
-  "yourPath": "El teu recorregut",
+  "yourPath": "La teva ruta",
   "correctPath": "Resultat correcte",
   "shortestCount": "Camí més curt: {value} comarques",
   "optimalAlternatives": "{value} camins òptims trobats",
@@ -114,6 +114,7 @@ export const caStandard = {
   "congrats": "Felicitats per completar el nivell!",
   "timeOut": "Temps esgotat",
   "nextMap": "Següent mapa",
+  "nextLevel": "Següent nivell",
   "repeatLevel": "Repetir nivell",
   "viewMap": "Veure mapa",
   "resultLabel": "Resultat",
@@ -148,11 +149,13 @@ export const caStandard = {
   "optimalPathLabel": "Un camí òptim",
   "mainNavigation": "Navegació principal",
   "referenceCounty": "Comarca de referència: {value}.",
+  "ruleReference": "Referència de la norma: {value}.",
   "difficultyPixapi": "Pixapí",
   "difficultyDominguero": "Dominguero",
   "difficultyRondinaire": "Rondinaire",
   "difficultyCapCollaRutes": "Cap de colla de rutes",
   "powerupRevealNext": "Revela un pas",
+  "powerupRevealRule": "Revelar norma",
   "powerupTempInitials": "Inicials (5s)"
 };
 

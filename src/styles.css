@@ -1729,6 +1729,12 @@ h1 {
   stroke-width: 2.2;
 }
 
+.comarca.is-rule-reveal {
+  fill: color-mix(in srgb, var(--accent) 34%, var(--panel));
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
 @keyframes flash {
   0% {
     fill: var(--error);
@@ -1948,9 +1954,10 @@ h1 {
 }
 
 .result-modal {
-  width: min(620px, 100%);
+  max-width: 760px;
+  width: min(760px, 100%);
   gap: 18px;
-  padding: 26px;
+  padding: 18px;
 }
 
 .result-hero {
@@ -2179,6 +2186,7 @@ h1 {
   box-shadow: 0 14px 34px rgba(31, 42, 48, 0.14);
   color: var(--text);
   font-family: inherit;
+  overflow: hidden;
 }
 
 button.tutorial-shot {
@@ -2242,6 +2250,91 @@ button.tutorial-shot {
   overflow: hidden;
 }
 
+.tutorial-goal-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tutorial-goal-path {
+  fill: color-mix(in srgb, var(--comarca-fill) 92%, var(--panel));
+  stroke: color-mix(in srgb, var(--comarca-stroke) 92%, var(--panel));
+  stroke-width: 1.5;
+  transition:
+    fill 0.18s,
+    stroke 0.18s,
+    opacity 0.18s,
+    filter 0.18s;
+}
+
+.tutorial-goal-path.is-start {
+  fill: color-mix(in srgb, var(--accent-strong) 58%, var(--comarca-fill));
+  stroke: var(--accent-strong);
+}
+
+.tutorial-goal-path.is-rule {
+  fill: color-mix(in srgb, var(--guess) 44%, var(--comarca-fill));
+  stroke: var(--guess);
+}
+
+.tutorial-goal-path.is-target {
+  fill: color-mix(in srgb, var(--error) 54%, var(--comarca-fill));
+  stroke: var(--error);
+}
+
+.tutorial-goal-map.is-start .tutorial-goal-path.is-start,
+.tutorial-goal-map.is-target .tutorial-goal-path.is-target,
+.tutorial-goal-map.is-rule .tutorial-goal-path.is-rule {
+  filter: drop-shadow(0 0 8px rgba(31, 42, 48, 0.18));
+  stroke-width: 3;
+}
+
+.tutorial-goal-label text {
+  font-size: 22px;
+  font-weight: 800;
+  fill: var(--text);
+  stroke: var(--panel);
+  stroke-width: 5px;
+  paint-order: stroke fill;
+}
+
+.tutorial-goal-label circle {
+  fill: currentColor;
+}
+
+.tutorial-goal-label.is-start {
+  color: var(--accent-strong);
+}
+
+.tutorial-goal-label.is-rule {
+  color: var(--guess);
+}
+
+.tutorial-goal-label.is-target {
+  color: var(--error);
+}
+
+.tutorial-goal-skeleton {
+  display: grid;
+  align-content: center;
+  gap: 12px;
+  height: 100%;
+  padding: 22px;
+}
+
+.tutorial-goal-skeleton span {
+  height: 48px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--surface) 92%, var(--panel)),
+    color-mix(in srgb, var(--panel) 75%, #fff),
+    color-mix(in srgb, var(--surface) 92%, var(--panel))
+  );
+  background-size: 220% 100%;
+  animation: tutorial-skeleton 1.2s ease-in-out infinite;
+}
+
 .mini-comarca {
   position: absolute;
   display: block;
@@ -2294,6 +2387,16 @@ button.tutorial-shot {
   align-content: start;
   gap: 12px;
   padding: 18px;
+}
+
+.tutorial-improve-shot {
+  width: min(420px, 100%);
+  min-height: auto;
+  aspect-ratio: auto;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
 }
 
 .tutorial-field-label {
@@ -2452,14 +2555,42 @@ button.tutorial-shot {
   background: var(--panel);
 }
 
-.tutorial-result-card strong {
+.tutorial-result-title {
+  margin: 0;
   font-size: 1.45rem;
   line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.tutorial-result-subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.96rem;
+}
+
+.tutorial-rule-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 88%, var(--panel));
+}
+
+.tutorial-rule-card p {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.94rem;
+  line-height: 1.34;
+}
+
+.tutorial-rule-card .is-reference {
+  color: var(--muted);
 }
 
 .tutorial-score-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -2482,6 +2613,81 @@ button.tutorial-shot {
   color: var(--muted);
 }
 
+.tutorial-route-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tutorial-route-toggle button {
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: normal;
+  line-height: 1.15;
+  text-align: center;
+  padding: 10px 12px;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.tutorial-route-toggle button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.tutorial-route-caption {
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.tutorial-result-list {
+  margin: 0;
+  padding: 14px 14px 14px 28px;
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.tutorial-result-list.is-optimal {
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+}
+
+.tutorial-result-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.tutorial-result-actions button {
+  width: 100%;
+  min-width: 0;
+  white-space: normal;
+}
+
+.tutorial-result-actions button:disabled {
+  opacity: 1;
+}
+
+.tutorial-result-actions .result-secondary:disabled,
+.tutorial-result-actions .reset:disabled {
+  color: inherit;
+}
+
 @keyframes tutorial-enter {
   from {
     opacity: 0;
@@ -2501,6 +2707,15 @@ button.tutorial-shot {
   46%,
   100% {
     opacity: 0;
+  }
+}
+
+@keyframes tutorial-skeleton {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
   }
 }
 
@@ -2812,29 +3027,53 @@ button.tutorial-shot {
 
   .tutorial-modal {
     width: 100%;
-    max-height: calc(100vh - 20px);
+    max-width: none;
+    height: calc(100dvh - 20px);
+    max-height: calc(100dvh - 20px);
+    border-radius: 14px;
   }
 
   .tutorial-shell {
     grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100%;
     min-height: 0;
   }
 
   .tutorial-visual {
-    min-height: 310px;
-    padding: 14px;
+    min-height: 0;
+    padding: 12px 12px 10px;
     border-right: none;
     border-bottom: 1px solid var(--border);
   }
 
   .tutorial-copy {
-    gap: 14px;
-    padding: 18px;
+    min-height: 0;
+    gap: 12px;
+    padding: 16px;
+    overflow: hidden;
   }
 
   .tutorial-shot {
-    min-height: 280px;
-    width: min(320px, 100%);
+    width: min(330px, 100%);
+    max-width: 100%;
+    min-height: 0;
+    aspect-ratio: 1.08;
+  }
+
+  .tutorial-goal-shot {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .tutorial-mini-map {
+    min-height: 0;
+    height: clamp(164px, 31vh, 220px);
+  }
+
+  .tutorial-goal-label text {
+    font-size: 14px;
+    stroke-width: 3px;
   }
 
   .tutorial-text h2 {
@@ -2846,9 +3085,23 @@ button.tutorial-shot {
     line-height: 1.34;
   }
 
+  .tutorial-text {
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+
+  .tutorial-progress {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
   .tutorial-actions {
     grid-template-columns: 1fr;
     gap: 8px;
+    margin-top: auto;
+    padding-top: 10px;
+    background: linear-gradient(180deg, rgba(255, 252, 245, 0), var(--panel) 24%);
   }
 
   .tutorial-score-row {
@@ -2856,8 +3109,23 @@ button.tutorial-shot {
   }
 
   .result-modal {
+    max-width: none;
     max-height: calc(100vh - 110px);
-    padding: 18px;
+    padding: 14px;
+  }
+
+  .tutorial-route-toggle,
+  .tutorial-result-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .tutorial-result-card {
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .tutorial-result-list {
+    padding: 12px 12px 12px 24px;
   }
 
   .result-score-row {

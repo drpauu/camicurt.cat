@@ -11,6 +11,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const topoPath = path.resolve(__dirname, "..", "public", "catalunya-comarques.topojson");
 const rulesPath = path.resolve(__dirname, "..", "src", "data", "rules.json");
 const RULES = JSON.parse(fs.readFileSync(rulesPath, "utf8"));
+const SINGLE_REQUIRE_RULE = RULES.find(
+  (rule) => rule.type === "REQUIRE" && (rule.comarques || []).length === 1
+);
+const MULTI_REQUIRE_RULE = RULES.find(
+  (rule) => rule.type === "REQUIRE" && (rule.comarques || []).length > 1
+);
+if (!SINGLE_REQUIRE_RULE || !MULTI_REQUIRE_RULE) {
+  throw new Error("No s'han trobat normes suficients per als tests E2E.");
+}
 const TUTORIAL_SEEN_KEY = "rumb-tutorial-seen-v1";
 const STANDARD_DESCRIPTION =
   "uneix Inici i Destí triant comarques veïnes, completa una ruta vàlida i intenta millorar-la fins acostar-te al camí òptim.";
@@ -239,6 +248,10 @@ test("el tutorial inicial apareix una vegada i es pot reobrir des d'Opcions", as
   await expect(dialog.getByRole("heading", { name: /Mira l'objectiu/i })).toBeVisible();
   await expect(dialog.locator(".tutorial-dot")).toHaveCount(4);
   await page.waitForSelector("svg.map");
+  await expect(dialog.locator("svg.tutorial-goal-map")).toBeVisible();
+  await expect(dialog.locator('[data-tutorial-label-name="Segarra"]')).toBeVisible();
+  await expect(dialog.locator('[data-tutorial-label-name="Osona"]')).toBeVisible();
+  await expect(dialog.locator('[data-tutorial-label-name="Terra Alta"]')).toBeVisible();
   await expect(page.locator(".map-brief .route")).toBeVisible();
   const routeBefore = await getRouteAndRule(page);
 
@@ -258,7 +271,8 @@ test("el tutorial inicial apareix una vegada i es pot reobrir des d'Opcions", as
 
   await dialog.getByRole("button", { name: /Seg/i }).click();
   await expect(dialog.getByRole("heading", { name: /Millora/i })).toBeVisible();
-  await dialog.getByRole("button", { name: /Compara/i }).click();
+  await dialog.getByRole("tab", { name: /Un cam/i }).click();
+  await expect(dialog.locator('.tutorial-result-card[data-route-view="optimal"]')).toBeVisible();
   await expect(dialog).toContainText("Un camí òptim");
 
   await dialog.getByRole("button", { name: /Comença/i }).click();
@@ -283,8 +297,12 @@ test("el tutorial inicial encaixa en mobil sense tallar accions", async ({ page 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   const dialog = page.locator(".tutorial-modal");
   await expect(dialog).toBeVisible();
+  await page.waitForSelector("svg.map");
+  await expect(dialog.locator("svg.tutorial-goal-map")).toBeVisible();
   const metrics = await page.evaluate(() => {
     const modal = document.querySelector(".tutorial-modal")?.getBoundingClientRect();
+    const visual = document.querySelector(".tutorial-visual")?.getBoundingClientRect();
+    const actions = document.querySelector(".tutorial-actions")?.getBoundingClientRect();
     const buttons = [...document.querySelectorAll(".tutorial-actions button")].map(
       (button) => ({
         text: button.textContent.trim(),
@@ -298,11 +316,16 @@ test("el tutorial inicial encaixa en mobil sense tallar accions", async ({ page 
       modalHeight: Math.round(modal?.height || 0),
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
+      visualBottom: Math.round(visual?.bottom || 0),
+      actionsBottom: Math.round(actions?.bottom || 0),
+      modalBottom: Math.round(modal?.bottom || 0),
       buttons
     };
   });
   expect(metrics.modalWidth).toBeLessThanOrEqual(metrics.viewportWidth);
   expect(metrics.modalHeight).toBeLessThanOrEqual(metrics.viewportHeight);
+  expect(metrics.visualBottom).toBeLessThanOrEqual(metrics.modalBottom);
+  expect(metrics.actionsBottom).toBeLessThanOrEqual(metrics.modalBottom);
   expect(metrics.buttons).toHaveLength(3);
   expect(metrics.buttons.every((button) => button.scrollWidth <= button.clientWidth + 1)).toBe(
     true
@@ -537,18 +560,20 @@ test("obre el modal si el nivell ja està completat", async ({ page }) => {
   await expect(modal).toContainText("Intents: 3");
   await expect(modal).toContainText("Temps: 0:12");
   await expect(modal).toContainText("67% precisió");
-  await expect(modal).toContainText("Comarca de referència: Alt Camp.");
+  await expect(modal).toContainText("Referència de la norma: Alt Camp.");
   await expect(modal).not.toContainText("Has trobat");
   await expect(modal).toContainText("Un camí òptim");
   await expect(modal).toContainText("Alt Camp");
-  await expect(modal).toContainText("Següent mapa");
+  await expect(modal).toContainText("Següent nivell");
   await expect(modal).not.toContainText("Repetir nivell");
   await expect(modal).toContainText("Veure mapa");
   await expect(modal).not.toContainText("Top temps");
   await expect(modal).not.toContainText("Distribució");
-  await expect(modal).not.toContainText("El teu recorregut");
-  await expect(modal).not.toContainText("estrelles");
-  await expect(modal).not.toContainText("Progrés");
+  await expect(modal).toContainText("La teva ruta");
+  await modal.getByRole("tab", { name: /Un cam/i }).click();
+  await expect(modal.locator('.tutorial-result-card[data-route-view="optimal"]')).toBeVisible();
+  await expect(modal.locator(".tutorial-result-list")).toContainText("Baix Camp");
+  await expect(modal.locator(".tutorial-result-list")).toContainText(/Vall.s Occidental/);
   const resetStyles = await modal.locator(".reset.result-primary").evaluate((button) => {
     const styles = getComputedStyle(button);
     return {
@@ -642,7 +667,7 @@ test("Seguent mapa des d'un diari antic carrega el dia seguent del calendari", a
   await previousDayButton.click();
   const modal = page.locator(".result-modal");
   await expect(modal).toBeVisible();
-  await modal.getByRole("button", { name: /Seg.*mapa/i }).click();
+  await modal.getByRole("button", { name: /Seg.*nivell/i }).click();
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");
   await expect(modal).toBeHidden();
   await expect(page.locator(".map-brief .route")).toContainText("Urgell");
@@ -712,7 +737,7 @@ test("Seguent mapa des del diari actual obre un mapa aleatori normal", async ({ 
   const modal = page.locator(".result-modal");
   await expect(modal).toBeVisible();
   const routeBefore = (await page.locator(".map-brief .route").textContent())?.trim();
-  await modal.getByRole("button", { name: /Seg.*mapa/i }).click();
+  await modal.getByRole("button", { name: /Seg.*nivell/i }).click();
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "normal");
   await expect(modal).toBeHidden();
   await expect
@@ -907,10 +932,10 @@ test("el modal de resultat no talla accions a amplades petites", async ({ page }
     await page.locator(`[data-calendar-day="${dayKey}"]`).click();
     const modal = page.locator(".result-modal");
     await expect(modal).toBeVisible();
-    await expect(modal.getByRole("button", { name: /Següent mapa/i })).toBeVisible();
+    await expect(modal.getByRole("button", { name: /Següent nivell/i })).toBeVisible();
     await expect(modal.getByRole("button", { name: /Repetir nivell/i })).toHaveCount(0);
     const metrics = await page.evaluate(() =>
-      [...document.querySelectorAll(".result-actions button")].map((button) => {
+      [...document.querySelectorAll(".tutorial-result-actions button")].map((button) => {
         const box = button.getBoundingClientRect();
         return {
           text: button.textContent.trim(),
@@ -922,13 +947,146 @@ test("el modal de resultat no talla accions a amplades petites", async ({ page }
       })
     );
     expect(metrics.map((entry) => entry.text)).toEqual([
-      "Següent mapa",
+      "Següent nivell",
       "Veure mapa"
     ]);
     expect(metrics.every((entry) => entry.height >= 44)).toBeTruthy();
     expect(metrics.every((entry) => entry.scrollWidth <= entry.clientWidth + 1)).toBeTruthy();
     await modal.getByRole("button", { name: /Veure mapa/i }).click();
   }
+});
+
+test("el comodi revelar norma marca la comarca correcta en una norma simple", async ({
+  page
+}) => {
+  const dayKey = getTodayKey();
+  const comarcaName = SINGLE_REQUIRE_RULE.comarques[0];
+  const comarcaId = comarcaIdByName.get(normalizeName(comarcaName));
+  expect(comarcaId).toBeTruthy();
+
+  await page.addInitScript(
+    ({ key, ruleId, countyId }) => {
+      const level = {
+        id: "daily-rule-reveal-single",
+        start_id: "urgell",
+        target_id: "terra-alta",
+        shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
+        rule_id: ruleId,
+        avoid_ids: null,
+        must_pass_ids: [countyId],
+        difficulty_id: "pixapi"
+      };
+      localStorage.setItem(
+        "rumb-calendar-cache-v1",
+        JSON.stringify({
+          updatedAt: Date.now(),
+          daily: [{ date: key, levelId: level.id, level }]
+        })
+      );
+    },
+    { key: dayKey, ruleId: SINGLE_REQUIRE_RULE.id, countyId: comarcaId }
+  );
+
+  await gotoHome(page);
+  await page.getByRole("button", { name: /Calendari/i }).click();
+  await page.locator(`[data-calendar-day="${dayKey}"]`).click();
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");
+  await expect(page.getByRole("button", { name: /Revelar norma/i })).toBeVisible();
+  await page.getByRole("button", { name: /Revelar norma/i }).click();
+  await page.waitForSelector("path.comarca.is-rule-reveal[data-comarca-name]");
+  const revealNames = await page
+    .locator("path.comarca.is-rule-reveal[data-comarca-name]")
+    .evaluateAll((items) => items.map((item) => item.getAttribute("data-comarca-name")).filter(Boolean));
+  expect(revealNames).toEqual([comarcaName]);
+});
+
+test("el comodi revelar norma marca totes les comarques i no surt a cap de colla", async ({
+  page
+}) => {
+  const dayKey = getTodayKey();
+  const countyIds = MULTI_REQUIRE_RULE.comarques
+    .map((name) => comarcaIdByName.get(normalizeName(name)))
+    .filter(Boolean);
+  expect(countyIds).toHaveLength(MULTI_REQUIRE_RULE.comarques.length);
+
+  await page.addInitScript(
+    ({ key, ruleId, ids, difficultyId }) => {
+      const level = {
+        id: `daily-rule-reveal-${difficultyId}`,
+        start_id: "urgell",
+        target_id: "terra-alta",
+        shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
+        rule_id: ruleId,
+        avoid_ids: null,
+        must_pass_ids: ids,
+        difficulty_id: difficultyId
+      };
+      localStorage.setItem(
+        "rumb-calendar-cache-v1",
+        JSON.stringify({
+          updatedAt: Date.now(),
+          daily: [{ date: key, levelId: level.id, level }]
+        })
+      );
+    },
+    { key: dayKey, ruleId: MULTI_REQUIRE_RULE.id, ids: countyIds, difficultyId: "dominguero" }
+  );
+
+  await gotoHome(page);
+  await page.getByRole("button", { name: /Calendari/i }).click();
+  await page.locator(`[data-calendar-day="${dayKey}"]`).click();
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");
+  await expect(page.getByRole("button", { name: /Revelar norma/i })).toBeVisible();
+  await page.getByRole("button", { name: /Revelar norma/i }).click();
+  await page.waitForFunction(
+    (expected) =>
+      document.querySelectorAll("path.comarca.is-rule-reveal[data-comarca-name]").length ===
+      expected,
+    MULTI_REQUIRE_RULE.comarques.length
+  );
+  const revealNames = await page
+    .locator("path.comarca.is-rule-reveal[data-comarca-name]")
+    .evaluateAll((items) =>
+      items.map((item) => item.getAttribute("data-comarca-name")).filter(Boolean).sort()
+    );
+  expect(revealNames).toEqual([...MULTI_REQUIRE_RULE.comarques].sort());
+
+  const hardPage = await page.context().newPage();
+  await hardPage.addInitScript(
+    ({ key, ruleId, ids, difficultyId, tutorialKey }) => {
+      localStorage.setItem(tutorialKey, "1");
+      const level = {
+        id: `daily-rule-reveal-${difficultyId}`,
+        start_id: "urgell",
+        target_id: "terra-alta",
+        shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
+        rule_id: ruleId,
+        avoid_ids: null,
+        must_pass_ids: ids,
+        difficulty_id: difficultyId
+      };
+      localStorage.setItem(
+        "rumb-calendar-cache-v1",
+        JSON.stringify({
+          updatedAt: Date.now(),
+          daily: [{ date: key, levelId: level.id, level }]
+        })
+      );
+    },
+    {
+      key: dayKey,
+      ruleId: MULTI_REQUIRE_RULE.id,
+      ids: countyIds,
+      difficultyId: "cap-colla-rutes",
+      tutorialKey: TUTORIAL_SEEN_KEY
+    }
+  );
+  await gotoHome(hardPage);
+  await hardPage.getByRole("button", { name: /Calendari/i }).click();
+  await hardPage.locator(`[data-calendar-day="${dayKey}"]`).click();
+  await hardPage.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");
+  await expect(hardPage.getByRole("button", { name: /Revelar norma/i })).toHaveCount(0);
+  await hardPage.close();
 });
 
 test("les opcions de so es persisteixen dins d'Opcions", async ({ page }) => {
