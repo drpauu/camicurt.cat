@@ -181,6 +181,7 @@ function RouteResultCard({
     activeView === "optimal"
       ? "tutorial-result-list is-optimal"
       : "tutorial-result-list is-player";
+  const lastRouteIndex = routeNames.length - 1;
 
   return (
     <div className="tutorial-result-card" data-route-view={activeView}>
@@ -230,7 +231,14 @@ function RouteResultCard({
       )}
       <ol className={listClassName}>
         {routeNames.map((name, index) => (
-          <li key={`${activeView}-${name}-${index}`}>{name}</li>
+          <li
+            key={`${activeView}-${name}-${index}`}
+            className={`${index === 0 ? "is-route-start" : ""} ${
+              index === lastRouteIndex && lastRouteIndex > 0 ? "is-route-target" : ""
+            }`.trim()}
+          >
+            {name}
+          </li>
         ))}
       </ol>
       <div className="tutorial-result-actions result-actions">
