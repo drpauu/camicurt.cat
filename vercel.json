@@ -1,4 +1,14 @@
 {
+  "rewrites": [
+    {
+      "source": "/aula",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/aula/(.*)",
+      "destination": "/index.html"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

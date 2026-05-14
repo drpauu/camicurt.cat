@@ -1,9 +1,19 @@
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey =
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  import.meta.env.VITE_SUPABESE_ANON_KEY;
 const hasSupabase = Boolean(supabaseUrl && supabaseKey);
 
 export const supabaseEnabled = hasSupabase;
+
+export function getSupabaseUrl() {
+  return supabaseUrl || "";
+}
+
+export function getSupabasePublicKey() {
+  return supabaseKey || "";
+}
 
 let clientPromise = null;
 

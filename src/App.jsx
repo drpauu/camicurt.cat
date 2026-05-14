@@ -37,6 +37,7 @@ import {
   selectWinningAttempt
 } from "./lib/completion.js";
 import { ThemeProvider } from "./ThemeProvider.jsx";
+import AulaApp from "./aula/AulaApp.jsx";
 
 const VIEW_WIDTH = 900;
 const VIEW_HEIGHT = 700;
@@ -151,6 +152,14 @@ function BrandLogo({ className = "" }) {
       />
     </span>
   );
+}
+
+export default function App() {
+  const pathname = typeof window === "undefined" ? "/" : window.location.pathname;
+  if (pathname.startsWith("/aula")) {
+    return <AulaApp PublicGameApp={PublicGameApp} />;
+  }
+  return <PublicGameApp />;
 }
 
 function RouteResultCard({
@@ -1270,6 +1279,51 @@ function buildRuleFromLevel(level, comarcaById, normalizedToId, ruleDefs = []) {
   };
 }
 
+function buildRuleFromAulaSnapshot(snapshot, comarcaById) {
+  if (!snapshot) return null;
+  const source = snapshot.rule || null;
+  const avoidIds = Array.isArray(snapshot.avoidIds)
+    ? snapshot.avoidIds
+    : Array.isArray(snapshot.avoid_ids)
+      ? snapshot.avoid_ids
+      : [];
+  const mustPassIds = Array.isArray(snapshot.mustPassIds)
+    ? snapshot.mustPassIds
+    : Array.isArray(snapshot.must_pass_ids)
+      ? snapshot.must_pass_ids
+      : [];
+  const kind =
+    source?.kind ||
+    (avoidIds.length ? "avoid" : mustPassIds.length ? "mustIncludeAny" : null);
+  const comarcaIds =
+    kind === "avoid"
+      ? avoidIds
+      : kind === "mustIncludeAny"
+        ? mustPassIds
+        : Array.isArray(source?.comarcaIds)
+          ? source.comarcaIds
+          : [];
+  if (!kind || !comarcaIds.length) return null;
+  const comarques = comarcaIds
+    .map((id) => comarcaById.get(id)?.properties.name || id)
+    .filter(Boolean);
+  return {
+    id: source?.id || snapshot.ruleId || snapshot.rule_id || "aula-rule",
+    kind,
+    label:
+      source?.label ||
+      source?.text ||
+      (kind === "avoid"
+        ? `No pots passar per ${comarques.join(", ")}.`
+        : `Has de passar per ${comarques.join(", ")}.`),
+    comarques,
+    comarcaIds,
+    difficulty: source?.difficulty || "medium",
+    tags: Array.isArray(source?.tags) ? source.tags : ["aula"],
+    explanation: source?.explanation || ""
+  };
+}
+
 function isRuleFeasible(rule, ctx) {
   if (!rule) return false;
   if (rule.kind === "avoid") {
@@ -1411,7 +1465,17 @@ function createEventId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-export default function App() {
+export function PublicGameApp({
+  variant = "public",
+  fixedLevelSnapshot = null,
+  classroomSession = null,
+  onClassroomComplete = null,
+  hidePublicChrome = false,
+  disableModeSwitch = false,
+  disableCalendar = false,
+  disableLocalRecords = false
+} = {}) {
+  const isAulaMode = variant === "aula";
   const initialSettings = useMemo(() => loadSettings(), []);
   const [comarques, setComarques] = useState([]);
   const [adjacency, setAdjacency] = useState(new Map());
@@ -1476,7 +1540,9 @@ export default function App() {
   const [musicTrack, setMusicTrack] = useState(initialSettings.musicTrack);
   const [activeTheme, setActiveTheme] = useState(initialSettings.theme);
   const [optionsOpen, setOptionsOpen] = useState(false);
-  const [tutorialOpen, setTutorialOpen] = useState(() => shouldShowInitialTutorial());
+  const [tutorialOpen, setTutorialOpen] = useState(() =>
+    isAulaMode ? false : shouldShowInitialTutorial()
+  );
   const [tutorialStep, setTutorialStep] = useState(0);
   const [tutorialDemoState, setTutorialDemoState] = useState(0);
   const [audioManifest, setAudioManifest] = useState(null);
@@ -1594,6 +1660,8 @@ export default function App() {
   const attemptsFlushRef = useRef(false);
   const completionMigrationRef = useRef(false);
   const pendingStartNextRef = useRef(null);
+  const aulaApplyRef = useRef(null);
+  const aulaCompletionSentRef = useRef(false);
 
   const leaderboardEndpoint = import.meta.env.VITE_LEADERBOARD_URL || "";
   const isSupabaseReady = useMemo(
@@ -1603,8 +1671,9 @@ export default function App() {
   const isExploreMode = gameMode === "explore";
   const isTimedMode = gameMode === "timed";
   const isDailyMode = gameMode === "daily";
-  const isFixedMode = isDailyMode;
-  const shouldLoadCalendar = isSupabaseReady || calendarOpen || isDailyMode;
+  const isFixedMode = isDailyMode || isAulaMode;
+  const shouldLoadCalendar =
+    !disableCalendar && (isSupabaseReady || calendarOpen || isDailyMode);
   const routeDifficulty = classifyDifficultyByShortestCount(
     shortestPath.length ? Math.max(shortestPath.length - 2, 0) : 0
   );
@@ -1621,6 +1690,7 @@ export default function App() {
   }, [activeRule, isExploreMode, powerups]);
 
   useEffect(() => {
+    if (disableLocalRecords) return;
     if (!supabaseEnabled || supabase || supabaseBlocked) return;
     let cancelled = false;
     let idleId = null;
@@ -1650,7 +1720,7 @@ export default function App() {
       }
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [calendarOpen, isDailyMode, supabase, supabaseBlocked]);
+  }, [calendarOpen, isDailyMode, supabase, supabaseBlocked, disableLocalRecords]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1845,10 +1915,11 @@ export default function App() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (disableLocalRecords) return;
     localStorage.setItem("rumb-mode", gameMode);
     localStorage.setItem("rumb-difficulty", difficulty);
     localStorage.setItem(ACTIVE_THEME_KEY, activeTheme);
-  }, [gameMode, difficulty, activeTheme]);
+  }, [gameMode, difficulty, activeTheme, disableLocalRecords]);
 
   useEffect(() => {
     supabaseUserIdRef.current = supabaseUserId;
@@ -1956,14 +2027,16 @@ export default function App() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (disableLocalRecords) return;
     if (Object.keys(dailyResults).length > 60) {
       setDailyResults((prev) => trimResults(prev, 60));
       return;
     }
     localStorage.setItem(DAILY_RESULTS_KEY, JSON.stringify(dailyResults));
-  }, [dailyResults]);
+  }, [dailyResults, disableLocalRecords]);
 
   useEffect(() => {
+    if (disableLocalRecords) return;
     if (completionMigrationRef.current) return;
     const hasRecords = completionRecords && Object.keys(completionRecords).length > 0;
     const hasLegacy = Object.keys(dailyResults).length > 0;
@@ -1983,21 +2056,24 @@ export default function App() {
     });
     completionMigrationRef.current = true;
     setCompletionRecords(next);
-  }, [completionRecords, dailyResults]);
+  }, [completionRecords, dailyResults, disableLocalRecords]);
 
   useEffect(() => {
+    if (disableLocalRecords) return;
     saveCompletionRecords(completionRecords);
-  }, [completionRecords]);
+  }, [completionRecords, disableLocalRecords]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (disableLocalRecords) return;
     localStorage.setItem(LEVEL_STATS_KEY, JSON.stringify(levelStats));
-  }, [levelStats]);
+  }, [levelStats, disableLocalRecords]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (disableLocalRecords) return;
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(-20)));
-  }, [history]);
+  }, [history, disableLocalRecords]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -2072,6 +2148,7 @@ export default function App() {
   }, [isSupabaseReady, supabaseUserId, isOnline]);
 
   useEffect(() => {
+    if (disableLocalRecords) return;
     if (!isSupabaseReady) return;
     const userId = supabaseUserIdRef.current;
     if (!userId) return;
@@ -2096,7 +2173,8 @@ export default function App() {
     musicEnabled,
     musicVolume,
     sfxEnabled,
-    sfxVolume
+    sfxVolume,
+    disableLocalRecords
   ]);
 
   useEffect(() => {
@@ -2304,6 +2382,7 @@ export default function App() {
 
   useEffect(() => {
     if (!comarques.length || !adjacency.size) return;
+    if (isAulaMode) return;
     if (!isExploreMode && !rulesReady) return;
     if (isCalendarModeActive) return;
     const forceNew = pendingStartNextRef.current;
@@ -2316,7 +2395,26 @@ export default function App() {
     activeDifficulty,
     isCalendarModeActive,
     isExploreMode,
+    isAulaMode,
     rulesReady,
+    ruleDefs.length
+  ]);
+
+  useEffect(() => {
+    if (!isAulaMode || !fixedLevelSnapshot || !comarques.length || !adjacency.size) return;
+    const key = `${classroomSession?.sessionId || "aula"}:${fixedLevelSnapshot.id || ""}:${
+      fixedLevelSnapshot.startId || fixedLevelSnapshot.start_id
+    }:${fixedLevelSnapshot.targetId || fixedLevelSnapshot.target_id}`;
+    if (aulaApplyRef.current === key) return;
+    aulaApplyRef.current = key;
+    applyAulaLevel(fixedLevelSnapshot);
+  }, [
+    isAulaMode,
+    fixedLevelSnapshot,
+    classroomSession,
+    comarques,
+    adjacency,
+    shortestPathCache,
     ruleDefs.length
   ]);
 
@@ -2367,6 +2465,7 @@ export default function App() {
   ]);
 
   useEffect(() => {
+    if (disableLocalRecords) return;
     if (!leaderboardEndpoint && typeof window === "undefined") return;
     let idleId;
     const schedule = () => loadLeaderboard();
@@ -2382,7 +2481,7 @@ export default function App() {
         clearTimeout(idleId);
       }
     };
-  }, [leaderboardEndpoint]);
+  }, [leaderboardEndpoint, disableLocalRecords]);
 
   useEffect(() => {
     if (!shouldLoadCalendar || calendarLoaded || calendarLoadingRef.current) return;
@@ -2542,6 +2641,7 @@ export default function App() {
     let isMounted = true;
 
     async function initAuth() {
+      if (disableLocalRecords) return;
       if (!isSupabaseReady) return;
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) {
@@ -2606,7 +2706,7 @@ export default function App() {
     return () => {
       isMounted = false;
     };
-  }, [isSupabaseReady]);
+  }, [isSupabaseReady, disableLocalRecords]);
 
   const comarcaById = useMemo(() => {
     return new Map(comarques.map((featureItem) => [featureItem.properties.id, featureItem]));
@@ -2932,6 +3032,7 @@ export default function App() {
 
   async function persistLevel(payload) {
     if (!payload) return;
+    if (disableLocalRecords) return;
     if (!isSupabaseReady) return;
     if (!supabaseUserId) return;
     try {
@@ -2942,6 +3043,7 @@ export default function App() {
   }
 
   async function flushTelemetryQueue() {
+    if (disableLocalRecords) return;
     if (!isSupabaseReady || !supabaseUserId || !isOnline) return;
     if (telemetryFlushRef.current) return;
     const queued = readQueue(TELEMETRY_QUEUE_KEY);
@@ -2966,6 +3068,7 @@ export default function App() {
   }
 
   function enqueueTelemetry(eventType, payload = {}, meta = {}) {
+    if (disableLocalRecords) return;
     const entry = {
       id: createEventId(),
       player_id: supabaseUserId || null,
@@ -2987,6 +3090,7 @@ export default function App() {
   }
 
   async function flushAttemptsQueue() {
+    if (disableLocalRecords) return;
     if (!isSupabaseReady || !supabaseUserId || !isOnline) return;
     if (attemptsFlushRef.current) return;
     const queued = readQueue(ATTEMPTS_QUEUE_KEY);
@@ -3011,6 +3115,7 @@ export default function App() {
   }
 
   function enqueueAttempt(payload) {
+    if (disableLocalRecords) return;
     if (!payload || !supabaseUserId) return;
     const entry = {
       ...payload,
@@ -3198,6 +3303,67 @@ export default function App() {
         }
       );
     }
+  }
+
+  function applyAulaLevel(snapshot) {
+    if (!snapshot || !comarques.length) return;
+    const start = snapshot.startId || snapshot.start_id;
+    const target = snapshot.targetId || snapshot.target_id;
+    const rule = buildRuleFromAulaSnapshot(snapshot, comarcaById);
+    const storedShortest = Array.isArray(snapshot.shortestPath)
+      ? snapshot.shortestPath
+      : Array.isArray(snapshot.shortest_path)
+        ? snapshot.shortest_path
+        : [];
+    const pathResult = resolveShortestPaths(start, target, rule, storedShortest);
+    const nextShortest = pathResult.primaryPath;
+    const nextShortestPaths = pathResult.paths;
+    const levelDifficulty =
+      snapshot.difficultyId ||
+      snapshot.difficulty_id ||
+      snapshot.difficulty ||
+      classifyDifficultyByShortestCount(Math.max(nextShortest.length - 2, 0));
+    const basePowerups = snapshot.allowPowerups
+      ? getPowerupUses(levelDifficulty)
+      : Object.fromEntries(POWERUPS.map((powerup) => [powerup.id, 0]));
+
+    setGameMode("normal");
+    setLevelDifficultyId(levelDifficulty);
+    setStartId(start);
+    setTargetId(target);
+    setCurrentId(start);
+    setGuessHistory([]);
+    setAttempts(0);
+    setHintsUsed(0);
+    setGuessError(false);
+    setTempRevealId(null);
+    setTempRuleRevealIds([]);
+    setTempNeighborHint(false);
+    setTempInitialsHint(false);
+    setPowerups(basePowerups);
+    setReplayMode(null);
+    setReplayOrder([]);
+    setReplayIndex(0);
+    setGuessValue("");
+    setIsSuggestionsOpen(false);
+    setIsComplete(false);
+    setIsFailed(false);
+    clearCompletionModalTimer();
+    setShowModal(false);
+    setCompletionCelebrating(false);
+    setResultData(null);
+    setShortestPath(nextShortest);
+    setShortestPaths(nextShortestPaths);
+    setActiveRule(rule);
+    setElapsedMs(0);
+    setStartedAt(null);
+    setTimePenaltyMs(0);
+    setTimeLimitMs(DEFAULT_TIME_LIMIT_MS);
+    setIsCountdownActive(false);
+    setCountdownValue(null);
+    setLastEntryId(null);
+    setCopyStatus("idle");
+    aulaCompletionSentRef.current = false;
   }
 
   function getCompletionRecord(mode, key) {
@@ -3926,7 +4092,18 @@ export default function App() {
   }
 
   async function fetchCalendarDetails(keys) {
-    if (!supabaseEnabled || !supabase) return [];
+    if (!supabaseEnabled) return [];
+    let calendarClient = supabase;
+    if (!calendarClient && !supabaseBlocked) {
+      try {
+        calendarClient = await getSupabaseClient();
+        if (calendarClient) setSupabase(calendarClient);
+      } catch {
+        setSupabaseBlocked(true);
+        return [];
+      }
+    }
+    if (!calendarClient) return [];
     const uniqueKeys = [...new Set(keys)]
       .map((key) => normalizeDayKey(key))
       .filter((key) => key && key <= dayKey);
@@ -3942,7 +4119,7 @@ export default function App() {
 
     const request = withRetry(
       () =>
-        supabase
+        calendarClient
           .from("daily_calendar_public")
           .select(CALENDAR_DETAIL_COLUMNS)
           .in("date", missingKeys)
@@ -4129,6 +4306,11 @@ export default function App() {
 
   async function handleStartNext() {
     playManifestSfx("click");
+    if (isAulaMode) {
+      setShowModal(false);
+      setCompletionCelebrating(false);
+      return;
+    }
     const resultMode = resultData?.mode || (isDailyMode ? "daily" : gameMode);
     const resultDayKey = resultData?.dayKey || (isDailyMode ? activeDayKey : null);
     clearCompletionModalTimer();
@@ -4583,8 +4765,9 @@ export default function App() {
         ? getNextDifficultyId(activeDifficulty)
         : null;
     const shouldUnlock =
-      shouldUnlockAllDifficulties ||
-      (Boolean(nextDifficulty) && !unlockedDifficulties.has(nextDifficulty));
+      !disableLocalRecords &&
+      (shouldUnlockAllDifficulties ||
+        (Boolean(nextDifficulty) && !unlockedDifficulties.has(nextDifficulty)));
     const nextDifficultyEntry = nextDifficulty
       ? DIFFICULTIES.find((entryItem) => entryItem.id === nextDifficulty)
       : null;
@@ -4607,26 +4790,28 @@ export default function App() {
       !currentStats.bestTime || totalTime < currentStats.bestTime;
     const isNewBestAttempts =
       !currentStats.bestAttempts || attempts < currentStats.bestAttempts;
-    const shouldReward = isNewBestTime || isNewBestAttempts;
+    const shouldReward = !disableLocalRecords && (isNewBestTime || isNewBestAttempts);
 
-    setLevelStats((prev) => {
-      const current = prev[levelKey] || {};
-      const bestTime = current.bestTime ? Math.min(current.bestTime, totalTime) : totalTime;
-      const bestAttempts = current.bestAttempts
-        ? Math.min(current.bestAttempts, attempts)
-        : attempts;
-      const perfect = current.perfect || distance === 0;
-      const next = {
-        ...prev,
-        [levelKey]: {
-          bestTime,
-          bestAttempts,
-          perfect,
-          lastPlayed: Date.now()
-        }
-      };
-      return trimLevelStats(next);
-    });
+    if (!disableLocalRecords) {
+      setLevelStats((prev) => {
+        const current = prev[levelKey] || {};
+        const bestTime = current.bestTime ? Math.min(current.bestTime, totalTime) : totalTime;
+        const bestAttempts = current.bestAttempts
+          ? Math.min(current.bestAttempts, attempts)
+          : attempts;
+        const perfect = current.perfect || distance === 0;
+        const next = {
+          ...prev,
+          [levelKey]: {
+            bestTime,
+            bestAttempts,
+            perfect,
+            lastPlayed: Date.now()
+          }
+        };
+        return trimLevelStats(next);
+      });
+    }
 
     const entry = {
       id:
@@ -4676,21 +4861,23 @@ export default function App() {
     void fireConfetti({ particleCount: 180, spread: 70, origin: { y: 0.7 } });
     setLastEntryId(entry.id);
 
-    setHistory((prev) => {
-      const historyEntry = {
-        id: entry.id,
-        date: entry.createdAt,
-        mode: gameMode,
-        difficulty: resultDifficulty,
-        timeMs: totalTime,
-        attempts,
-        distance,
-        shortest: shortestCount,
-        found: foundCount,
-        rule: activeRule?.label || t("noRule")
-      };
-      return [...prev, historyEntry].slice(-20);
-    });
+    if (!disableLocalRecords) {
+      setHistory((prev) => {
+        const historyEntry = {
+          id: entry.id,
+          date: entry.createdAt,
+          mode: gameMode,
+          difficulty: resultDifficulty,
+          timeMs: totalTime,
+          attempts,
+          distance,
+          shortest: shortestCount,
+          found: foundCount,
+          rule: activeRule?.label || t("noRule")
+        };
+        return [...prev, historyEntry].slice(-20);
+      });
+    }
 
     const baseResultPayload = {
       attempts,
@@ -4719,8 +4906,19 @@ export default function App() {
       levelSnapshot: buildCurrentLevelSnapshot()
     };
 
+    const aulaResultPayload = {
+      ...baseResultPayload,
+      foundPathIds: path,
+      accuracy: getRouteAccuracy(baseResultPayload)
+    };
+
     setResultData(baseResultPayload);
     revealCompletionModalAfterMap();
+
+    if (isAulaMode && onClassroomComplete && !aulaCompletionSentRef.current) {
+      aulaCompletionSentRef.current = true;
+      void onClassroomComplete(aulaResultPayload);
+    }
 
     enqueueTelemetry("level_complete", {
       attempts,
@@ -4732,35 +4930,37 @@ export default function App() {
       ruleDifficulty
     });
 
-    submitLeaderboard(entry).then((entries) => {
-      const stats = buildLeaderboardStats(entries, entry);
-      const resultPayload = stats
-        ? { ...baseResultPayload, ...stats }
-        : baseResultPayload;
-      const levelId = isDailyMode
-        ? calendarDailyMap.get(activeDayKey)?.level?.id ||
-          calendarDailyMap.get(activeDayKey)?.levelId ||
-          null
-        : null;
-      setCompletionRecords((prev) =>
-        upsertCompletionRecord(prev, levelKey, {
-          levelId,
-          mode: gameMode,
-          dayKey: isDailyMode ? activeDayKey : null,
-          shortestPath: shortestNames,
-          shortestCount,
-          attempt: resultPayload
-        })
-      );
-      if (isDailyMode) {
-        setDailyResults((prev) => ({ ...prev, [activeDayKey]: resultPayload }));
-      }
-      setResultData((prev) =>
-        prev?.entryId === entry.id ? { ...prev, ...resultPayload } : prev
-      );
-    });
+    if (!disableLocalRecords) {
+      submitLeaderboard(entry).then((entries) => {
+        const stats = buildLeaderboardStats(entries, entry);
+        const resultPayload = stats
+          ? { ...baseResultPayload, ...stats }
+          : baseResultPayload;
+        const levelId = isDailyMode
+          ? calendarDailyMap.get(activeDayKey)?.level?.id ||
+            calendarDailyMap.get(activeDayKey)?.levelId ||
+            null
+          : null;
+        setCompletionRecords((prev) =>
+          upsertCompletionRecord(prev, levelKey, {
+            levelId,
+            mode: gameMode,
+            dayKey: isDailyMode ? activeDayKey : null,
+            shortestPath: shortestNames,
+            shortestCount,
+            attempt: resultPayload
+          })
+        );
+        if (isDailyMode) {
+          setDailyResults((prev) => ({ ...prev, [activeDayKey]: resultPayload }));
+        }
+        setResultData((prev) =>
+          prev?.entryId === entry.id ? { ...prev, ...resultPayload } : prev
+        );
+      });
+    }
 
-    if (supabaseUserId) {
+    if (supabaseUserId && !disableLocalRecords) {
       enqueueAttempt({
         id: entry.id,
         player_id: supabaseUserId,
@@ -5036,7 +5236,8 @@ export default function App() {
 
   return (
     <ThemeProvider themeId={activeTheme} weatherState={weatherState}>
-      <div className="page">
+      <div className={`page ${isAulaMode ? "aula-game-page" : ""}`}>
+      {!hidePublicChrome ? (
       <header className="topbar">
         <div className="brand">
           <div className="brand-row">
@@ -5084,6 +5285,7 @@ export default function App() {
           </div>
         </div>
       </header>
+      ) : null}
 
       <section className="game-layout">
         <div
@@ -5264,6 +5466,7 @@ export default function App() {
                 </strong>
               </div>
             ) : null}
+            {!isAulaMode ? (
             <div className="side-powerups">
               <span className="label">{t("powerups")}</span>
               <div className="powerups">
@@ -5289,6 +5492,8 @@ export default function App() {
                 })}
               </div>
             </div>
+            ) : null}
+            {!hidePublicChrome ? (
             <button
               type="button"
               className="options-launch-button"
@@ -5300,6 +5505,7 @@ export default function App() {
             >
               {t("options")}
             </button>
+            ) : null}
           </div>
         </aside>
       </section>
@@ -5387,7 +5593,7 @@ export default function App() {
         </div>
       ) : null}
 
-      {optionsOpen ? (
+      {optionsOpen && !disableModeSwitch ? (
         <div
           className="modal-backdrop options-modal-backdrop"
           onClick={() => {
@@ -5528,7 +5734,7 @@ export default function App() {
         </div>
       ) : null}
 
-      {calendarOpen ? (
+      {calendarOpen && !disableCalendar ? (
         <div className="calendar-overlay" onClick={handleCalendarClose}>
           <div
             className={`calendar-panel ${calendarMode}`}
@@ -5679,6 +5885,7 @@ export default function App() {
           </div>
         </div>
       ) : null}
+      {!hidePublicChrome ? (
       <nav className="bottom-nav" aria-label={t("mainNavigation")}>
         <button
           type="button"
@@ -5708,6 +5915,7 @@ export default function App() {
           <span className="bottom-nav-label">{t("options")}</span>
         </button>
       </nav>
+      ) : null}
       </div>
     </ThemeProvider>
   );
