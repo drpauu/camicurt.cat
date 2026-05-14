@@ -2,3 +2,8 @@
 .env.local
 .env.cron
 .perf/
+
+# Hidden directories
+.*/
+!.gitignore
+!.gitattributes
