@@ -2,13 +2,13 @@
 
 Com revisar un repte:
 
-- Comprova que la ruta comenca i acaba a les comarques indicades.
-- Compta nomes les comarques intermedies.
-- Compara la ruta trobada amb el cami optim del repte.
-- Accepta rutes equivalents si tenen el mateix nombre de comarques intermedies i totes les connexions son valides.
+- Comprova que la ruta comença i acaba a les comarques indicades.
+- Compta només les comarques intermèdies.
+- Compara la ruta trobada amb el camí òptim del repte.
+- Accepta rutes equivalents si tenen el mateix nombre de comarques intermèdies i totes les connexions són vàlides.
 
 Criteris de comentari:
 
-- Ruta optima: mateix nombre d'intermedies que el cami de referencia.
-- Ruta propera: una o dues comarques mes que l'optima.
-- Ruta a revisar: conte salts entre comarques que no son veines.
+- Ruta òptima: mateix nombre d'intermèdies que el camí de referència.
+- Ruta propera: una o dues comarques més que l'òptima.
+- Ruta a revisar: conté salts entre comarques que no són veïnes.

@@ -1,4 +1,4 @@
-# Sessio de 45 minuts
+# Sessió de 45 minuts
 
 0-5 minuts:
 
@@ -8,7 +8,7 @@
 5-15 minuts:
 
 - Equips: primera ruta sobre paper.
-- Docent: obre la sessio i projecta el codi.
+- Docent: obre la sessió i projecta el codi.
 
 15-30 minuts:
 
@@ -17,8 +17,8 @@
 
 30-40 minuts:
 
-- Resultats i comparacio de camins.
-- Comentari de la ruta optima.
+- Resultats i comparació de camins.
+- Comentari de la ruta òptima.
 
 40-45 minuts:
 

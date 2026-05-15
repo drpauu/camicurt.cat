@@ -16,10 +16,10 @@ export default function AulaLogin() {
     try {
       await sendAulaMagicLink(email.trim());
       setStatus("sent");
-      setMessage("T'hem enviat un enllac d'acces. Obre'l des del mateix navegador.");
+      setMessage("T'hem enviat un enllaç d'accés. Obre'l des del mateix navegador.");
     } catch (error) {
       setStatus("error");
-      setMessage(error.message || "No s'ha pogut enviar l'enllac d'acces.");
+      setMessage(error.message || "No s'ha pogut enviar l'enllaç d'accés.");
     }
   }
 
@@ -27,7 +27,7 @@ export default function AulaLogin() {
     <AulaLayout>
       <div className="aula-narrow">
         <AulaCard>
-          <p className="aula-eyebrow">Acces docent</p>
+          <p className="aula-eyebrow">Accés docent</p>
           <h1>Entra a Camicurt Aula</h1>
           <p>Introdueix el correu del teu centre per accedir a Camicurt Aula.</p>
           <form className="aula-form" onSubmit={handleSubmit}>
@@ -42,7 +42,7 @@ export default function AulaLogin() {
               placeholder="docent@centre.cat"
             />
             <AulaButton type="submit" disabled={status === "loading"}>
-              {status === "loading" ? "Enviant..." : "Enviar enllac d'acces"}
+              {status === "loading" ? "Enviant..." : "Enviar enllaç d'accés"}
             </AulaButton>
           </form>
           {message ? (

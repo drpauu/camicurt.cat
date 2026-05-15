@@ -2,7 +2,7 @@ import { getSupabaseClient } from "../../lib/supabase.js";
 
 async function requireClient() {
   const supabase = await getSupabaseClient();
-  if (!supabase) throw new Error("Supabase no esta configurat.");
+  if (!supabase) throw new Error("Supabase no està configurat.");
   return supabase;
 }
 
@@ -13,7 +13,7 @@ function throwIfError(error, fallback) {
 export async function listAdminLicenses() {
   const supabase = await requireClient();
   const { data, error } = await supabase.rpc("aula_admin_list_licenses");
-  throwIfError(error, "No s'han pogut carregar les llicencies.");
+  throwIfError(error, "No s'han pogut carregar les llicències.");
   return data || [];
 }
 
@@ -43,7 +43,7 @@ export async function createAdminLicense(values) {
     p_billing_reference: values.billingReference || null,
     p_notes: values.notes || null
   });
-  throwIfError(error, "No s'ha pogut crear la llicencia.");
+  throwIfError(error, "No s'ha pogut crear la llicència.");
   return data;
 }
 
@@ -66,7 +66,7 @@ export async function renewLicense({ licenseId, newEndsAt, billingReference }) {
     p_new_ends_at: newEndsAt,
     p_billing_reference: billingReference || null
   });
-  throwIfError(error, "No s'ha pogut renovar la llicencia.");
+  throwIfError(error, "No s'ha pogut renovar la llicència.");
   return data;
 }
 

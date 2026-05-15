@@ -82,7 +82,7 @@ export default function AulaPlayPage({ sessionId, PublicGameApp }) {
   if (!participant || !fixedLevelSnapshot) {
     return (
       <AulaLayout>
-        <AulaBlocked message="Torna a entrar amb el codi de sessio per jugar aquest repte." />
+        <AulaBlocked message="Torna a entrar amb el codi de sessió per jugar aquest repte." />
       </AulaLayout>
     );
   }

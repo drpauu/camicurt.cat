@@ -41,7 +41,7 @@ export default function AulaPanel({ access }) {
     <AulaLayout access={access}>
       <section className="aula-panel-head">
         <div>
-          <p className="aula-eyebrow">Panel docent</p>
+          <p className="aula-eyebrow">Panell docent</p>
           <h1>{access.organization?.name || "Camicurt Aula"}</h1>
           <p>
             Pla {license?.plan || "sense pla"} · estat {license?.status || "desconegut"} · caduca
@@ -49,7 +49,7 @@ export default function AulaPanel({ access }) {
           </p>
         </div>
         <div className="aula-actions">
-          <AulaButton href="/aula/sessions/new">Crear sessio</AulaButton>
+          <AulaButton href="/aula/sessions/new">Crear sessió</AulaButton>
           <AulaButton href="/aula/materials" variant="secondary">
             Materials docents
           </AulaButton>
@@ -60,20 +60,20 @@ export default function AulaPanel({ access }) {
         <div className="aula-section-title">
           <div>
             <p className="aula-eyebrow">Activitat recent</p>
-            <h2>Ultimes sessions</h2>
+            <h2>Últimes sessions</h2>
           </div>
         </div>
         {loading ? <AulaLoading label="Carregant sessions..." /> : null}
         {error ? <p className="aula-message aula-message-error">{error.message}</p> : null}
         {!loading && !sessions.length ? (
-          <p className="aula-empty">Encara no has creat cap sessio d'aula.</p>
+          <p className="aula-empty">Encara no has creat cap sessió d'aula.</p>
         ) : null}
         {sessions.length ? (
           <div className="aula-table-wrap">
             <table className="aula-table">
               <thead>
                 <tr>
-                  <th>Titol</th>
+                  <th>Títol</th>
                   <th>Codi</th>
                   <th>Estat</th>
                   <th>Data</th>
@@ -83,7 +83,7 @@ export default function AulaPanel({ access }) {
               <tbody>
                 {sessions.map((session) => (
                   <tr key={session.id}>
-                    <td>{session.title || "Sessio sense titol"}</td>
+                    <td>{session.title || "Sessió sense títol"}</td>
                     <td>
                       <strong>{session.join_code}</strong>
                     </td>

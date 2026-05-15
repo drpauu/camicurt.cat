@@ -4,7 +4,7 @@ import {
   getSupabaseUrl
 } from "../../lib/supabase.js";
 
-function normalizeError(error, fallback = "No s'ha pogut completar l'operacio.") {
+function normalizeError(error, fallback = "No s'ha pogut completar l'operació.") {
   if (!error) return new Error(fallback);
   if (error instanceof Error) return error;
   return new Error(error.message || fallback);
@@ -12,7 +12,7 @@ function normalizeError(error, fallback = "No s'ha pogut completar l'operacio.")
 
 async function requireClient() {
   const supabase = await getSupabaseClient();
-  if (!supabase) throw new Error("Supabase no esta configurat.");
+  if (!supabase) throw new Error("Supabase no està configurat.");
   return supabase;
 }
 
@@ -22,7 +22,7 @@ export async function getAulaAccess() {
     return { allowed: false, reason: "no_supabase" };
   }
   const { data, error } = await supabase.rpc("aula_get_access");
-  if (error) throw normalizeError(error, "No s'ha pogut validar l'acces.");
+  if (error) throw normalizeError(error, "No s'ha pogut validar l'accés.");
   return data || { allowed: false, reason: "no_access" };
 }
 
@@ -78,7 +78,7 @@ export async function createAulaSession({ classId = null, challengeId, title, se
     p_title: title || null,
     p_settings: settings || {}
   });
-  if (error) throw normalizeError(error, "No s'ha pogut crear la sessio.");
+  if (error) throw normalizeError(error, "No s'ha pogut crear la sessió.");
   return data;
 }
 
@@ -88,7 +88,7 @@ export async function setAulaSessionStatus(sessionId, status) {
     p_session_id: sessionId,
     p_status: status
   });
-  if (error) throw normalizeError(error, "No s'ha pogut actualitzar la sessio.");
+  if (error) throw normalizeError(error, "No s'ha pogut actualitzar la sessió.");
   return data;
 }
 
@@ -100,7 +100,7 @@ export async function getAulaSessionBundle(sessionId) {
     .eq("id", sessionId)
     .maybeSingle();
   if (sessionResult.error) {
-    throw normalizeError(sessionResult.error, "No s'ha pogut carregar la sessio.");
+    throw normalizeError(sessionResult.error, "No s'ha pogut carregar la sessió.");
   }
   const session = sessionResult.data;
   if (!session) return { session: null, challenge: null, participants: [], results: [] };
@@ -136,13 +136,13 @@ export async function getAulaSessionBundle(sessionId) {
 
 function getFunctionUrl(action) {
   const url = getSupabaseUrl();
-  if (!url) throw new Error("Supabase no esta configurat.");
+  if (!url) throw new Error("Supabase no està configurat.");
   return `${url.replace(/\/$/, "")}/functions/v1/aula-session/${action}`;
 }
 
 async function callAulaFunction(action, payload) {
   const key = getSupabasePublicKey();
-  if (!key) throw new Error("Supabase no esta configurat.");
+  if (!key) throw new Error("Supabase no està configurat.");
   const response = await fetch(getFunctionUrl(action), {
     method: "POST",
     headers: {
@@ -154,7 +154,7 @@ async function callAulaFunction(action, payload) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.error || "No s'ha pogut completar la peticio d'Aula.");
+    throw new Error(data.error || "No s'ha pogut completar la petició d'Aula.");
   }
   return data;
 }

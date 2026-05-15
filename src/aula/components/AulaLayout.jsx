@@ -22,9 +22,9 @@ export default function AulaLayout({ children, access = null, wide = false }) {
             <small>{organization?.name || "Recurs educatiu"}</small>
           </span>
         </a>
-        <nav className="aula-nav" aria-label="Navegacio Aula">
-          <a href="/aula/panel">Panel</a>
-          <a href="/aula/sessions/new">Crear sessio</a>
+        <nav className="aula-nav" aria-label="Navegació Aula">
+          <a href="/aula/panel">Panell</a>
+          <a href="/aula/sessions/new">Crear sessió</a>
           <a href="/aula/materials">Materials</a>
           <a href="/aula/join">Entrar amb codi</a>
           {isAdmin ? <a href="/aula/admin">Admin</a> : null}
@@ -36,7 +36,7 @@ export default function AulaLayout({ children, access = null, wide = false }) {
             </button>
           ) : (
             <AulaButton href="/aula/login" variant="secondary">
-              Acces docent
+              Accés docent
             </AulaButton>
           )}
         </div>

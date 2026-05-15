@@ -6,9 +6,9 @@ Repte:
 
 Inici:
 
-Desti:
+Destí:
 
-Primera hipotesi de ruta:
+Primera hipòtesi de ruta:
 
 1.
 2.
@@ -24,7 +24,7 @@ Ruta final enviada:
 4.
 5.
 
-Reflexio:
+Reflexió:
 
 - Quina comarca ens ha ajudat a connectar la ruta?
-- Quin canvi fariem si repetissim el repte?
+- Quin canvi faríem si repetíssim el repte?

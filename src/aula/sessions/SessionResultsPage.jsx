@@ -5,6 +5,7 @@ import AulaLoading from "../components/AulaLoading.jsx";
 import useAulaResults from "../hooks/useAulaResults.js";
 import { downloadResultsCsv } from "../lib/aulaCsv.js";
 import { setAulaSessionStatus } from "../lib/aulaApi.js";
+import { formatComarcaPath } from "../lib/comarcaNames.js";
 
 export default function SessionResultsPage({ access, sessionId }) {
   const { loading, bundle, results, error } = useAulaResults(sessionId, { pollMs: 10000 });
@@ -19,7 +20,7 @@ export default function SessionResultsPage({ access, sessionId }) {
       <section className="aula-panel-head">
         <div>
           <p className="aula-eyebrow">Resultats</p>
-          <h1>{bundle?.session?.title || bundle?.challenge?.title || "Sessio Aula"}</h1>
+          <h1>{bundle?.session?.title || bundle?.challenge?.title || "Sessió Aula"}</h1>
         </div>
         <div className="aula-actions">
           <AulaButton onClick={() => downloadResultsCsv(sessionId, results)} variant="secondary">
@@ -29,7 +30,7 @@ export default function SessionResultsPage({ access, sessionId }) {
             Mode projector
           </AulaButton>
           <AulaButton onClick={closeSession} variant="secondary">
-            Tancar sessio
+            Tancar sessió
           </AulaButton>
         </div>
       </section>
@@ -48,9 +49,9 @@ export default function SessionResultsPage({ access, sessionId }) {
                   <th>Estat</th>
                   <th>Intents</th>
                   <th>Temps</th>
-                  <th>Precisio</th>
-                  <th>Distancia respecte l'optim</th>
-                  <th>Cami trobat</th>
+                  <th>Precisió</th>
+                  <th>Distància respecte a l'òptim</th>
+                  <th>Camí trobat</th>
                 </tr>
               </thead>
               <tbody>
@@ -62,7 +63,7 @@ export default function SessionResultsPage({ access, sessionId }) {
                     <td>{result.time_seconds ?? ""}</td>
                     <td>{result.precision ?? ""}</td>
                     <td>{result.distance_from_optimal ?? ""}</td>
-                    <td>{Array.isArray(result.found_path) ? result.found_path.join(" > ") : ""}</td>
+                    <td>{formatComarcaPath(result.found_path)}</td>
                   </tr>
                 ))}
               </tbody>

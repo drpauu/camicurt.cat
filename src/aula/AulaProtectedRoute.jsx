@@ -9,7 +9,7 @@ export default function AulaProtectedRoute({ children, adminOnly = false }) {
   if (loading) {
     return (
       <AulaLayout>
-        <AulaLoading label="Carregant acces..." />
+        <AulaLoading label="Carregant accés..." />
       </AulaLayout>
     );
   }
@@ -33,7 +33,7 @@ export default function AulaProtectedRoute({ children, adminOnly = false }) {
   if (adminOnly && access.teacher?.role !== "camicurt_admin") {
     return (
       <AulaLayout access={access}>
-        <AulaBlocked message="Aquest apartat es nomes per a l'administracio de Camicurt." />
+        <AulaBlocked message="Aquest apartat és només per a l'administració de Camicurt." />
       </AulaLayout>
     );
   }

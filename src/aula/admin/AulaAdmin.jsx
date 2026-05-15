@@ -88,7 +88,7 @@ export default function AulaAdmin({ access }) {
           .map((item) => item.trim().toLowerCase())
           .filter(Boolean)
       });
-      setMessage("Organitzacio i llicencia creades.");
+      setMessage("Organització i llicència creades.");
       await load();
     } catch (error) {
       setMessage(error.message);
@@ -113,8 +113,8 @@ export default function AulaAdmin({ access }) {
       <section className="aula-panel-head">
         <div>
           <p className="aula-eyebrow">Admin Camicurt</p>
-          <h1>Llicencies i centres</h1>
-          <p>Gestio funcional de centres, plans i docents convidats.</p>
+          <h1>Llicències i centres</h1>
+          <p>Gestió funcional de centres, plans i docents convidats.</p>
         </div>
       </section>
 
@@ -122,7 +122,7 @@ export default function AulaAdmin({ access }) {
 
       <div className="aula-grid aula-grid-two">
         <AulaCard>
-          <p className="aula-eyebrow">Nova llicencia</p>
+          <p className="aula-eyebrow">Nova llicència</p>
           <h2>Crear centre</h2>
           <form className="aula-form aula-form-grid" onSubmit={handleCreate}>
             <label>
@@ -148,7 +148,7 @@ export default function AulaAdmin({ access }) {
               />
             </label>
             <label>
-              Provincia
+              Província
               <input
                 value={createForm.province}
                 onChange={(event) => updateCreate("province", event.target.value)}
@@ -163,7 +163,7 @@ export default function AulaAdmin({ access }) {
               />
             </label>
             <label>
-              Facturacio
+              Facturació
               <input
                 type="email"
                 value={createForm.billingEmail}
@@ -193,9 +193,9 @@ export default function AulaAdmin({ access }) {
                 value={createForm.status}
                 onChange={(event) => updateCreate("status", event.target.value)}
               >
-                <option value="trial">trial</option>
-                <option value="active">active</option>
-                <option value="pending_payment">pending_payment</option>
+                <option value="trial">prova</option>
+                <option value="active">activa</option>
+                <option value="pending_payment">pagament pendent</option>
               </select>
             </label>
             <label>
@@ -217,7 +217,7 @@ export default function AulaAdmin({ access }) {
               />
             </label>
             <label>
-              Max docents
+              Màx. docents
               <input
                 type="number"
                 min="1"
@@ -226,7 +226,7 @@ export default function AulaAdmin({ access }) {
               />
             </label>
             <label>
-              Max alumnes/sessio
+              Màx. alumnes/sessió
               <input
                 type="number"
                 min="1"
@@ -237,13 +237,13 @@ export default function AulaAdmin({ access }) {
               />
             </label>
             <label>
-              Referencia factura
+              Referència factura
               <input
                 value={createForm.billingReference}
                 onChange={(event) => updateCreate("billingReference", event.target.value)}
               />
             </label>
-            <AulaButton type="submit">Crear llicencia</AulaButton>
+            <AulaButton type="submit">Crear llicència</AulaButton>
           </form>
         </AulaCard>
 
@@ -285,9 +285,9 @@ export default function AulaAdmin({ access }) {
             <label>
               Rol
               <select value={inviteForm.role} onChange={(event) => updateInvite("role", event.target.value)}>
-                <option value="teacher">teacher</option>
-                <option value="school_admin">school_admin</option>
-                <option value="camicurt_admin">camicurt_admin</option>
+                <option value="teacher">docent</option>
+                <option value="school_admin">admin centre</option>
+                <option value="camicurt_admin">admin Camicurt</option>
               </select>
             </label>
             <AulaButton type="submit">Convidar</AulaButton>
@@ -298,7 +298,7 @@ export default function AulaAdmin({ access }) {
       <AulaCard>
         <div className="aula-section-title">
           <div>
-            <p className="aula-eyebrow">Llicencies</p>
+            <p className="aula-eyebrow">Llicències</p>
             <h2>Estat comercial</h2>
           </div>
           <AulaButton variant="secondary" onClick={load}>

@@ -101,8 +101,8 @@ export default function CreateSessionPage({ access }) {
     <AulaLayout access={access}>
       <section className="aula-panel-head">
         <div>
-          <p className="aula-eyebrow">Sessio d'aula</p>
-          <h1>Crear sessio</h1>
+          <p className="aula-eyebrow">Sessió d'aula</p>
+          <h1>Crear sessió</h1>
           <p>Tria un repte preparat i genera un codi temporal per a l'alumnat.</p>
         </div>
       </section>
@@ -112,16 +112,16 @@ export default function CreateSessionPage({ access }) {
 
       {created ? (
         <AulaCard>
-          <p className="aula-eyebrow">Sessio creada</p>
-          <h2>Codi de sessio: {created.join_code}</h2>
+          <p className="aula-eyebrow">Sessió creada</p>
+          <h2>Codi de sessió: {created.join_code}</h2>
           <p>
-            Enllac per a l'alumnat:{" "}
+            Enllaç per a l'alumnat:{" "}
             <a href={`/aula/join?code=${created.join_code}`}>/aula/join?code={created.join_code}</a>
           </p>
           <p>Estat actual: {created.status}</p>
           <div className="aula-actions">
             <AulaButton onClick={handleOpen} disabled={created.status === "open"}>
-              Obrir sessio
+              Obrir sessió
             </AulaButton>
             <AulaButton href={`/aula/session/${created.id}/projector`} variant="secondary">
               Mode projector
@@ -159,7 +159,7 @@ export default function CreateSessionPage({ access }) {
               </select>
             </label>
             <label>
-              Titol de sessio
+              Títol de sessió
               <input value={title} onChange={(event) => setTitle(event.target.value)} />
             </label>
             <label>
@@ -170,7 +170,7 @@ export default function CreateSessionPage({ access }) {
               </select>
             </label>
             <label>
-              Limit de temps (segons)
+              Límit de temps (segons)
               <input
                 type="number"
                 min="0"
@@ -184,7 +184,7 @@ export default function CreateSessionPage({ access }) {
                 checked={settings.show_ranking}
                 onChange={(event) => updateSetting("show_ranking", event.target.checked)}
               />
-              Mostrar ranking
+              Mostrar rànquing
             </label>
             <label className="aula-check">
               <input
@@ -194,7 +194,7 @@ export default function CreateSessionPage({ access }) {
                   updateSetting("show_solution_at_end", event.target.checked)
                 }
               />
-              Mostrar solucio al final
+              Mostrar solució al final
             </label>
             <label className="aula-check">
               <input
@@ -205,7 +205,7 @@ export default function CreateSessionPage({ access }) {
               Permetre comodins
             </label>
             <AulaButton type="submit" disabled={status === "saving" || !challengeId}>
-              {status === "saving" ? "Creant..." : "Crear sessio"}
+              {status === "saving" ? "Creant..." : "Crear sessió"}
             </AulaButton>
           </form>
         </AulaCard>

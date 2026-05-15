@@ -10,7 +10,7 @@ export default function useAulaSession(sessionId, { pollMs = 0 } = {}) {
 
   useEffect(() => {
     if (!sessionId) {
-      setState({ loading: false, bundle: null, error: new Error("Falta la sessio.") });
+      setState({ loading: false, bundle: null, error: new Error("Falta la sessió.") });
       return undefined;
     }
     let cancelled = false;

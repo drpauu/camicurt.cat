@@ -1,11 +1,13 @@
+import { formatComarcaPath } from "./comarcaNames.js";
+
 const CSV_HEADERS = [
   "equip",
   "completat",
   "intents",
   "temps_segons",
-  "precisio",
-  "distancia_optima",
-  "cami_trobat"
+  "precisió",
+  "distància_òptima",
+  "camí_trobat"
 ];
 
 function escapeCsv(value) {
@@ -17,12 +19,12 @@ function escapeCsv(value) {
 export function resultsToCsv(results = []) {
   const rows = results.map((result) => [
     result.display_name || result.participant?.display_name || "",
-    result.completed ? "si" : "no",
+    result.completed ? "sí" : "no",
     result.attempts_count ?? "",
     result.time_seconds ?? "",
     result.precision ?? "",
     result.distance_from_optimal ?? "",
-    Array.isArray(result.found_path) ? result.found_path.join(" > ") : ""
+    formatComarcaPath(result.found_path)
   ]);
   return [CSV_HEADERS, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\n");
 }

@@ -23,7 +23,7 @@ export default function AdminLicenses({ licenses, onChanged }) {
         newEndsAt: date,
         billingReference: license.billing_reference || null
       });
-      setMessage("Llicencia renovada.");
+      setMessage("Llicència renovada.");
       onChanged?.();
     } catch (error) {
       setMessage(error.message);

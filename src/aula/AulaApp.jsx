@@ -80,7 +80,7 @@ export default function AulaApp({ PublicGameApp }) {
 
   return (
     <AulaLayout>
-      <AulaBlocked message="Aquesta pagina d'Aula no existeix." />
+      <AulaBlocked message="Aquesta pàgina d'Aula no existeix." />
     </AulaLayout>
   );
 }

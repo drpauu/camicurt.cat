@@ -8,28 +8,32 @@ import solucionari from "./materials/solucionari.md?raw";
 const materials = [
   {
     title: "Guia docent",
+    label: "guia docent",
     type: "teacher_guide",
     description:
-      "Objectius, proposta de dinamica i consells per introduir les rutes entre comarques.",
+      "Objectius, proposta de dinàmica i consells per introduir les rutes entre comarques.",
     content: guiaDocent
   },
   {
     title: "Fitxa d'alumne",
+    label: "fitxa d'alumne",
     type: "worksheet",
     description:
-      "Full imprimible per anotar hipotesis, comarques candidates i reflexio final.",
+      "Full imprimible per anotar hipòtesis, comarques candidates i reflexió final.",
     content: fitxaAlumne
   },
   {
     title: "Solucionari",
+    label: "solucionari",
     type: "solutionary",
-    description: "Criteris per comentar una ruta optima i alternatives equivalents.",
+    description: "Criteris per comentar una ruta òptima i alternatives equivalents.",
     content: solucionari
   },
   {
-    title: "Sessio de 45 minuts",
+    title: "Sessió de 45 minuts",
+    label: "sessió",
     type: "slides",
-    description: "Estructura breu per a una classe amb inici, joc en equips i posada en comu.",
+    description: "Estructura breu per a una classe amb inici, joc en equips i posada en comú.",
     content: sessio45Minuts
   }
 ];
@@ -41,13 +45,13 @@ export default function AulaMaterials({ access }) {
         <div>
           <p className="aula-eyebrow">Materials docents</p>
           <h1>Recursos per preparar la classe</h1>
-          <p>Materials inicials en HTML. Els PDF es podran afegir mes endavant.</p>
+          <p>Materials inicials en HTML. Els PDF es podran afegir més endavant.</p>
         </div>
       </section>
       <div className="aula-grid aula-grid-two">
         {materials.map((material) => (
           <AulaCard key={material.type}>
-            <p className="aula-eyebrow">{material.type}</p>
+            <p className="aula-eyebrow">{material.label}</p>
             <h2>{material.title}</h2>
             <p>{material.description}</p>
             <details className="aula-material">

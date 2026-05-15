@@ -108,7 +108,7 @@ async function requireActiveLicense(supabase: any, organizationId: string) {
     .maybeSingle();
   if (orgError) throw orgError;
   if (!organization || organization.status !== "active") {
-    throw new Error("El centre no esta actiu.");
+    throw new Error("El centre no està actiu.");
   }
 
   const { data: license, error: licenseError } = await supabase
@@ -122,16 +122,16 @@ async function requireActiveLicense(supabase: any, organizationId: string) {
     .limit(1)
     .maybeSingle();
   if (licenseError) throw licenseError;
-  if (!license) throw new Error("El centre no te llicencia activa.");
+  if (!license) throw new Error("El centre no té llicència activa.");
   return license;
 }
 
 async function handleJoin(req: Request, supabase: any, payload: any) {
   const joinCode = normalizeJoinCode(payload.joinCode);
   const displayName = cleanDisplayName(payload.displayName);
-  if (!joinCode) return json(req, { error: "Cal indicar el codi de sessio." }, 400);
+  if (!joinCode) return json(req, { error: "Cal indicar el codi de sessió." }, 400);
   if (displayName.length < 1 || displayName.length > 60) {
-    return json(req, { error: "El nom d'equip ha de tenir entre 1 i 60 caracters." }, 400);
+    return json(req, { error: "El nom d'equip ha de tenir entre 1 i 60 caràcters." }, 400);
   }
 
   const { data: session, error: sessionError } = await supabase
@@ -140,12 +140,12 @@ async function handleJoin(req: Request, supabase: any, payload: any) {
     .eq("join_code", joinCode)
     .maybeSingle();
   if (sessionError) throw sessionError;
-  if (!session) return json(req, { error: "Codi invalid o sessio no trobada." }, 404);
+  if (!session) return json(req, { error: "Codi invàlid o sessió no trobada." }, 404);
   if (session.status !== "open") {
-    return json(req, { error: "La sessio encara no esta oberta." }, 409);
+    return json(req, { error: "La sessió encara no està oberta." }, 409);
   }
   if (new Date(session.expires_at).getTime() <= Date.now()) {
-    return json(req, { error: "La sessio ha caducat." }, 410);
+    return json(req, { error: "La sessió ha caducat." }, 410);
   }
 
   const license = await requireActiveLicense(supabase, session.organization_id);
@@ -156,7 +156,7 @@ async function handleJoin(req: Request, supabase: any, payload: any) {
       .eq("session_id", session.id);
     if (countError) throw countError;
     if ((count || 0) >= license.max_participants_per_session) {
-      return json(req, { error: "La sessio ha arribat al limit de participants." }, 409);
+      return json(req, { error: "La sessió ha arribat al límit de participants." }, 409);
     }
   }
 
@@ -201,7 +201,7 @@ async function handleSubmit(req: Request, supabase: any, payload: any) {
 
   const tokenHash = await sha256Hex(participantToken);
   if (tokenHash !== participant.participant_token_hash) {
-    return json(req, { error: "Token de participant invalid." }, 401);
+    return json(req, { error: "Token de participant invàlid." }, 401);
   }
 
   const { data: session, error: sessionError } = await supabase
@@ -211,7 +211,7 @@ async function handleSubmit(req: Request, supabase: any, payload: any) {
     .maybeSingle();
   if (sessionError) throw sessionError;
   if (!session || session.status === "archived") {
-    return json(req, { error: "La sessio no accepta resultats." }, 409);
+    return json(req, { error: "La sessió no accepta resultats." }, 409);
   }
   await requireActiveLicense(supabase, session.organization_id);
 
@@ -275,7 +275,7 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: getCorsHeaders(req) });
   }
   if (req.method !== "POST") {
-    return json(req, { error: "Metode no permes." }, 405);
+    return json(req, { error: "Mètode no permès." }, 405);
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");

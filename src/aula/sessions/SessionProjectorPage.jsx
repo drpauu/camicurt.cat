@@ -5,6 +5,7 @@ import AulaLayout from "../components/AulaLayout.jsx";
 import AulaLoading from "../components/AulaLoading.jsx";
 import useAulaSession from "../hooks/useAulaSession.js";
 import { setAulaSessionStatus } from "../lib/aulaApi.js";
+import { formatComarcaName, formatComarcaPath } from "../lib/comarcaNames.js";
 
 export default function SessionProjectorPage({ access, sessionId }) {
   const { loading, bundle, error } = useAulaSession(sessionId, { pollMs: 7000 });
@@ -35,11 +36,11 @@ export default function SessionProjectorPage({ access, sessionId }) {
           <div className="aula-projector-grid">
             <div>
               <span>Inici</span>
-              <strong>{challenge.start_id}</strong>
+              <strong>{formatComarcaName(challenge.start_id)}</strong>
             </div>
             <div>
-              <span>Desti</span>
-              <strong>{challenge.target_id}</strong>
+              <span>Destí</span>
+              <strong>{formatComarcaName(challenge.target_id)}</strong>
             </div>
             <div>
               <span>Dificultat</span>
@@ -61,25 +62,25 @@ export default function SessionProjectorPage({ access, sessionId }) {
           {challenge.student_prompt ? <p>{challenge.student_prompt}</p> : null}
           {showSolution ? (
             <div className="aula-solution">
-              <strong>Solucio:</strong> {challenge.shortest_path.join(" > ")}
+              <strong>Solució:</strong> {formatComarcaPath(challenge.shortest_path)}
             </div>
           ) : null}
           <div className="aula-actions">
             <AulaButton onClick={() => updateStatus("open")} disabled={session.status === "open"}>
-              Obrir sessio
+              Obrir sessió
             </AulaButton>
             <AulaButton
               variant="secondary"
               onClick={() => updateStatus("closed")}
               disabled={session.status === "closed"}
             >
-              Tancar sessio
+              Tancar sessió
             </AulaButton>
             <AulaButton href={`/aula/session/${session.id}/results`} variant="secondary">
               Veure resultats
             </AulaButton>
             <AulaButton variant="secondary" onClick={() => setShowSolution((prev) => !prev)}>
-              Mostrar solucio
+              Mostrar solució
             </AulaButton>
           </div>
         </AulaCard>

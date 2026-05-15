@@ -17,7 +17,7 @@ export default function AulaCallback() {
           window.location.replace("/aula/panel");
           return;
         }
-        throw new Error("Aquest correu no te cap llicencia activa de Camicurt Aula.");
+        throw new Error("Aquest correu no té cap llicència activa de Camicurt Aula.");
       } catch (error) {
         if (!cancelled) setState({ loading: false, error });
       }
@@ -31,7 +31,7 @@ export default function AulaCallback() {
   if (state.loading) {
     return (
       <AulaLayout>
-        <AulaLoading label="Validant acces docent..." />
+        <AulaLoading label="Validant accés docent..." />
       </AulaLayout>
     );
   }

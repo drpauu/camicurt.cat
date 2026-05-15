@@ -36,7 +36,7 @@ export default function JoinSessionPage() {
       window.location.assign(`/aula/play/${result.sessionId}`);
     } catch (error) {
       setStatus("error");
-      setMessage(error.message || "Codi invalid o sessio no disponible.");
+      setMessage(error.message || "Codi invàlid o sessió no disponible.");
     }
   }
 
@@ -45,10 +45,10 @@ export default function JoinSessionPage() {
       <div className="aula-narrow">
         <AulaCard>
           <p className="aula-eyebrow">Entrada d'alumnat</p>
-          <h1>Entra a la sessio</h1>
+          <h1>Entra a la sessió</h1>
           <form className="aula-form" onSubmit={handleSubmit}>
             <label>
-              Codi de sessio
+              Codi de sessió
               <input
                 value={joinCode}
                 onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
@@ -58,7 +58,7 @@ export default function JoinSessionPage() {
               />
             </label>
             <label>
-              Nom d'equip o pseudonim
+              Nom d'equip o pseudònim
               <input
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
@@ -69,7 +69,7 @@ export default function JoinSessionPage() {
               />
             </label>
             <AulaButton type="submit" disabled={status === "loading"}>
-              {status === "loading" ? "Entrant..." : "Comencar"}
+              {status === "loading" ? "Entrant..." : "Començar"}
             </AulaButton>
           </form>
           {message ? <p className="aula-message aula-message-error">{message}</p> : null}
