@@ -122,6 +122,54 @@ const getMadridDayKeyOffset = (offsetDays) => {
   return date.toISOString().slice(0, 10);
 };
 
+const supabaseJsonHeaders = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET, POST, OPTIONS",
+  "access-control-allow-headers": "authorization, apikey, x-client-info, content-type, prefer, range",
+  "access-control-expose-headers": "content-range",
+  "content-range": "0-0/1"
+};
+
+const rowFromDailyLevel = (date, level) => ({
+  date,
+  level_id: level.id,
+  start_id: level.start_id,
+  target_id: level.target_id,
+  shortest_path: level.shortest_path,
+  rule_id: level.rule_id ?? null,
+  avoid_ids: level.avoid_ids ?? null,
+  must_pass_ids: level.must_pass_ids ?? null,
+  difficulty_id: level.difficulty_id
+});
+
+const mockDailyCalendarDetails = async (page, entries) => {
+  const rowsByDate = new Map(
+    entries.map(({ date, level }) => [date, rowFromDailyLevel(date, level)])
+  );
+  await page.route("**/*daily_calendar_public*", (route) => {
+    if (route.request().method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: supabaseJsonHeaders });
+    }
+    const url = new URL(route.request().url());
+    const dateFilter = url.searchParams.get("date") || "";
+    const requestedDate = dateFilter.startsWith("eq.") ? dateFilter.slice(3) : null;
+    const rows = requestedDate
+      ? rowsByDate.has(requestedDate)
+        ? [rowsByDate.get(requestedDate)]
+        : []
+      : [...rowsByDate.values()];
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: {
+        ...supabaseJsonHeaders,
+        "content-range": rows.length ? `0-${rows.length - 1}/${rows.length}` : "*/0"
+      },
+      body: JSON.stringify(rows)
+    });
+  });
+};
+
 const gotoHome = async (page) => {
   await page.addInitScript((key) => {
     localStorage.setItem(key, "1");
@@ -426,6 +474,18 @@ test("Nou mapa genera un repte nou mantenint mode i dificultat", async ({ page }
 });
 
 test("Nou mapa surt del repte diari cap a un nivell normal aleatori", async ({ page }) => {
+  const dayKey = getTodayKey();
+  const level = {
+    id: "daily-to-normal",
+    start_id: "urgell",
+    target_id: "terra-alta",
+    shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
+    rule_id: null,
+    avoid_ids: null,
+    must_pass_ids: null,
+    difficulty_id: "pixapi"
+  };
+  await mockDailyCalendarDetails(page, [{ date: dayKey, level }]);
   await page.addInitScript(() => {
     localStorage.setItem("rumb-mode", "normal");
     localStorage.setItem("rumb-difficulty", "pixapi");
@@ -476,6 +536,18 @@ test("el comodi d'inicials mostra lletres grans sense sortir del mapa de cada co
 });
 
 test("inicia el nivell diari", async ({ page }) => {
+  const dayKey = getTodayKey();
+  const level = {
+    id: "daily-start",
+    start_id: "urgell",
+    target_id: "terra-alta",
+    shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
+    rule_id: null,
+    avoid_ids: null,
+    must_pass_ids: null,
+    difficulty_id: "pixapi"
+  };
+  await mockDailyCalendarDetails(page, [{ date: dayKey, level }]);
   await page.addInitScript(() => {
     localStorage.setItem("rumb-mode", "normal");
   });
@@ -485,7 +557,78 @@ test("inicia el nivell diari", async ({ page }) => {
   await expect(page.locator(".brand-mode-description")).toHaveCount(0);
 });
 
+test("Diari i logo carreguen avui sense obrir el calendari", async ({ page }) => {
+  const dayKey = getTodayKey();
+  const level = {
+    id: "daily-reset-actions",
+    start_id: "urgell",
+    target_id: "terra-alta",
+    shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
+    rule_id: null,
+    avoid_ids: null,
+    must_pass_ids: null,
+    difficulty_id: "pixapi"
+  };
+  await mockDailyCalendarDetails(page, [{ date: dayKey, level }]);
+  await page.addInitScript(() => {
+    localStorage.setItem("rumb-mode", "normal");
+  });
+  await gotoHome(page);
+  await page.waitForSelector("svg.map");
+
+  await page.getByRole("button", { name: /^Diari$/i }).click();
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");
+  await expect(page.locator(".calendar-panel")).toHaveCount(0);
+  await expect(page.locator(".map-brief .route")).toContainText("Urgell");
+  await expect(page.locator(".map-brief .route")).toContainText("Terra Alta");
+
+  await page.getByRole("button", { name: /Calendari/i }).click();
+  await expect(page.locator(".calendar-panel")).toBeVisible();
+  await page.locator(".calendar-header .icon-button").click();
+  await page.locator(".topbar .brand-button").click();
+  await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");
+  await expect(page.locator(".calendar-panel")).toHaveCount(0);
+  await expect(page.locator(".map-brief .route")).toContainText("Urgell");
+});
+
+test("obrir el calendari no canvia el nivell carregat", async ({ page }) => {
+  const dayKey = getTodayKey();
+  const level = {
+    id: "daily-calendar-open-no-change",
+    start_id: "urgell",
+    target_id: "terra-alta",
+    shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
+    rule_id: null,
+    avoid_ids: null,
+    must_pass_ids: null,
+    difficulty_id: "pixapi"
+  };
+  await mockDailyCalendarDetails(page, [{ date: dayKey, level }]);
+  await page.addInitScript(() => {
+    localStorage.setItem("rumb-mode", "normal");
+  });
+  await gotoHome(page);
+  await page.getByRole("button", { name: /^Diari$/i }).click();
+  await expect(page.locator(".map-brief .route")).toContainText("Urgell");
+  const routeBefore = (await page.locator(".map-brief .route").textContent())?.trim();
+  await page.getByRole("button", { name: /Calendari/i }).click();
+  await expect(page.locator(".calendar-panel")).toBeVisible();
+  expect((await page.locator(".map-brief .route").textContent())?.trim()).toBe(routeBefore);
+});
+
 test("completar el nivell diari desbloqueja totes les dificultats", async ({ page }) => {
+  const dayKey = getTodayKey();
+  const level = {
+    id: "daily-unlocks",
+    start_id: "urgell",
+    target_id: "terra-alta",
+    shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
+    rule_id: null,
+    avoid_ids: null,
+    must_pass_ids: null,
+    difficulty_id: "pixapi"
+  };
+  await mockDailyCalendarDetails(page, [{ date: dayKey, level }]);
   await page.addInitScript(() => {
     localStorage.setItem("rumb-mode", "normal");
     localStorage.setItem("rumb-difficulty", "pixapi");
@@ -568,23 +711,24 @@ test("contrarellotge tanca opcions i mostra compte enrere des de 5", async ({ pa
 
 test("clicar un nivell completat al calendari el reinicia i conserva el dia verd", async ({ page }) => {
   const dayKey = getTodayKey();
-  await page.addInitScript((key) => {
-    const level = {
-      id: "daily-completed",
-      start_id: "baix-camp",
-      target_id: "valles-occidental",
-      shortest_path: [
-        "baix-camp",
-        "alt-camp",
-        "alt-penedes",
-        "baix-llobregat",
-        "valles-occidental"
-      ],
-      rule_id: null,
-      avoid_ids: null,
-      must_pass_ids: null,
-      difficulty_id: "cap-colla-rutes"
-    };
+  const level = {
+    id: "daily-completed",
+    start_id: "baix-camp",
+    target_id: "valles-occidental",
+    shortest_path: [
+      "baix-camp",
+      "alt-camp",
+      "alt-penedes",
+      "baix-llobregat",
+      "valles-occidental"
+    ],
+    rule_id: null,
+    avoid_ids: null,
+    must_pass_ids: null,
+    difficulty_id: "cap-colla-rutes"
+  };
+  await mockDailyCalendarDetails(page, [{ date: dayKey, level }]);
+  await page.addInitScript(({ key, level }) => {
     const record = {
       levelKey: `daily:${key}`,
       dayKey: key,
@@ -622,7 +766,7 @@ test("clicar un nivell completat al calendari el reinicia i conserva el dia verd
       "rumb-completion-records-v1",
       JSON.stringify({ [`daily:${key}`]: record })
     );
-  }, dayKey);
+  }, { key: dayKey, level });
   await gotoHome(page);
   await page.getByRole("button", { name: /Calendari/i }).click();
   const dayButton = page.locator(`[data-calendar-day="${dayKey}"]`);
@@ -645,34 +789,38 @@ test("Seguent mapa des d'un diari antic carrega el dia seguent del calendari", a
 }) => {
   const previousKey = getMadridDayKeyOffset(-1);
   const todayKey = getTodayKey();
+  const previousLevel = {
+    id: "daily-previous-next",
+    start_id: "baix-camp",
+    target_id: "valles-occidental",
+    shortest_path: [
+      "baix-camp",
+      "alt-camp",
+      "alt-penedes",
+      "baix-llobregat",
+      "valles-occidental"
+    ],
+    rule_id: null,
+    avoid_ids: null,
+    must_pass_ids: null,
+    difficulty_id: "cap-colla-rutes"
+  };
+  const todayLevel = {
+    id: "daily-current-next",
+    start_id: "urgell",
+    target_id: "terra-alta",
+    shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
+    rule_id: null,
+    avoid_ids: null,
+    must_pass_ids: null,
+    difficulty_id: "cap-colla-rutes"
+  };
+  await mockDailyCalendarDetails(page, [
+    { date: previousKey, level: previousLevel },
+    { date: todayKey, level: todayLevel }
+  ]);
   await page.addInitScript(
-    ({ previousKey: prevKey, todayKey: currentKey }) => {
-      const previousLevel = {
-        id: "daily-previous-next",
-        start_id: "baix-camp",
-        target_id: "valles-occidental",
-        shortest_path: [
-          "baix-camp",
-          "alt-camp",
-          "alt-penedes",
-          "baix-llobregat",
-          "valles-occidental"
-        ],
-        rule_id: null,
-        avoid_ids: null,
-        must_pass_ids: null,
-        difficulty_id: "cap-colla-rutes"
-      };
-      const todayLevel = {
-        id: "daily-current-next",
-        start_id: "urgell",
-        target_id: "terra-alta",
-        shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
-        rule_id: null,
-        avoid_ids: null,
-        must_pass_ids: null,
-        difficulty_id: "cap-colla-rutes"
-      };
+    ({ previousKey: prevKey, todayKey: currentKey, previousLevel, todayLevel }) => {
       const winningAttempt = {
         attempts: 2,
         timeMs: 9000,
@@ -710,7 +858,7 @@ test("Seguent mapa des d'un diari antic carrega el dia seguent del calendari", a
         })
       );
     },
-    { previousKey, todayKey }
+    { previousKey, todayKey, previousLevel, todayLevel }
   );
 
   await gotoHome(page);
@@ -732,23 +880,24 @@ test("Seguent mapa des d'un diari antic carrega el dia seguent del calendari", a
 
 test("Seguent mapa des del diari actual obre un mapa aleatori normal", async ({ page }) => {
   const todayKey = getTodayKey();
-  await page.addInitScript((key) => {
-    const level = {
-      id: "daily-current-random",
-      start_id: "baix-camp",
-      target_id: "valles-occidental",
-      shortest_path: [
-        "baix-camp",
-        "alt-camp",
-        "alt-penedes",
-        "baix-llobregat",
-        "valles-occidental"
-      ],
-      rule_id: null,
-      avoid_ids: null,
-      must_pass_ids: null,
-      difficulty_id: "cap-colla-rutes"
-    };
+  const level = {
+    id: "daily-current-random",
+    start_id: "baix-camp",
+    target_id: "valles-occidental",
+    shortest_path: [
+      "baix-camp",
+      "alt-camp",
+      "alt-penedes",
+      "baix-llobregat",
+      "valles-occidental"
+    ],
+    rule_id: null,
+    avoid_ids: null,
+    must_pass_ids: null,
+    difficulty_id: "cap-colla-rutes"
+  };
+  await mockDailyCalendarDetails(page, [{ date: todayKey, level }]);
+  await page.addInitScript(({ key, level }) => {
     const winningAttempt = {
       attempts: 2,
       timeMs: 9000,
@@ -782,7 +931,7 @@ test("Seguent mapa des del diari actual obre un mapa aleatori normal", async ({ 
         }
       })
     );
-  }, todayKey);
+  }, { key: todayKey, level });
 
   await gotoHome(page);
   await page.getByRole("button", { name: /Calendari/i }).click();
@@ -804,17 +953,18 @@ test("Seguent mapa des del diari actual obre un mapa aleatori normal", async ({ 
 
 test("el modal mostra cami optim encara que la ruta ja sigui optima", async ({ page }) => {
   const dayKey = getTodayKey();
-  await page.addInitScript((key) => {
-    const level = {
-      id: "daily-short",
-      start_id: "urgell",
-      target_id: "terra-alta",
-      shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
-      rule_id: null,
-      avoid_ids: null,
-      must_pass_ids: null,
-      difficulty_id: "pixapi"
-    };
+  const level = {
+    id: "daily-short",
+    start_id: "urgell",
+    target_id: "terra-alta",
+    shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
+    rule_id: null,
+    avoid_ids: null,
+    must_pass_ids: null,
+    difficulty_id: "pixapi"
+  };
+  await mockDailyCalendarDetails(page, [{ date: dayKey, level }]);
+  await page.addInitScript(({ key, level }) => {
     localStorage.setItem(
       "rumb-calendar-cache-v1",
       JSON.stringify({
@@ -822,7 +972,7 @@ test("el modal mostra cami optim encara que la ruta ja sigui optima", async ({ p
         daily: [{ date: key, levelId: level.id, level }]
       })
     );
-  }, dayKey);
+  }, { key: dayKey, level });
   await gotoHome(page);
   await page.getByRole("button", { name: /Calendari/i }).click();
   await page.locator(`[data-calendar-day="${dayKey}"]`).click();
@@ -857,23 +1007,24 @@ test("el boto diari reinicia un nivell completat i conserva el dia en verd", asy
   page
 }) => {
   const dayKey = getTodayKey();
-  await page.addInitScript((key) => {
-    const level = {
-      id: "daily-reset",
-      start_id: "baix-camp",
-      target_id: "valles-occidental",
-      shortest_path: [
-        "baix-camp",
-        "alt-camp",
-        "alt-penedes",
-        "baix-llobregat",
-        "valles-occidental"
-      ],
-      rule_id: null,
-      avoid_ids: null,
-      must_pass_ids: null,
-      difficulty_id: "cap-colla-rutes"
-    };
+  const level = {
+    id: "daily-reset",
+    start_id: "baix-camp",
+    target_id: "valles-occidental",
+    shortest_path: [
+      "baix-camp",
+      "alt-camp",
+      "alt-penedes",
+      "baix-llobregat",
+      "valles-occidental"
+    ],
+    rule_id: null,
+    avoid_ids: null,
+    must_pass_ids: null,
+    difficulty_id: "cap-colla-rutes"
+  };
+  await mockDailyCalendarDetails(page, [{ date: dayKey, level }]);
+  await page.addInitScript(({ key, level }) => {
     const winningAttempt = {
       attempts: 4,
       timeMs: 15000,
@@ -910,7 +1061,7 @@ test("el boto diari reinicia un nivell completat i conserva el dia en verd", asy
         }
       })
     );
-  }, dayKey);
+  }, { key: dayKey, level });
   await gotoHome(page);
   await page.waitForSelector("svg.map");
   await page.getByRole("button", { name: /^Diari$/i }).click();
@@ -930,23 +1081,24 @@ test("el boto diari reinicia un nivell completat i conserva el dia en verd", asy
 
 test("el modal de resultat no talla accions a amplades petites", async ({ page }) => {
   const dayKey = getTodayKey();
-  await page.addInitScript((key) => {
-    const level = {
-      id: "daily-result-actions",
-      start_id: "baix-camp",
-      target_id: "valles-occidental",
-      shortest_path: [
-        "baix-camp",
-        "alt-camp",
-        "alt-penedes",
-        "baix-llobregat",
-        "valles-occidental"
-      ],
-      rule_id: null,
-      avoid_ids: null,
-      must_pass_ids: null,
-      difficulty_id: "cap-colla-rutes"
-    };
+  const level = {
+    id: "daily-result-actions",
+    start_id: "baix-camp",
+    target_id: "valles-occidental",
+    shortest_path: [
+      "baix-camp",
+      "alt-camp",
+      "alt-penedes",
+      "baix-llobregat",
+      "valles-occidental"
+    ],
+    rule_id: null,
+    avoid_ids: null,
+    must_pass_ids: null,
+    difficulty_id: "cap-colla-rutes"
+  };
+  await mockDailyCalendarDetails(page, [{ date: dayKey, level }]);
+  await page.addInitScript(({ key, level }) => {
     const winningAttempt = {
       attempts: 2,
       timeMs: 9000,
@@ -977,7 +1129,7 @@ test("el modal de resultat no talla accions a amplades petites", async ({ page }
       "rumb-completion-records-v1",
       JSON.stringify({ [`daily:${key}`]: record })
     );
-  }, dayKey);
+  }, { key: dayKey, level });
 
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 });
@@ -1067,19 +1219,20 @@ test("el comodi revelar norma marca la comarca correcta en una norma simple", as
   const comarcaName = SINGLE_REQUIRE_RULE.comarques[0];
   const comarcaId = comarcaIdByName.get(normalizeName(comarcaName));
   expect(comarcaId).toBeTruthy();
+  const level = {
+    id: "daily-rule-reveal-single",
+    start_id: "urgell",
+    target_id: "terra-alta",
+    shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
+    rule_id: SINGLE_REQUIRE_RULE.id,
+    avoid_ids: null,
+    must_pass_ids: [comarcaId],
+    difficulty_id: "pixapi"
+  };
+  await mockDailyCalendarDetails(page, [{ date: dayKey, level }]);
 
   await page.addInitScript(
-    ({ key, ruleId, countyId }) => {
-      const level = {
-        id: "daily-rule-reveal-single",
-        start_id: "urgell",
-        target_id: "terra-alta",
-        shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
-        rule_id: ruleId,
-        avoid_ids: null,
-        must_pass_ids: [countyId],
-        difficulty_id: "pixapi"
-      };
+    ({ key, level }) => {
       localStorage.setItem(
         "rumb-calendar-cache-v1",
         JSON.stringify({
@@ -1088,7 +1241,7 @@ test("el comodi revelar norma marca la comarca correcta en una norma simple", as
         })
       );
     },
-    { key: dayKey, ruleId: SINGLE_REQUIRE_RULE.id, countyId: comarcaId }
+    { key: dayKey, level }
   );
 
   await gotoHome(page);
@@ -1112,19 +1265,25 @@ test("el comodi revelar norma marca totes les comarques i no surt a cap de colla
     .map((name) => comarcaIdByName.get(normalizeName(name)))
     .filter(Boolean);
   expect(countyIds).toHaveLength(MULTI_REQUIRE_RULE.comarques.length);
+  const softLevel = {
+    id: "daily-rule-reveal-dominguero",
+    start_id: "urgell",
+    target_id: "terra-alta",
+    shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
+    rule_id: MULTI_REQUIRE_RULE.id,
+    avoid_ids: null,
+    must_pass_ids: countyIds,
+    difficulty_id: "dominguero"
+  };
+  const hardLevel = {
+    ...softLevel,
+    id: "daily-rule-reveal-cap-colla-rutes",
+    difficulty_id: "cap-colla-rutes"
+  };
+  await mockDailyCalendarDetails(page, [{ date: dayKey, level: softLevel }]);
 
   await page.addInitScript(
-    ({ key, ruleId, ids, difficultyId }) => {
-      const level = {
-        id: `daily-rule-reveal-${difficultyId}`,
-        start_id: "urgell",
-        target_id: "terra-alta",
-        shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
-        rule_id: ruleId,
-        avoid_ids: null,
-        must_pass_ids: ids,
-        difficulty_id: difficultyId
-      };
+    ({ key, level }) => {
       localStorage.setItem(
         "rumb-calendar-cache-v1",
         JSON.stringify({
@@ -1133,7 +1292,7 @@ test("el comodi revelar norma marca totes les comarques i no surt a cap de colla
         })
       );
     },
-    { key: dayKey, ruleId: MULTI_REQUIRE_RULE.id, ids: countyIds, difficultyId: "dominguero" }
+    { key: dayKey, level: softLevel }
   );
 
   await gotoHome(page);
@@ -1156,19 +1315,10 @@ test("el comodi revelar norma marca totes les comarques i no surt a cap de colla
   expect(revealNames).toEqual([...MULTI_REQUIRE_RULE.comarques].sort());
 
   const hardPage = await page.context().newPage();
+  await mockDailyCalendarDetails(hardPage, [{ date: dayKey, level: hardLevel }]);
   await hardPage.addInitScript(
-    ({ key, ruleId, ids, difficultyId, tutorialKey }) => {
+    ({ key, level, tutorialKey }) => {
       localStorage.setItem(tutorialKey, "1");
-      const level = {
-        id: `daily-rule-reveal-${difficultyId}`,
-        start_id: "urgell",
-        target_id: "terra-alta",
-        shortest_path: ["urgell", "garrigues", "ribera-ebre", "terra-alta"],
-        rule_id: ruleId,
-        avoid_ids: null,
-        must_pass_ids: ids,
-        difficulty_id: difficultyId
-      };
       localStorage.setItem(
         "rumb-calendar-cache-v1",
         JSON.stringify({
@@ -1179,9 +1329,7 @@ test("el comodi revelar norma marca totes les comarques i no surt a cap de colla
     },
     {
       key: dayKey,
-      ruleId: MULTI_REQUIRE_RULE.id,
-      ids: countyIds,
-      difficultyId: "cap-colla-rutes",
+      level: hardLevel,
       tutorialKey: TUTORIAL_SEEN_KEY
     }
   );
@@ -1683,7 +1831,7 @@ test("el calendari permet clicar disponibilitat abans del detall del nivell", as
   await expect(dayButton).toHaveAttribute("data-has-level", "true");
   await expect(dayButton).toBeEnabled();
   await dayButton.click();
-  await expect(dayButton).toHaveAttribute("data-loading", "true");
+  await expect(page.locator(".calendar-panel")).toHaveCount(0);
   await expect.poll(() => detailRequests).toBeGreaterThan(0);
   releaseDetail();
   await page.waitForFunction(() => localStorage.getItem("rumb-mode") === "daily");

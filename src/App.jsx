@@ -1029,7 +1029,14 @@ function readRuleHistory() {
 }
 
 function normalizeCalendarBootstrapPayload(data, fallbackDayKey, fromKey, toKey) {
-  const payload = Array.isArray(data) ? data[0] : data;
+  const rawPayload = Array.isArray(data) ? data[0] : data;
+  const payload =
+    rawPayload && typeof rawPayload === "object"
+      ? rawPayload.calendar_daily_bootstrap_public ||
+        rawPayload.result ||
+        rawPayload.data ||
+        rawPayload
+      : rawPayload;
   if (!payload || typeof payload !== "object") return null;
   const rows = Array.isArray(payload.rows) ? payload.rows : [];
   const serverDay =
@@ -1202,10 +1209,19 @@ async function fetchCalendarAvailabilityState(supabase, fromKey, toKey, fallback
             source: "fallback"
           };
         }
-      } else if (result?.rows?.length || result?.expectedPastDays !== null) {
+      } else if (
+        result &&
+        (result.rows?.length ||
+          result.expectedPastDays != null ||
+          result.assignedPastDays != null ||
+          result.missingPastCount != null)
+      ) {
         return result;
       }
     } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn("calendar availability loader failed", error);
+      }
       lastError = error;
     }
   }
@@ -1790,6 +1806,8 @@ export function PublicGameApp({
   const [calendarRetryNonce, setCalendarRetryNonce] = useState(0);
   const [calendarSelection, setCalendarSelection] = useState(null);
   const [calendarLoadingDayKey, setCalendarLoadingDayKey] = useState(null);
+  const [dailyLevelStatus, setDailyLevelStatus] = useState("idle");
+  const [dailySelectedDate, setDailySelectedDate] = useState(() => getMadridDayKey());
   const [levelStats, setLevelStats] = useState(() => {
     if (typeof window === "undefined") return {};
     const raw = localStorage.getItem(LEVEL_STATS_KEY);
@@ -1851,6 +1869,10 @@ export function PublicGameApp({
     serverDay: getMadridDayKey()
   });
   const calendarDetailRequestsRef = useRef(new Map());
+  const calendarLoadRequestRef = useRef(0);
+  const dailyLevelRequestRef = useRef(0);
+  const autoDailyLoadRef = useRef(null);
+  const mountedRef = useRef(true);
   const pendingRepeatSnapshotRef = useRef(null);
   const calendarCountsRef = useRef({ daily: 0 });
   const calendarMonthRef = useRef(calendarMonth);
@@ -2007,6 +2029,14 @@ export function PublicGameApp({
     }
     return 0;
   }, [dailyStreak, dayKey]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const streakTitle = getStreakTitle(displayStreak);
   const t = useMemo(() => (key, vars = {}) => translate(DEFAULT_LOCALE, key, vars), []);
   const playManifestSfx = useCallback(
@@ -2684,7 +2714,9 @@ export function PublicGameApp({
 
   useEffect(() => {
     if (!shouldLoadCalendar || calendarLoadingRef.current) return;
-    let isMounted = true;
+    const requestId = calendarLoadRequestRef.current + 1;
+    calendarLoadRequestRef.current = requestId;
+    const isCurrentCalendarLoad = () => mountedRef.current;
     async function loadCalendar() {
       const { from, to } = getCalendarAvailabilityWindow(dayKey);
       const cached = readCalendarCache({
@@ -2693,9 +2725,9 @@ export function PublicGameApp({
         expectedTo: to
       });
       const hasCache = Boolean(cached?.daily?.length);
-      if (hasCache && isMounted) {
+      if (hasCache && isCurrentCalendarLoad()) {
         calendarCacheWritableRef.current = false;
-        setCalendarDaily(cached.daily || []);
+        setCalendarDaily((prev) => mergeCalendarEntries(prev, cached.daily || []));
         if (cached.serverDay) setCalendarTodayKey(cached.serverDay);
         calendarCacheMetaRef.current = {
           from: cached.from || from,
@@ -2709,14 +2741,14 @@ export function PublicGameApp({
       if (!calendarClient && supabaseEnabled && !supabaseBlocked) {
         try {
           calendarClient = await getSupabaseClient();
-          if (calendarClient && isMounted) setSupabase(calendarClient);
+          if (calendarClient && isCurrentCalendarLoad()) setSupabase(calendarClient);
         } catch {
-          if (isMounted) setSupabaseBlocked(true);
+          if (isCurrentCalendarLoad()) setSupabaseBlocked(true);
         }
       }
       const canReadCalendar = Boolean(supabaseEnabled && calendarClient && !supabaseBlocked);
       if (!canReadCalendar) {
-        if (isMounted && !hasCache) {
+        if (isCurrentCalendarLoad() && !hasCache) {
           setCalendarStatus(supabaseEnabled && !supabaseBlocked ? "loading" : "error");
         }
         return;
@@ -2748,11 +2780,15 @@ export function PublicGameApp({
           error.calendarStatus = dailyEntries.length ? "partial" : "error";
           throw error;
         }
-        const mergedEntries = mergeCalendarEntries(cached?.daily || [], dailyEntries);
-        if (isMounted) {
+        if (isCurrentCalendarLoad()) {
           calendarCacheWritableRef.current = true;
           setCalendarTodayKey(authoritativeDay);
-          setCalendarDaily(mergedEntries);
+          setCalendarDaily((prev) =>
+            mergeCalendarEntries(
+              mergeCalendarEntries(prev, cached?.daily || []),
+              dailyEntries
+            )
+          );
           setCalendarStatus("ready");
           setCalendarLoaded(true);
           calendarCacheMetaRef.current = {
@@ -2760,29 +2796,26 @@ export function PublicGameApp({
             to: coverage.to,
             serverDay: authoritativeDay
           };
-          writeCalendarCache({
-            daily: mergedEntries,
-            from: coverage.from,
-            to: coverage.to,
-            serverDay: authoritativeDay,
-            source: availabilityState.source || "network"
-          });
         }
       } catch (error) {
-        if (isMounted) {
+        if (isCurrentCalendarLoad()) {
           calendarCacheWritableRef.current = false;
           setCalendarStatus(error?.calendarStatus || (hasCache ? "partial" : "error"));
           if (hasCache) setCalendarLoaded(true);
         }
       } finally {
-        calendarLoadingRef.current = false;
+        if (calendarLoadRequestRef.current === requestId) {
+          calendarLoadingRef.current = false;
+        }
       }
     }
 
     loadCalendar();
 
     return () => {
-      isMounted = false;
+      if (calendarLoadRequestRef.current === requestId) {
+        calendarLoadingRef.current = false;
+      }
     };
   }, [shouldLoadCalendar, supabase, supabaseBlocked, dayKey, calendarRetryNonce]);
 
@@ -4405,96 +4438,141 @@ export function PublicGameApp({
     return request;
   }
 
-  async function fetchCalendarDetail(key) {
+  async function fetchDailyLevelEntry(key) {
     const normalizedKey = normalizeDayKey(key);
-    if (!normalizedKey) return null;
-    const existing = calendarDailyMap.get(normalizedKey);
-    if (existing?.level) return existing.level;
-    const entries = await fetchCalendarDetails([normalizedKey]);
-    return entries.find((entry) => entry.date === normalizedKey)?.level || null;
-  }
-
-  function handleCalendarPick(mode, key) {
-    if (mode === "daily" && key > dayKey) {
-      playManifestSfx("error");
-      return;
-    }
-    const entry = calendarDailyMap.get(key);
-    const selectionKey = `${mode}:${key}`;
-    calendarApplyRef.current = null;
-    calendarResetRef.current = selectionKey;
-    setShowModal(false);
-    setResultData(null);
-    setIsFailed(false);
-    setIsComplete(false);
-    setCalendarMode("daily");
-    if (!entry?.level) {
-      if (entry?.levelId) {
-        handleCalendarAction("daily", key);
-        return;
+    if (!normalizedKey) throw new Error("daily_date_invalid");
+    let calendarClient = supabase;
+    if (!calendarClient && supabaseEnabled && !supabaseBlocked) {
+      try {
+        calendarClient = await getSupabaseClient();
+        if (calendarClient && mountedRef.current) setSupabase(calendarClient);
+      } catch (error) {
+        if (mountedRef.current) setSupabaseBlocked(true);
+        throw error;
       }
-      calendarResetRef.current = null;
-      setCalendarSelection(null);
-      setCalendarStatus((status) => (status === "ready" ? "partial" : status));
-      setCalendarOpen(true);
-      return;
     }
-    setCalendarSelection({ mode: "daily", key });
-    if (gameMode !== "daily") {
-      setGameMode("daily");
-      return;
+    if (!calendarClient) throw new Error("daily_backend_unavailable");
+
+    const result = await withRetry(
+      () =>
+        calendarClient
+          .from("daily_calendar_public")
+          .select(CALENDAR_DETAIL_COLUMNS)
+          .eq("date", normalizedKey)
+          .limit(1),
+      { retries: 2, backoffMs: 500 }
+    );
+    if (result.error) throw result.error;
+    const row = Array.isArray(result.data) ? result.data[0] : result.data;
+    const entry = calendarDetailEntryFromRow(row);
+    if (!entry?.level) {
+      const error = new Error("daily_level_missing");
+      error.code = "daily_level_missing";
+      throw error;
     }
-    applyCalendarLevel(entry.level);
-    calendarResetRef.current = null;
-    calendarApplyRef.current = selectionKey;
+    return entry;
   }
 
-  async function handlePlayToday() {
-    playManifestSfx("click");
+  function clearDailyRoundState() {
     clearCompletionModalTimer();
     setCompletionCelebrating(false);
     setShowModal(false);
     setResultData(null);
     setIsFailed(false);
     setIsComplete(false);
+    setReplayMode(null);
+    setReplayOrder([]);
+    setReplayIndex(0);
+    setStartId(null);
+    setTargetId(null);
+    setCurrentId(null);
+    setGuessHistory([]);
+    setAttempts(0);
+    setHintsUsed(0);
+    setGuessError(false);
+    setGuessFeedback(null);
+    setTempRevealId(null);
+    setTempRuleRevealIds([]);
+    setTempNeighborHint(false);
+    setTempInitialsHint(false);
+    setShortestPath([]);
+    setShortestPaths([]);
+    setActiveRule(null);
+    setElapsedMs(0);
+    setStartedAt(null);
+    setTimePenaltyMs(0);
+    setIsCountdownActive(false);
+    setCountdownValue(null);
+    setLastEntryId(null);
+    setCopyStatus("idle");
+  }
+
+  async function loadDailyLevel(key, options = {}) {
+    const normalizedKey = normalizeDayKey(key);
+    if (!normalizedKey) return null;
+    const { markCalendarLoading = false } = options;
+    const requestId = dailyLevelRequestRef.current + 1;
+    dailyLevelRequestRef.current = requestId;
+    setDailySelectedDate(normalizedKey);
+    setDailyLevelStatus("loading");
+    if (markCalendarLoading) setCalendarLoadingDayKey(normalizedKey);
+    try {
+      const entry = await fetchDailyLevelEntry(normalizedKey);
+      if (!mountedRef.current || dailyLevelRequestRef.current !== requestId) return null;
+      setCalendarDaily((prev) => mergeCalendarEntries(prev, [entry]));
+      setDailyLevelStatus("ready");
+      return entry;
+    } catch (error) {
+      if (!mountedRef.current || dailyLevelRequestRef.current !== requestId) return null;
+      const isMissing = error?.code === "daily_level_missing";
+      setDailyLevelStatus(isMissing ? "missing" : "error");
+      return null;
+    } finally {
+      if (mountedRef.current && markCalendarLoading) {
+        setCalendarLoadingDayKey((current) =>
+          current === normalizedKey ? null : current
+        );
+      }
+    }
+  }
+
+  async function startDailyLevel(key, options = {}) {
+    const normalizedKey = normalizeDayKey(key);
+    if (!normalizedKey || normalizedKey > dayKey) {
+      playManifestSfx("error");
+      return false;
+    }
+    const {
+      closeCalendar = false,
+      markCalendarLoading = false,
+      playSound = true
+    } = options;
+    if (playSound) playManifestSfx("click");
+    clearDailyRoundState();
     setOptionsOpen(false);
-    setCalendarOpen(false);
-    const key = dayKey;
-    const selectionKey = `daily:${key}`;
-    const entry = calendarDailyMap.get(key);
-    let level = entry?.level || null;
-    if (!level && entry?.levelId) {
-      setCalendarLoadingDayKey(key);
-      level = await fetchCalendarDetail(key);
-      setCalendarLoadingDayKey((current) => (current === key ? null : current));
-    }
-    if (level && entry?.levelId && !entry.level) {
-      setCalendarDaily((prev) =>
-        mergeCalendarEntries(prev, [
-          {
-            date: key,
-            levelId: entry.levelId,
-            level
-          }
-        ])
-      );
-    }
+    if (closeCalendar) setCalendarOpen(false);
+    setCalendarMode("daily");
+    setCalendarSelection(null);
+    if (gameMode !== "daily") setGameMode("daily");
+
+    const entry = await loadDailyLevel(normalizedKey, { markCalendarLoading });
+    if (!entry?.level) return false;
+
+    const selectionKey = `daily:${normalizedKey}`;
     calendarResetRef.current = selectionKey;
     calendarApplyRef.current = null;
-    setCalendarMode("daily");
-    setCalendarSelection({ mode: "daily", key });
+    setCalendarSelection({ mode: "daily", key: normalizedKey });
     if (gameMode !== "daily") {
-      setGameMode("daily");
-      return;
+      return true;
     }
-    if (level) {
-      calendarResetRef.current = null;
-      applyCalendarLevel(level);
-      calendarApplyRef.current = selectionKey;
-    } else if (!entry?.levelId) {
-      setCalendarStatus((status) => (status === "ready" ? "partial" : status));
-      setCalendarOpen(true);
-    }
+    calendarResetRef.current = null;
+    applyCalendarLevel(entry.level);
+    calendarApplyRef.current = selectionKey;
+    return true;
+  }
+
+  function resetToTodayDailyLevel() {
+    return startDailyLevel(dayKey, { closeCalendar: true, playSound: true });
   }
 
   function getNextDailyCalendarKey(fromKey) {
@@ -4514,40 +4592,11 @@ export function PublicGameApp({
     const entry = calendarDailyMap.get(normalizedKey);
     if (!entry?.levelId) return false;
 
-    let level = entry.level;
-    if (!level) {
-      setCalendarLoadingDayKey(normalizedKey);
-      level = await fetchCalendarDetail(normalizedKey);
-      setCalendarLoadingDayKey((current) =>
-        current === normalizedKey ? null : current
-      );
-    }
-    if (!level) return false;
-
-    setCalendarDaily((prev) =>
-      mergeCalendarEntries(prev, [
-        {
-          date: normalizedKey,
-          levelId: entry.levelId,
-          level
-        }
-      ])
-    );
-
-    const selectionKey = `daily:${normalizedKey}`;
-    calendarResetRef.current = selectionKey;
-    calendarApplyRef.current = null;
-    setCalendarMode("daily");
-    setCalendarSelection({ mode: "daily", key: normalizedKey });
-    if (gameMode !== "daily") {
-      setGameMode("daily");
-      return true;
-    }
-
-    calendarResetRef.current = null;
-    applyCalendarLevel(level);
-    calendarApplyRef.current = selectionKey;
-    return true;
+    return startDailyLevel(normalizedKey, {
+      closeCalendar: true,
+      markCalendarLoading: true,
+      playSound: false
+    });
   }
 
   function startRandomNormalMap() {
@@ -4770,43 +4819,14 @@ export function PublicGameApp({
       playManifestSfx("error");
       return;
     }
-    const hasCalendarData = calendarDaily.length > 0;
-    if (!hasCalendarData && calendarStatus !== "ready") return;
-    playManifestSfx("click");
+    if (mode !== "daily") return;
     const entry = calendarDailyMap.get(key);
     if (!entry?.levelId) return;
-    let level = entry.level;
-    if (!level) {
-      setCalendarLoadingDayKey(key);
-      level = await fetchCalendarDetail(key);
-      setCalendarLoadingDayKey((current) => (current === key ? null : current));
-    }
-    if (!level) return;
-    setCalendarDaily((prev) =>
-      mergeCalendarEntries(prev, [
-        {
-          date: key,
-          levelId: entry.levelId,
-          level
-        }
-      ])
-    );
-    const selectionKey = `${mode}:${key}`;
-    calendarResetRef.current = selectionKey;
-    calendarApplyRef.current = null;
-    setShowModal(false);
-    setResultData(null);
-    setIsFailed(false);
-    setIsComplete(false);
-    setCalendarSelection({ mode: "daily", key });
-    setCalendarOpen(false);
-    if (gameMode !== "daily") {
-      setGameMode("daily");
-      return;
-    }
-    applyCalendarLevel(level);
-    calendarResetRef.current = null;
-    calendarApplyRef.current = selectionKey;
+    await startDailyLevel(key, {
+      closeCalendar: true,
+      markCalendarLoading: true,
+      playSound: true
+    });
   }
 
   function handleCalendarClose() {
@@ -4822,55 +4842,13 @@ export function PublicGameApp({
 
   function handleModePick(modeId) {
     if (modeId === "daily") {
-      handlePlayToday();
+      resetToTodayDailyLevel();
       return;
     }
     playManifestSfx("toggle");
     setGameMode(modeId);
     if (modeId === "timed") {
       setOptionsOpen(false);
-    }
-  }
-
-  function handleTitleReset() {
-    playManifestSfx("click");
-    const todayKey = dayKey;
-    const todayDone = Boolean(getCompletionRecord("daily", todayKey)?.winningAttempt);
-    setShowModal(false);
-    setResultData(null);
-    setIsFailed(false);
-    setIsComplete(false);
-    setReplayMode(null);
-    setReplayOrder([]);
-    setReplayIndex(0);
-    setCalendarOpen(false);
-    calendarApplyRef.current = null;
-
-    if (!isSupabaseReady) {
-      if (gameMode !== "normal") {
-        setGameMode("normal");
-        setCalendarSelection(null);
-      } else {
-        resetGame(true);
-      }
-      return;
-    }
-
-    if (!todayDone) {
-      handleCalendarPick("daily", todayKey);
-      return;
-    }
-    const unlocked = [...unlockedDifficulties];
-    const next =
-      unlocked[Math.floor(Math.random() * unlocked.length)] || "pixapi";
-    const willChangeDifficulty = next !== difficulty;
-    if (willChangeDifficulty) {
-      setDifficulty(next);
-    }
-    if (gameMode !== "normal") {
-      setGameMode("normal");
-    } else if (!willChangeDifficulty) {
-      resetGame(true);
     }
   }
 
@@ -5443,6 +5421,16 @@ export function PublicGameApp({
     return [randomOption, ...MUSIC_TRACKS.map((track) => ({ id: track.id, label: track.label }))];
   }, [audioManifest, t]);
   const todayLabel = useMemo(() => formatFullDayLabel(dayKey), [dayKey]);
+  const dailyLevelStatusMessage =
+    !isDailyMode
+      ? t("loadingData")
+      : dailyLevelStatus === "missing"
+      ? t("dailyLevelMissing", { date: dailySelectedDate })
+      : dailyLevelStatus === "error"
+        ? t("dailyLevelError")
+        : t("loadingData");
+  const showDailyLevelRetry =
+    isDailyMode && (dailyLevelStatus === "error" || dailyLevelStatus === "missing");
   const showDailySkeleton =
     (calendarStatus === "loading" || calendarStatus === "refreshing") &&
     calendarDaily.length === 0;
@@ -5513,6 +5501,30 @@ export function PublicGameApp({
     activeDayKey
   ]);
 
+  useEffect(() => {
+    if (isAulaMode || disableCalendar) return;
+    if (!isDailyMode) return;
+    if (!isMapReady || !rulesReady) return;
+    const targetKey = normalizeDayKey(activeDayKey || dayKey);
+    if (!targetKey || targetKey > dayKey) return;
+    if (dailyLevelStatus === "loading") return;
+    if (activeCalendarEntry?.level && calendarSelection?.key === targetKey) return;
+    if (autoDailyLoadRef.current === targetKey) return;
+    autoDailyLoadRef.current = targetKey;
+    startDailyLevel(targetKey, { closeCalendar: false, playSound: false });
+  }, [
+    isAulaMode,
+    disableCalendar,
+    isDailyMode,
+    isMapReady,
+    rulesReady,
+    activeDayKey,
+    dayKey,
+    activeCalendarEntry,
+    calendarSelection,
+    dailyLevelStatus
+  ]);
+
   return (
     <ThemeProvider themeId={activeTheme} weatherState={weatherState}>
       <div className={`page ${isAulaMode ? "aula-game-page" : ""}`}>
@@ -5523,7 +5535,7 @@ export function PublicGameApp({
             <button
               type="button"
               className="brand-button"
-              onClick={handlePlayToday}
+              onClick={resetToTodayDailyLevel}
               aria-label={t("playToday")}
               title={t("playToday")}
             >
@@ -5546,7 +5558,7 @@ export function PublicGameApp({
             <button
               type="button"
               className={`topbar-challenge ${isDailyMode ? "active" : ""}`}
-              onClick={handlePlayToday}
+              onClick={resetToTodayDailyLevel}
               disabled={!isMapReady}
               aria-pressed={isDailyMode}
             >
@@ -5591,7 +5603,21 @@ export function PublicGameApp({
                 </div>
               </>
             ) : (
-              <span>{t("loadingData")}</span>
+              <span
+                className={showDailyLevelRetry ? "daily-level-error" : ""}
+                role={showDailyLevelRetry ? "alert" : undefined}
+              >
+                {dailyLevelStatusMessage}
+                {showDailyLevelRetry ? (
+                  <button
+                    type="button"
+                    className="tutorial-open-button daily-retry-button"
+                    onClick={resetToTodayDailyLevel}
+                  >
+                    {t("dailyLevelRetry")}
+                  </button>
+                ) : null}
+              </span>
             )}
           </div>
           <div className="map-stage">
