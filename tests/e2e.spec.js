@@ -2395,6 +2395,113 @@ test("la barra mobil no talla accions ni solapa el mapa", async ({ page }) => {
   expect(completedMetrics.overlapsCompletedRoute).toBeFalsy();
 });
 
+test("el teclat mobil no fa flotar la barra inferior sobre l'input", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    let viewportHeight = window.innerHeight || 844;
+    const listeners = new Map([
+      ["resize", new Set()],
+      ["scroll", new Set()]
+    ]);
+    const emit = (type) => {
+      for (const listener of listeners.get(type) || []) {
+        listener.call(window.visualViewport, new Event(type));
+      }
+    };
+    const visualViewportMock = {
+      get width() {
+        return window.innerWidth;
+      },
+      get height() {
+        return viewportHeight;
+      },
+      get offsetTop() {
+        return 0;
+      },
+      get offsetLeft() {
+        return 0;
+      },
+      get pageTop() {
+        return window.scrollY;
+      },
+      get pageLeft() {
+        return window.scrollX;
+      },
+      get scale() {
+        return 1;
+      },
+      addEventListener(type, listener) {
+        if (!listeners.has(type)) listeners.set(type, new Set());
+        listeners.get(type).add(listener);
+      },
+      removeEventListener(type, listener) {
+        listeners.get(type)?.delete(listener);
+      }
+    };
+    Object.defineProperty(window, "visualViewport", {
+      configurable: true,
+      value: visualViewportMock
+    });
+    window.__setVisualViewportHeightForTest = (nextHeight) => {
+      viewportHeight = nextHeight;
+      emit("resize");
+    };
+  });
+
+  await gotoHome(page);
+  await page.waitForSelector("svg.map");
+  await page.locator("#guess-input").focus();
+  await page.evaluate(() => window.__setVisualViewportHeightForTest(520));
+
+  await expect(page.locator("html")).toHaveClass(/mobile-keyboard-open/);
+  const keyboardMetrics = await page.evaluate(() => {
+    const input = document.querySelector("#guess-input")?.getBoundingClientRect();
+    const nav = document.querySelector(".bottom-nav")?.getBoundingClientRect();
+    const navStyles = getComputedStyle(document.querySelector(".bottom-nav"));
+    const overlaps = (a, b) =>
+      Boolean(
+        a &&
+          b &&
+          a.left < b.right &&
+          a.right > b.left &&
+          a.top < b.bottom &&
+          a.bottom > b.top
+      );
+    return {
+      activeId: document.activeElement?.id || "",
+      navPosition: navStyles.position,
+      navDisplay: navStyles.display,
+      navOverlapsInput: overlaps(input, nav),
+      inputTop: Math.round(input?.top || 0),
+      inputBottom: Math.round(input?.bottom || 0),
+      visualBottom: Math.round(window.visualViewport.height),
+      rootOverflow: document.documentElement.scrollWidth - window.innerWidth
+    };
+  });
+
+  expect(keyboardMetrics.activeId).toBe("guess-input");
+  expect(keyboardMetrics.navPosition).toBe("static");
+  expect(keyboardMetrics.navDisplay).toBe("grid");
+  expect(keyboardMetrics.navOverlapsInput).toBeFalsy();
+  expect(keyboardMetrics.inputTop).toBeGreaterThanOrEqual(0);
+  expect(keyboardMetrics.inputBottom).toBeLessThanOrEqual(keyboardMetrics.visualBottom + 1);
+  expect(keyboardMetrics.rootOverflow).toBeLessThanOrEqual(1);
+
+  await page.locator("#guess-input").fill("Alt");
+  await expect(page.locator("#guess-input")).toHaveValue("Alt");
+
+  await page.evaluate(() => {
+    document.querySelector("#guess-input")?.blur();
+    window.__setVisualViewportHeightForTest(844);
+  });
+  await expect(page.locator("html")).not.toHaveClass(/mobile-keyboard-open/);
+  await expect
+    .poll(() =>
+      page.evaluate(() => getComputedStyle(document.querySelector(".bottom-nav")).position)
+    )
+    .toBe("fixed");
+});
+
 test("el layout public encaixa sense overflow en viewports clau", async ({ page }) => {
   const viewports = [
     { name: "desktop gran", width: 1440, height: 900 },

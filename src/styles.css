@@ -3532,6 +3532,20 @@ button.tutorial-shot {
     font-size: clamp(0.68rem, 2.25vw, 0.82rem);
     font-weight: 750;
   }
+
+  html.mobile-keyboard-open .page {
+    padding-bottom: max(13px, env(safe-area-inset-bottom));
+  }
+
+  html.mobile-keyboard-open .bottom-nav {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    width: 100%;
+    margin-top: 12px;
+    transform: none;
+  }
 }
 
 @media (max-width: 900px) and (max-height: 520px) {

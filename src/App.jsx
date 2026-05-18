@@ -1853,6 +1853,12 @@ export function PublicGameApp({
   const guessFeedbackTimerRef = useRef(null);
   const completionModalTimerRef = useRef(null);
   const guessInputRef = useRef(null);
+  const mobileKeyboardRef = useRef({
+    focused: false,
+    baselineHeight: 0,
+    blurTimer: null,
+    rafId: null
+  });
   const lastGuessRef = useRef(null);
   const userZoomedRef = useRef(false);
   const weatherFetchRef = useRef(null);
@@ -2034,6 +2040,31 @@ export function PublicGameApp({
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const handleViewportChange = () => {
+      updateMobileKeyboardState();
+    };
+    const viewport = window.visualViewport;
+    viewport?.addEventListener("resize", handleViewportChange);
+    viewport?.addEventListener("scroll", handleViewportChange);
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("orientationchange", handleViewportChange);
+    return () => {
+      viewport?.removeEventListener("resize", handleViewportChange);
+      viewport?.removeEventListener("scroll", handleViewportChange);
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("orientationchange", handleViewportChange);
+      if (mobileKeyboardRef.current.rafId) {
+        window.cancelAnimationFrame(mobileKeyboardRef.current.rafId);
+      }
+      if (mobileKeyboardRef.current.blurTimer) {
+        window.clearTimeout(mobileKeyboardRef.current.blurTimer);
+      }
+      setMobileKeyboardOpen(false);
     };
   }, []);
 
@@ -4231,6 +4262,97 @@ export function PublicGameApp({
     });
   }
 
+  function isMobileKeyboardViewport() {
+    if (typeof window === "undefined") return false;
+    if (window.matchMedia) {
+      return window.matchMedia("(max-width: 900px)").matches;
+    }
+    return window.innerWidth <= 900;
+  }
+
+  function setMobileKeyboardOpen(isOpen) {
+    if (typeof document === "undefined") return;
+    document.documentElement.classList.toggle("mobile-keyboard-open", isOpen);
+    document.body?.classList.toggle("mobile-keyboard-open", isOpen);
+  }
+
+  function ensureGuessInputVisibleForKeyboard() {
+    if (typeof window === "undefined") return;
+    const input = guessInputRef.current;
+    if (!input) return;
+    if (mobileKeyboardRef.current.rafId) {
+      window.cancelAnimationFrame(mobileKeyboardRef.current.rafId);
+    }
+    mobileKeyboardRef.current.rafId = window.requestAnimationFrame(() => {
+      mobileKeyboardRef.current.rafId = null;
+      const viewportHeight = window.visualViewport?.height || window.innerHeight;
+      const rect = input.getBoundingClientRect();
+      const margin = 24;
+      const isCovered = rect.bottom > viewportHeight - margin || rect.top < margin;
+      if (isCovered) {
+        input.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
+      }
+    });
+  }
+
+  function updateMobileKeyboardState() {
+    if (typeof window === "undefined") return;
+    const state = mobileKeyboardRef.current;
+    if (!state.focused || !isMobileKeyboardViewport()) {
+      setMobileKeyboardOpen(false);
+      return;
+    }
+    const viewport = window.visualViewport;
+    const visualHeight = viewport?.height || window.innerHeight || 0;
+    const layoutHeight = Math.max(
+      window.innerHeight || 0,
+      document.documentElement?.clientHeight || 0,
+      state.baselineHeight || 0
+    );
+    if (!state.baselineHeight) {
+      state.baselineHeight = Math.max(layoutHeight, visualHeight);
+    } else if (visualHeight > state.baselineHeight) {
+      state.baselineHeight = visualHeight;
+    }
+    const baselineLoss = state.baselineHeight - visualHeight;
+    const layoutLoss = layoutHeight - visualHeight;
+    const threshold = Math.max(120, state.baselineHeight * 0.18);
+    const isOpen = Boolean(viewport && (baselineLoss > threshold || layoutLoss > threshold));
+    setMobileKeyboardOpen(isOpen);
+    if (isOpen) {
+      ensureGuessInputVisibleForKeyboard();
+    }
+  }
+
+  function startMobileKeyboardWatch() {
+    if (typeof window === "undefined") return;
+    const state = mobileKeyboardRef.current;
+    if (state.blurTimer) {
+      window.clearTimeout(state.blurTimer);
+      state.blurTimer = null;
+    }
+    state.focused = true;
+    state.baselineHeight = Math.max(
+      window.innerHeight || 0,
+      window.visualViewport?.height || 0,
+      document.documentElement?.clientHeight || 0
+    );
+    updateMobileKeyboardState();
+  }
+
+  function stopMobileKeyboardWatch() {
+    if (typeof window === "undefined") return;
+    const state = mobileKeyboardRef.current;
+    if (state.blurTimer) {
+      window.clearTimeout(state.blurTimer);
+    }
+    state.blurTimer = window.setTimeout(() => {
+      state.focused = false;
+      state.baselineHeight = 0;
+      setMobileKeyboardOpen(false);
+    }, 120);
+  }
+
   function pushGuessFeedback(text, tone = "neutral") {
     if (!text) return;
     setGuessFeedback({ text, tone });
@@ -4371,9 +4493,11 @@ export function PublicGameApp({
 
   function handleGuessFocus() {
     setIsSuggestionsOpen(true);
+    startMobileKeyboardWatch();
   }
 
   function handleGuessBlur() {
+    stopMobileKeyboardWatch();
     setTimeout(() => setIsSuggestionsOpen(false), 150);
   }
 
