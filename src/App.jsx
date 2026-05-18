@@ -53,10 +53,10 @@ const LEVEL_STATS_KEY = "rumb-level-stats-v1";
 const DAILY_RESULTS_KEY = "rumb-daily-results-v1";
 const CALENDAR_WEEKDAYS = ["dl", "dt", "dc", "dj", "dv", "ds", "dg"];
 const CALENDAR_CACHE_KEY = "rumb-calendar-cache-v1";
-const CALENDAR_CACHE_VERSION = "2026-05-18-authoritative-day";
+const CALENDAR_CACHE_VERSION = "2026-05-18-bootstrap-v2";
 const CALENDAR_CACHE_TTL_MS = 1000 * 60 * 15;
-const CALENDAR_AVAILABILITY_LOOKBACK_YEARS = 1;
-const CALENDAR_AVAILABILITY_LOOKAHEAD_YEARS = 6;
+const CALENDAR_FIRST_DAY = "2025-01-01";
+const CALENDAR_FUTURE_BUFFER_DAYS = 30;
 const CALENDAR_AVAILABILITY_PAGE_SIZE = 5000;
 const CALENDAR_AVAILABILITY_COLUMNS = "date, level_id";
 const CALENDAR_DETAIL_COLUMNS =
@@ -738,6 +738,17 @@ function getMadridDayKeyOffset(offsetDays) {
   return addDaysToDayKey(getMadridDayKey(), offsetDays);
 }
 
+function countDaysInclusive(fromKey, toKey) {
+  const from = normalizeDayKey(fromKey);
+  const to = normalizeDayKey(toKey);
+  if (!from || !to || to < from) return 0;
+  const [fromYear, fromMonth, fromDay] = from.split("-").map(Number);
+  const [toYear, toMonth, toDay] = to.split("-").map(Number);
+  const fromTime = Date.UTC(fromYear, fromMonth - 1, fromDay);
+  const toTime = Date.UTC(toYear, toMonth - 1, toDay);
+  return Math.floor((toTime - fromTime) / 86400000) + 1;
+}
+
 function getLocalDayKey(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -910,10 +921,9 @@ function getLatestUnlockedCalendarDay(entries, maxDayKey) {
 
 function getCalendarAvailabilityWindow(dayKey) {
   const normalized = normalizeDayKey(dayKey) || getMadridDayKey();
-  const [year] = normalized.split("-").map(Number);
   return {
-    from: `${year - CALENDAR_AVAILABILITY_LOOKBACK_YEARS}-01-01`,
-    to: `${year + CALENDAR_AVAILABILITY_LOOKAHEAD_YEARS}-12-31`
+    from: CALENDAR_FIRST_DAY,
+    to: addDaysToDayKey(normalized, CALENDAR_FUTURE_BUFFER_DAYS) || normalized
   };
 }
 
@@ -995,6 +1005,7 @@ function writeCalendarCache(payload) {
         from: normalizeDayKey(payload?.from) || null,
         to: normalizeDayKey(payload?.to) || null,
         serverDay: normalizeDayKey(payload?.serverDay) || getMadridDayKey(),
+        source: payload?.source || "network",
         updatedAt: Date.now()
       })
     );
@@ -1017,6 +1028,65 @@ function readRuleHistory() {
   }
 }
 
+function normalizeCalendarBootstrapPayload(data, fallbackDayKey, fromKey, toKey) {
+  const payload = Array.isArray(data) ? data[0] : data;
+  if (!payload || typeof payload !== "object") return null;
+  const rows = Array.isArray(payload.rows) ? payload.rows : [];
+  const serverDay =
+    normalizeDayKey(payload.serverDay || payload.server_day) ||
+    normalizeDayKey(fallbackDayKey) ||
+    getMadridDayKey();
+  const from = normalizeDayKey(payload.from || payload.from_day) || normalizeDayKey(fromKey);
+  const to = normalizeDayKey(payload.to || payload.to_day) || normalizeDayKey(toKey);
+  const expectedPastDays = Number(payload.expectedPastDays ?? payload.expected_past_days);
+  const assignedPastDays = Number(payload.assignedPastDays ?? payload.assigned_past_days);
+  const missingPastCount = Number(payload.missingPastCount ?? payload.missing_past_count);
+  return {
+    rows,
+    serverDay,
+    from,
+    to,
+    expectedPastDays: Number.isFinite(expectedPastDays) ? expectedPastDays : null,
+    assignedPastDays: Number.isFinite(assignedPastDays) ? assignedPastDays : null,
+    missingPastCount: Number.isFinite(missingPastCount) ? missingPastCount : null,
+    source: "bootstrap"
+  };
+}
+
+function getCalendarCoverageState(entries, metadata) {
+  const serverDay = normalizeDayKey(metadata?.serverDay) || getMadridDayKey();
+  const from = normalizeDayKey(metadata?.from) || CALENDAR_FIRST_DAY;
+  const to = normalizeDayKey(metadata?.to) || serverDay;
+  const pastEnd = to < serverDay ? to : serverDay;
+  const expectedPastDays =
+    typeof metadata?.expectedPastDays === "number"
+      ? metadata.expectedPastDays
+      : countDaysInclusive(from, pastEnd);
+  const assignedPastDays =
+    typeof metadata?.assignedPastDays === "number"
+      ? metadata.assignedPastDays
+      : new Set(
+          entries
+            .filter((entry) => entry?.levelId && entry.date >= from && entry.date <= pastEnd)
+            .map((entry) => entry.date)
+        ).size;
+  const missingPastCount =
+    typeof metadata?.missingPastCount === "number"
+      ? metadata.missingPastCount
+      : Math.max(expectedPastDays - assignedPastDays, 0);
+  return {
+    from,
+    to,
+    serverDay,
+    expectedPastDays,
+    assignedPastDays,
+    missingPastCount,
+    complete:
+      expectedPastDays === 0 ||
+      (assignedPastDays >= expectedPastDays && missingPastCount === 0)
+  };
+}
+
 async function fetchCalendarAvailabilityState(supabase, fromKey, toKey, fallbackDayKey) {
   const normalizedFrom = normalizeDayKey(fromKey);
   const normalizedTo = normalizeDayKey(toKey);
@@ -1030,6 +1100,26 @@ async function fetchCalendarAvailabilityState(supabase, fromKey, toKey, fallback
       .map((row) => normalizeDayKey(row?.server_day || row?.serverDay))
       .find(Boolean);
     return rowServerDay || fallbackServerDay;
+  };
+
+  const readBootstrapRpc = async () => {
+    const result = await withRetry(
+      () =>
+        supabase.rpc("calendar_daily_bootstrap_public", {
+          p_from: normalizedFrom,
+          p_to: normalizedTo
+        }),
+      { retries: 2, backoffMs: 500 }
+    );
+    if (result.error) throw result.error;
+    const payload = normalizeCalendarBootstrapPayload(
+      result.data,
+      fallbackServerDay,
+      normalizedFrom,
+      normalizedTo
+    );
+    if (!payload) throw new Error("calendar_bootstrap_payload_invalid");
+    return payload;
   };
 
   const readAvailabilityStateRpc = async () => {
@@ -1094,20 +1184,39 @@ async function fetchCalendarAvailabilityState(supabase, fromKey, toKey, fallback
 
   let lastError = null;
   for (const loader of [
+    readBootstrapRpc,
     readAvailabilityStateRpc,
     readAvailabilityRpc,
     readDirectAvailability,
     readPublicDetailsAvailability
   ]) {
     try {
-      const rows = await loader();
-      if (rows.length) return { rows, serverDay: resolveServerDay(rows) };
+      const result = await loader();
+      if (Array.isArray(result)) {
+        if (result.length) {
+          return {
+            rows: result,
+            serverDay: resolveServerDay(result),
+            from: normalizedFrom,
+            to: normalizedTo,
+            source: "fallback"
+          };
+        }
+      } else if (result?.rows?.length || result?.expectedPastDays !== null) {
+        return result;
+      }
     } catch (error) {
       lastError = error;
     }
   }
   if (lastError) throw lastError;
-  return { rows: [], serverDay: fallbackServerDay };
+  return {
+    rows: [],
+    serverDay: fallbackServerDay,
+    from: normalizedFrom,
+    to: normalizedTo,
+    source: "empty"
+  };
 }
 
 function writeRuleHistory(history) {
@@ -1678,6 +1787,7 @@ export function PublicGameApp({
   const [calendarStatus, setCalendarStatus] = useState("idle");
   const [calendarLoaded, setCalendarLoaded] = useState(false);
   const [calendarTodayKey, setCalendarTodayKey] = useState(() => getMadridDayKey());
+  const [calendarRetryNonce, setCalendarRetryNonce] = useState(0);
   const [calendarSelection, setCalendarSelection] = useState(null);
   const [calendarLoadingDayKey, setCalendarLoadingDayKey] = useState(null);
   const [levelStats, setLevelStats] = useState(() => {
@@ -1734,6 +1844,7 @@ export function PublicGameApp({
   const calendarResetRef = useRef(null);
   const calendarAutoSetRef = useRef({ daily: false });
   const calendarLoadingRef = useRef(false);
+  const calendarCacheWritableRef = useRef(false);
   const calendarCacheMetaRef = useRef({
     from: null,
     to: null,
@@ -2472,6 +2583,7 @@ export function PublicGameApp({
     if (isAulaMode) return;
     if (!isExploreMode && !rulesReady) return;
     if (isCalendarModeActive) return;
+    if (isDailyMode) return;
     const forceNew = pendingStartNextRef.current;
     pendingStartNextRef.current = null;
     resetGame(forceNew ?? false);
@@ -2575,7 +2687,6 @@ export function PublicGameApp({
     let isMounted = true;
     async function loadCalendar() {
       const { from, to } = getCalendarAvailabilityWindow(dayKey);
-      const canReadCalendar = Boolean(supabaseEnabled && supabase && !supabaseBlocked);
       const cached = readCalendarCache({
         allowStale: true,
         expectedFrom: from,
@@ -2583,6 +2694,7 @@ export function PublicGameApp({
       });
       const hasCache = Boolean(cached?.daily?.length);
       if (hasCache && isMounted) {
+        calendarCacheWritableRef.current = false;
         setCalendarDaily(cached.daily || []);
         if (cached.serverDay) setCalendarTodayKey(cached.serverDay);
         calendarCacheMetaRef.current = {
@@ -2593,6 +2705,16 @@ export function PublicGameApp({
         setCalendarStatus(cached.stale ? "refreshing" : "ready");
         setCalendarLoaded(true);
       }
+      let calendarClient = supabase;
+      if (!calendarClient && supabaseEnabled && !supabaseBlocked) {
+        try {
+          calendarClient = await getSupabaseClient();
+          if (calendarClient && isMounted) setSupabase(calendarClient);
+        } catch {
+          if (isMounted) setSupabaseBlocked(true);
+        }
+      }
+      const canReadCalendar = Boolean(supabaseEnabled && calendarClient && !supabaseBlocked);
       if (!canReadCalendar) {
         if (isMounted && !hasCache) {
           setCalendarStatus(supabaseEnabled && !supabaseBlocked ? "loading" : "error");
@@ -2602,33 +2724,54 @@ export function PublicGameApp({
       calendarLoadingRef.current = true;
       setCalendarStatus(hasCache ? "refreshing" : "loading");
       try {
-        const { rows: dailyRows, serverDay } = await fetchCalendarAvailabilityState(
-          supabase,
+        const availabilityState = await fetchCalendarAvailabilityState(
+          calendarClient,
           from,
           to,
           dayKey
         );
+        const { rows: dailyRows, serverDay } = availabilityState;
         const authoritativeDay = normalizeDayKey(serverDay) || dayKey;
         const dailyEntries = dailyRows
           .map((row) => calendarAvailabilityEntryFromRow(row))
           .filter(Boolean);
+        const coverage = getCalendarCoverageState(dailyEntries, {
+          ...availabilityState,
+          serverDay: authoritativeDay,
+          from: availabilityState.from || from,
+          to: availabilityState.to || to
+        });
+        if (!coverage.complete) {
+          const error = new Error(
+            `calendar_incomplete:${coverage.assignedPastDays}/${coverage.expectedPastDays}`
+          );
+          error.calendarStatus = dailyEntries.length ? "partial" : "error";
+          throw error;
+        }
         const mergedEntries = mergeCalendarEntries(cached?.daily || [], dailyEntries);
         if (isMounted) {
+          calendarCacheWritableRef.current = true;
           setCalendarTodayKey(authoritativeDay);
           setCalendarDaily(mergedEntries);
           setCalendarStatus("ready");
           setCalendarLoaded(true);
-          calendarCacheMetaRef.current = { from, to, serverDay: authoritativeDay };
+          calendarCacheMetaRef.current = {
+            from: coverage.from,
+            to: coverage.to,
+            serverDay: authoritativeDay
+          };
           writeCalendarCache({
             daily: mergedEntries,
-            from,
-            to,
-            serverDay: authoritativeDay
+            from: coverage.from,
+            to: coverage.to,
+            serverDay: authoritativeDay,
+            source: availabilityState.source || "network"
           });
         }
-      } catch {
+      } catch (error) {
         if (isMounted) {
-          setCalendarStatus(hasCache ? "ready" : "error");
+          calendarCacheWritableRef.current = false;
+          setCalendarStatus(error?.calendarStatus || (hasCache ? "partial" : "error"));
           if (hasCache) setCalendarLoaded(true);
         }
       } finally {
@@ -2641,10 +2784,11 @@ export function PublicGameApp({
     return () => {
       isMounted = false;
     };
-  }, [shouldLoadCalendar, supabase, supabaseBlocked, dayKey]);
+  }, [shouldLoadCalendar, supabase, supabaseBlocked, dayKey, calendarRetryNonce]);
 
   useEffect(() => {
     if (!calendarLoaded || !calendarDaily.length) return;
+    if (!calendarCacheWritableRef.current) return;
     writeCalendarCache({
       daily: calendarDaily,
       ...calendarCacheMetaRef.current,
@@ -4291,11 +4435,8 @@ export function PublicGameApp({
       }
       calendarResetRef.current = null;
       setCalendarSelection(null);
-      if (gameMode !== "daily") {
-        setGameMode("daily");
-      } else {
-        resetGame();
-      }
+      setCalendarStatus((status) => (status === "ready" ? "partial" : status));
+      setCalendarOpen(true);
       return;
     }
     setCalendarSelection({ mode: "daily", key });
@@ -4351,7 +4492,8 @@ export function PublicGameApp({
       applyCalendarLevel(level);
       calendarApplyRef.current = selectionKey;
     } else if (!entry?.levelId) {
-      resetGame();
+      setCalendarStatus((status) => (status === "ready" ? "partial" : status));
+      setCalendarOpen(true);
     }
   }
 
@@ -4672,7 +4814,17 @@ export function PublicGameApp({
     setCalendarOpen(false);
   }
 
+  function handleCalendarRetry() {
+    playManifestSfx("click", 0.55);
+    setCalendarStatus(calendarDaily.length ? "refreshing" : "loading");
+    setCalendarRetryNonce((value) => value + 1);
+  }
+
   function handleModePick(modeId) {
+    if (modeId === "daily") {
+      handlePlayToday();
+      return;
+    }
     playManifestSfx("toggle");
     setGameMode(modeId);
     if (modeId === "timed") {
@@ -5291,7 +5443,16 @@ export function PublicGameApp({
     return [randomOption, ...MUSIC_TRACKS.map((track) => ({ id: track.id, label: track.label }))];
   }, [audioManifest, t]);
   const todayLabel = useMemo(() => formatFullDayLabel(dayKey), [dayKey]);
-  const showDailySkeleton = calendarStatus === "loading" && calendarDaily.length === 0;
+  const showDailySkeleton =
+    (calendarStatus === "loading" || calendarStatus === "refreshing") &&
+    calendarDaily.length === 0;
+  const calendarStatusMessage =
+    calendarStatus === "error"
+      ? t("calendarError")
+      : calendarStatus === "partial"
+        ? t("calendarPartial")
+        : t("calendarEmpty");
+  const canRetryCalendar = calendarStatus === "error" || calendarStatus === "partial";
   const calendarMonthLabel = useMemo(() => {
     return calendarMonth.toLocaleDateString("ca-ES", {
       month: "long",
@@ -5960,8 +6121,19 @@ export function PublicGameApp({
               </div>
               {!showDailySkeleton &&
               !hasVisibleCalendarAvailability &&
-              (calendarStatus === "ready" || calendarStatus === "error") ? (
-                <p className="muted">{t("calendarEmpty")}</p>
+              (calendarStatus === "ready" ||
+                calendarStatus === "error" ||
+                calendarStatus === "partial") ? (
+                <p className="muted">{calendarStatusMessage}</p>
+              ) : null}
+              {!showDailySkeleton && canRetryCalendar ? (
+                <button
+                  type="button"
+                  className="tutorial-open-button"
+                  onClick={handleCalendarRetry}
+                >
+                  {t("calendarRetry")}
+                </button>
               ) : null}
             </div>
           </div>

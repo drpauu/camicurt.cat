@@ -1302,6 +1302,65 @@ test("el calendari habilita dies disponibles des de cache sense esperar xarxa", 
   await expect(dayButton).toBeEnabled();
 });
 
+test("un jugador nou sense cache veu el calendari daily des de Supabase", async ({
+  page
+}) => {
+  const todayKey = getTodayKey();
+  const yesterdayKey = getMadridDayKeyOffset(-1);
+  const supabaseHeaders = {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET, POST, OPTIONS",
+    "access-control-allow-headers": "authorization, apikey, x-client-info, content-type, prefer, range",
+    "access-control-expose-headers": "content-range",
+    "content-range": "0-1/2"
+  };
+
+  await page.route("**/*calendar_daily_bootstrap_public*", (route) => {
+    if (route.request().method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: supabaseHeaders });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        serverDay: todayKey,
+        from: "2025-01-01",
+        to: getMadridDayKeyOffset(30),
+        expectedPastDays: 2,
+        assignedPastDays: 2,
+        missingPastCount: 0,
+        rows: [
+          { date: todayKey, level_id: "level-today", server_day: todayKey, is_unlocked: true },
+          { date: yesterdayKey, level_id: "level-yesterday", server_day: todayKey, is_unlocked: true }
+        ]
+      })
+    });
+  });
+  await page.route("**/*daily_calendar_public*", (route) => {
+    if (route.request().method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: supabaseHeaders });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { ...supabaseHeaders, "content-range": "*/0" },
+      body: JSON.stringify([])
+    });
+  });
+
+  await gotoHome(page);
+  await page.getByRole("button", { name: /Calendari/i }).click();
+  await expect(page.locator(`[data-calendar-day="${todayKey}"]`)).toHaveAttribute(
+    "data-has-level",
+    "true"
+  );
+  await expect(page.locator(`[data-calendar-day="${yesterdayKey}"]`)).toHaveAttribute(
+    "data-has-level",
+    "true"
+  );
+});
+
 test("el calendari completa una cache antiga amb la disponibilitat autoritativa", async ({
   page
 }) => {
@@ -1316,7 +1375,30 @@ test("el calendari completa una cache antiga amb la disponibilitat autoritativa"
     "content-range": "0-2/3"
   };
 
-  await page.route("**/rest/v1/rpc/calendar_daily_availability_state_public", (route) => {
+  await page.route("**/*calendar_daily_bootstrap_public*", (route) => {
+    if (route.request().method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: supabaseHeaders });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        serverDay: todayKey,
+        from: "2025-01-01",
+        to: getMadridDayKeyOffset(30),
+        expectedPastDays: 3,
+        assignedPastDays: 3,
+        missingPastCount: 0,
+        rows: [
+          { date: todayKey, level_id: "level-today-authoritative", server_day: todayKey, is_unlocked: true },
+          { date: yesterdayKey, level_id: "level-yesterday-authoritative", server_day: todayKey, is_unlocked: true },
+          { date: oldKey, level_id: "level-old-cache", server_day: todayKey, is_unlocked: true }
+        ]
+      })
+    });
+  });
+  await page.route("**/*calendar_daily_availability_state_public*", (route) => {
     if (route.request().method() === "OPTIONS") {
       return route.fulfill({ status: 204, headers: supabaseHeaders });
     }
@@ -1404,7 +1486,29 @@ test("el calendari bloqueja un dia futur encara que tingui nivell assignat", asy
     "content-range": "0-1/2"
   };
 
-  await page.route("**/rest/v1/rpc/calendar_daily_availability_state_public", (route) => {
+  await page.route("**/*calendar_daily_bootstrap_public*", (route) => {
+    if (route.request().method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: supabaseHeaders });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        serverDay: todayKey,
+        from: "2025-01-01",
+        to: getMadridDayKeyOffset(30),
+        expectedPastDays: 1,
+        assignedPastDays: 1,
+        missingPastCount: 0,
+        rows: [
+          { date: tomorrowKey, level_id: "level-future", server_day: todayKey, is_unlocked: false },
+          { date: todayKey, level_id: "level-today", server_day: todayKey, is_unlocked: true }
+        ]
+      })
+    });
+  });
+  await page.route("**/*calendar_daily_availability_state_public*", (route) => {
     if (route.request().method() === "OPTIONS") {
       return route.fulfill({ status: 204, headers: supabaseHeaders });
     }
@@ -1449,6 +1553,57 @@ test("el calendari bloqueja un dia futur encara que tingui nivell assignat", asy
   await expect(tomorrowButton).toHaveAttribute("data-has-level", "false");
   await expect(tomorrowButton).toHaveAttribute("data-locked", "true");
   await expect(tomorrowButton).toBeDisabled();
+});
+
+test("una resposta buida del backend no es guarda com calendari valid", async ({
+  page
+}) => {
+  const todayKey = getTodayKey();
+  const supabaseHeaders = {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET, POST, OPTIONS",
+    "access-control-allow-headers": "authorization, apikey, x-client-info, content-type, prefer, range",
+    "access-control-expose-headers": "content-range",
+    "content-range": "*/0"
+  };
+
+  await page.route("**/*calendar_daily_bootstrap_public*", (route) => {
+    if (route.request().method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: supabaseHeaders });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        serverDay: todayKey,
+        from: "2025-01-01",
+        to: getMadridDayKeyOffset(30),
+        expectedPastDays: 1,
+        assignedPastDays: 0,
+        missingPastCount: 1,
+        rows: []
+      })
+    });
+  });
+  await page.route("**/*daily_calendar_public*", (route) => {
+    if (route.request().method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: supabaseHeaders });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: supabaseHeaders,
+      body: JSON.stringify([])
+    });
+  });
+
+  await gotoHome(page);
+  await page.getByRole("button", { name: /Calendari/i }).click();
+  await expect(page.locator(".calendar-panel")).toContainText(
+    /No s'han pogut carregar|Reintenta/
+  );
+  await page.waitForFunction(() => !localStorage.getItem("rumb-calendar-cache-v1"));
 });
 
 test("el calendari permet clicar disponibilitat abans del detall del nivell", async ({

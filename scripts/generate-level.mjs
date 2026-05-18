@@ -388,6 +388,10 @@ function addDays(date, offset) {
   return next;
 }
 
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function parsePositiveInteger(value, fallback) {
   const parsed = Number(value ?? fallback);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
@@ -565,6 +569,7 @@ async function run() {
       "bank-sql-chunks",
       "assign-year",
       "ensure-range",
+      "rebuild-range",
       "reassign-year",
       "reassign-years",
       "repair-invalid-rules",
@@ -572,7 +577,7 @@ async function run() {
     ].includes(mode)
   ) {
     console.error(
-      "Usa: node scripts/generate-level.mjs daily|backfill-2025|backfill-year YYYY|backfill-dates|bank [count] [offset]|bank-add [count]|bank-sql [count] [output.sql]|bank-sql-chunks [count] [output-dir]|assign-year [YYYY]|ensure-range [YYYY-MM-DD] [YYYY-MM-DD]|reassign-year YYYY|reassign-years YYYY [...]|repair-invalid-rules [YYYY-MM-DD] [YYYY-MM-DD]|repair-all-invalid-rules"
+      "Usa: node scripts/generate-level.mjs daily|backfill-2025|backfill-year YYYY|backfill-dates|bank [count] [offset]|bank-add [count]|bank-sql [count] [output.sql]|bank-sql-chunks [count] [output-dir]|assign-year [YYYY]|ensure-range [YYYY-MM-DD] [YYYY-MM-DD]|rebuild-range [YYYY-MM-DD] [YYYY-MM-DD]|reassign-year YYYY|reassign-years YYYY [...]|repair-invalid-rules [YYYY-MM-DD] [YYYY-MM-DD]|repair-all-invalid-rules"
     );
     process.exit(1);
   }
@@ -656,6 +661,18 @@ async function run() {
       levelId: insertLevel.data?.level_id || undefined,
       reason: insertLevel.data?.reason || undefined
     };
+  }
+
+  async function createDailyLevelWithRetry(forDayKey, attempts = 4) {
+    let lastResult = null;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      lastResult = await createDailyLevel(forDayKey);
+      if (lastResult.created || lastResult.reason === "ja_existeix") return lastResult;
+      if (attempt < attempts) {
+        await wait(500 * attempt);
+      }
+    }
+    return lastResult || { created: false, reason: "desconegut" };
   }
 
   async function ensureDailyRange(startDate, days) {
@@ -1063,6 +1080,92 @@ async function run() {
     return { startDate, totalDays };
   }
 
+  function addDaysToDayKey(dayKeyValue, offsetDays) {
+    const parsed = new Date(`${dayKeyValue}T00:00:00`);
+    if (Number.isNaN(parsed.valueOf())) return null;
+    return getDayKey(addDays(parsed, offsetDays));
+  }
+
+  async function auditDailyRange(startKey, endKey) {
+    const availability = await supabase
+      .from("calendar_daily")
+      .select("date, level_id")
+      .gte("date", startKey)
+      .lte("date", endKey)
+      .order("date", { ascending: true })
+      .range(0, 5000);
+    if (availability.error) {
+      console.error("Error auditant calendar_daily:", availability.error.message);
+      process.exit(1);
+    }
+
+    const publicEndKey = endKey < dayKey ? endKey : dayKey;
+    const detailRows = [];
+    if (publicEndKey >= startKey) {
+      const details = await supabase
+        .from("daily_calendar_public")
+        .select(
+          "date, level_id, start_id, target_id, difficulty_id, shortest_path, rule_id, avoid_ids, must_pass_ids"
+        )
+        .gte("date", startKey)
+        .lte("date", publicEndKey)
+        .order("date", { ascending: true })
+        .range(0, 5000);
+      if (details.error) {
+        console.error("Error auditant daily_calendar_public:", details.error.message);
+        process.exit(1);
+      }
+      detailRows.push(...(details.data || []));
+    }
+
+    const availabilityByDate = new Map(
+      (availability.data || []).map((row) => [row.date, row])
+    );
+    const detailByDate = new Map(detailRows.map((row) => [row.date, row]));
+    const missingDates = [];
+    const invalidRows = [];
+
+    let cursor = startKey;
+    while (cursor <= endKey) {
+      const calendarRow = availabilityByDate.get(cursor);
+      if (!calendarRow?.level_id) {
+        missingDates.push(cursor);
+      } else if (cursor <= publicEndKey) {
+        const detailRow = detailByDate.get(cursor);
+        const issues = detailRow
+          ? getLevelIssues(detailRow)
+          : ["nivell public no visible"];
+        if (issues.length) invalidRows.push({ date: cursor, issues });
+      }
+      cursor = addDaysToDayKey(cursor, 1);
+    }
+
+    return {
+      missingDates,
+      invalidRows,
+      availabilityCount: availability.data?.length || 0,
+      detailCount: detailRows.length
+    };
+  }
+
+  async function assertDailyRangeHealthy(startKey, endKey) {
+    const result = await auditDailyRange(startKey, endKey);
+    if (result.missingDates.length || result.invalidRows.length) {
+      if (result.missingDates.length) {
+        console.error(`Falten dies al calendari: ${result.missingDates.join(", ")}`);
+      }
+      if (result.invalidRows.length) {
+        console.error(
+          `Dies amb nivell o norma incoherent: ${result.invalidRows
+            .map((row) => `${row.date} (${row.issues.join("; ")})`)
+            .join(", ")}`
+        );
+      }
+      process.exit(1);
+    }
+    return result;
+  }
+
   async function clearBankUsageForKeys(keys) {
     if (!keys.length) return 0;
     const update = await supabase
@@ -1150,6 +1253,46 @@ async function run() {
       ...assigned,
       freedBankRows,
       deleted
+    };
+  }
+
+  async function rebuildDailyRangeGenerated(startDate, days) {
+    const keys = Array.from({ length: days }, (_, index) =>
+      getDayKey(addDays(startDate, index))
+    );
+    const startKey = keys[0];
+    const endKey = keys[keys.length - 1];
+    const freedBankRows = await clearBankUsageForKeys(keys);
+    const deleted = await deleteDailyLevelsForKeys(keys);
+    const createdKeys = [];
+    const failed = [];
+
+    for (const key of keys) {
+      const result = await createDailyLevelWithRetry(key);
+      if (result.created) {
+        createdKeys.push(key);
+      } else {
+        failed.push({ key, reason: result.reason || "no_creat" });
+      }
+      console.log(`Calendari daily ${key}: ${result.created ? "reconstruit" : result.reason}`);
+    }
+
+    if (failed.length) {
+      console.error(
+        `No s'han pogut reconstruir ${failed.length} dies: ${failed
+          .map((entry) => `${entry.key} (${entry.reason})`)
+          .join(", ")}`
+      );
+      process.exit(1);
+    }
+
+    const audit = await assertDailyRangeHealthy(startKey, endKey);
+    return {
+      createdKeys,
+      freedBankRows,
+      deleted,
+      audit,
+      total: keys.length
     };
   }
 
@@ -1366,8 +1509,10 @@ async function run() {
   }
 
   if (mode === "daily") {
-    const startDate = addDays(today, -20);
-    const dailyBatch = await ensureDailyRange(startDate, 21);
+    const startKey = "2025-01-01";
+    const endKey = addDaysToDayKey(dayKey, 30);
+    const { startDate, totalDays } = getDateRange(startKey, endKey);
+    const dailyBatch = await ensureDailyRange(startDate, totalDays);
     if (dailyBatch.todayResult.created) {
       console.log(`Nivell daily creat: ${dailyBatch.todayResult.levelId}`);
     } else {
@@ -1378,6 +1523,10 @@ async function run() {
         `Backfill diari: ${dailyBatch.createdKeys.length}/${dailyBatch.total}`
       );
     }
+    const audit = await assertDailyRangeHealthy(startKey, endKey);
+    console.log(
+      `Guardrail calendari: ${audit.availabilityCount} disponibilitats auditades, ${audit.detailCount} nivells publics fins ${dayKey}.`
+    );
     return;
   }
 
@@ -1504,8 +1653,20 @@ async function run() {
     const endKey = normalizeDayKeyInput(process.argv[4]) || dayKey;
     const { startDate, totalDays } = getDateRange(startKey, endKey);
     const dailyBatch = await ensureDailyRange(startDate, totalDays);
+    const audit = await assertDailyRangeHealthy(startKey, endKey);
     console.log(
-      `Calendari assegurat ${startKey}..${endKey}: ${dailyBatch.createdKeys.length}/${dailyBatch.total} dies creats, ${dailyBatch.total - dailyBatch.createdKeys.length} no creats (existien o han fallat)`
+      `Calendari assegurat ${startKey}..${endKey}: ${dailyBatch.createdKeys.length}/${dailyBatch.total} dies creats, ${dailyBatch.total - dailyBatch.createdKeys.length} no creats (existien o han fallat). Auditoria: ${audit.detailCount} nivells publics.`
+    );
+    return;
+  }
+
+  if (mode === "rebuild-range") {
+    const startKey = normalizeDayKeyInput(process.argv[3]) || "2025-01-01";
+    const endKey = normalizeDayKeyInput(process.argv[4]) || dayKey;
+    const { startDate, totalDays } = getDateRange(startKey, endKey);
+    const result = await rebuildDailyRangeGenerated(startDate, totalDays);
+    console.log(
+      `Calendari reconstruït ${startKey}..${endKey}: ${result.createdKeys.length}/${result.total} dies, ${result.deleted.calendarRows} calendaris antics, ${result.deleted.levelRows} nivells antics, ${result.freedBankRows} banc alliberats.`
     );
     return;
   }
