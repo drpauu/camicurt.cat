@@ -103,15 +103,23 @@ const playGuesses = async (page, names) => {
 };
 
 const getTodayKey = () => {
-  return getDayKeyOffset(0);
+  return getMadridDayKeyOffset(0);
 };
 
-const getDayKeyOffset = (offsetDays) => {
-  const now = new Date();
-  now.setDate(now.getDate() + offsetDays);
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
+const getMadridDayKey = () => {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(new Date());
+};
+
+const getMadridDayKeyOffset = (offsetDays) => {
+  const [year, month, day] = getMadridDayKey().split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + offsetDays);
+  return date.toISOString().slice(0, 10);
 };
 
 const gotoHome = async (page) => {
@@ -635,7 +643,7 @@ test("clicar un nivell completat al calendari el reinicia i conserva el dia verd
 test("Seguent mapa des d'un diari antic carrega el dia seguent del calendari", async ({
   page
 }) => {
-  const previousKey = getDayKeyOffset(-1);
+  const previousKey = getMadridDayKeyOffset(-1);
   const todayKey = getTodayKey();
   await page.addInitScript(
     ({ previousKey: prevKey, todayKey: currentKey }) => {
@@ -1277,7 +1285,7 @@ test("el calendari habilita dies disponibles des de cache sense esperar xarxa", 
   page
 }) => {
   const dayKey = getTodayKey();
-  await page.route("**/rest/v1/calendar_daily*", (route) => route.abort("failed"));
+  await page.route("**/*calendar_daily*", (route) => route.abort("failed"));
   await page.addInitScript((key) => {
     localStorage.setItem(
       "rumb-calendar-cache-v1",
@@ -1294,6 +1302,155 @@ test("el calendari habilita dies disponibles des de cache sense esperar xarxa", 
   await expect(dayButton).toBeEnabled();
 });
 
+test("el calendari completa una cache antiga amb la disponibilitat autoritativa", async ({
+  page
+}) => {
+  const todayKey = getTodayKey();
+  const yesterdayKey = getMadridDayKeyOffset(-1);
+  const oldKey = getMadridDayKeyOffset(-3);
+  const supabaseHeaders = {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET, POST, OPTIONS",
+    "access-control-allow-headers": "authorization, apikey, x-client-info, content-type, prefer, range",
+    "access-control-expose-headers": "content-range",
+    "content-range": "0-2/3"
+  };
+
+  await page.route("**/rest/v1/rpc/calendar_daily_availability_state_public", (route) => {
+    if (route.request().method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: supabaseHeaders });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: supabaseHeaders,
+      body: JSON.stringify([
+        {
+          date: todayKey,
+          level_id: "level-today-authoritative",
+          server_day: todayKey,
+          is_unlocked: true
+        },
+        {
+          date: yesterdayKey,
+          level_id: "level-yesterday-authoritative",
+          server_day: todayKey,
+          is_unlocked: true
+        },
+        {
+          date: oldKey,
+          level_id: "level-old-cache",
+          server_day: todayKey,
+          is_unlocked: true
+        }
+      ])
+    });
+  });
+  await page.route("**/*daily_calendar_public*", (route) => {
+    if (route.request().method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: supabaseHeaders });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { ...supabaseHeaders, "content-range": "*/0" },
+      body: JSON.stringify([])
+    });
+  });
+  await page.addInitScript((key) => {
+    localStorage.setItem(
+      "rumb-calendar-cache-v1",
+      JSON.stringify({
+        updatedAt: Date.now() - 86400000,
+        daily: [{ date: key, levelId: "level-old-cache", level: null }]
+      })
+    );
+  }, oldKey);
+
+  await gotoHome(page);
+  await page.getByRole("button", { name: /Calendari/i }).click();
+  await expect(page.locator(`[data-calendar-day="${todayKey}"]`)).toHaveAttribute(
+    "data-has-level",
+    "true"
+  );
+  await expect(page.locator(`[data-calendar-day="${yesterdayKey}"]`)).toHaveAttribute(
+    "data-has-level",
+    "true"
+  );
+  await page.waitForFunction(
+    ([cacheKey, expectedToday]) => {
+      const parsed = JSON.parse(localStorage.getItem(cacheKey) || "{}");
+      return (
+        parsed.version &&
+        parsed.serverDay === expectedToday &&
+        Array.isArray(parsed.daily) &&
+        parsed.daily.some((entry) => entry.date === expectedToday)
+      );
+    },
+    ["rumb-calendar-cache-v1", todayKey]
+  );
+});
+
+test("el calendari bloqueja un dia futur encara que tingui nivell assignat", async ({
+  page
+}) => {
+  const todayKey = getTodayKey();
+  const tomorrowKey = getMadridDayKeyOffset(1);
+  const supabaseHeaders = {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET, POST, OPTIONS",
+    "access-control-allow-headers": "authorization, apikey, x-client-info, content-type, prefer, range",
+    "access-control-expose-headers": "content-range",
+    "content-range": "0-1/2"
+  };
+
+  await page.route("**/rest/v1/rpc/calendar_daily_availability_state_public", (route) => {
+    if (route.request().method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: supabaseHeaders });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: supabaseHeaders,
+      body: JSON.stringify([
+        {
+          date: tomorrowKey,
+          level_id: "level-future",
+          server_day: todayKey,
+          is_unlocked: false
+        },
+        {
+          date: todayKey,
+          level_id: "level-today",
+          server_day: todayKey,
+          is_unlocked: true
+        }
+      ])
+    });
+  });
+  await page.route("**/*daily_calendar_public*", (route) => {
+    if (route.request().method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: supabaseHeaders });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { ...supabaseHeaders, "content-range": "*/0" },
+      body: JSON.stringify([])
+    });
+  });
+
+  await gotoHome(page);
+  await page.getByRole("button", { name: /Calendari/i }).click();
+  if (tomorrowKey.slice(0, 7) !== todayKey.slice(0, 7)) {
+    await page.locator(".calendar-month .icon-button").last().click();
+  }
+  const tomorrowButton = page.locator(`[data-calendar-day="${tomorrowKey}"]`);
+  await expect(tomorrowButton).toHaveAttribute("data-has-level", "false");
+  await expect(tomorrowButton).toHaveAttribute("data-locked", "true");
+  await expect(tomorrowButton).toBeDisabled();
+});
+
 test("el calendari permet clicar disponibilitat abans del detall del nivell", async ({
   page
 }) => {
@@ -1306,7 +1463,7 @@ test("el calendari permet clicar disponibilitat abans del detall del nivell", as
   let detailRequests = 0;
   const supabaseHeaders = {
     "access-control-allow-origin": "*",
-    "access-control-allow-methods": "GET, OPTIONS",
+    "access-control-allow-methods": "GET, POST, OPTIONS",
     "access-control-allow-headers": "authorization, apikey, x-client-info, content-type, prefer, range",
     "access-control-expose-headers": "content-range",
     "content-range": "0-0/1"

@@ -365,6 +365,15 @@ function getDayKey(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+function getMadridDayKey(date = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(date);
+}
+
 function normalizeDayKeyInput(value) {
   if (!value) return null;
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
@@ -555,6 +564,7 @@ async function run() {
       "bank-sql",
       "bank-sql-chunks",
       "assign-year",
+      "ensure-range",
       "reassign-year",
       "reassign-years",
       "repair-invalid-rules",
@@ -562,7 +572,7 @@ async function run() {
     ].includes(mode)
   ) {
     console.error(
-      "Usa: node scripts/generate-level.mjs daily|backfill-2025|backfill-year YYYY|backfill-dates|bank [count] [offset]|bank-add [count]|bank-sql [count] [output.sql]|bank-sql-chunks [count] [output-dir]|assign-year [YYYY]|reassign-year YYYY|reassign-years YYYY [...]|repair-invalid-rules [YYYY-MM-DD] [YYYY-MM-DD]|repair-all-invalid-rules"
+      "Usa: node scripts/generate-level.mjs daily|backfill-2025|backfill-year YYYY|backfill-dates|bank [count] [offset]|bank-add [count]|bank-sql [count] [output.sql]|bank-sql-chunks [count] [output-dir]|assign-year [YYYY]|ensure-range [YYYY-MM-DD] [YYYY-MM-DD]|reassign-year YYYY|reassign-years YYYY [...]|repair-invalid-rules [YYYY-MM-DD] [YYYY-MM-DD]|repair-all-invalid-rules"
     );
     process.exit(1);
   }
@@ -577,7 +587,7 @@ async function run() {
   const { ids, names, normalizedToId, centroidMap, adjacencyMap } = loadTopology();
 
   const today = new Date();
-  const dayKey = getDayKey(today);
+  const dayKey = getMadridDayKey(today);
   const rulePool = RULE_DEFS;
 
   async function fetchRecentRuleIds(mode, limit) {
@@ -1037,6 +1047,22 @@ async function run() {
     return year;
   }
 
+  function getDateRange(startKey, endKey) {
+    const startDate = new Date(`${startKey}T00:00:00`);
+    const endDate = new Date(`${endKey}T00:00:00`);
+    if (Number.isNaN(startDate.valueOf()) || Number.isNaN(endDate.valueOf())) {
+      console.error("El rang de dates no es valid.");
+      process.exit(1);
+    }
+    if (startKey > endKey) {
+      console.error("El rang de dates no es valid: la data inicial supera la final.");
+      process.exit(1);
+    }
+    const totalDays =
+      Math.round((endDate.getTime() - startDate.getTime()) / 86400000) + 1;
+    return { startDate, totalDays };
+  }
+
   async function clearBankUsageForKeys(keys) {
     if (!keys.length) return 0;
     const update = await supabase
@@ -1469,6 +1495,17 @@ async function run() {
     const result = await assignDailyRangeFromBank(startDate, totalDays);
     console.log(
       `Calendari ${year} assignat: ${result.createdKeys.length}/${result.total} nous, ${result.skipped} ja existien`
+    );
+    return;
+  }
+
+  if (mode === "ensure-range") {
+    const startKey = normalizeDayKeyInput(process.argv[3]) || "2025-01-01";
+    const endKey = normalizeDayKeyInput(process.argv[4]) || dayKey;
+    const { startDate, totalDays } = getDateRange(startKey, endKey);
+    const dailyBatch = await ensureDailyRange(startDate, totalDays);
+    console.log(
+      `Calendari assegurat ${startKey}..${endKey}: ${dailyBatch.createdKeys.length}/${dailyBatch.total} dies creats, ${dailyBatch.total - dailyBatch.createdKeys.length} no creats (existien o han fallat)`
     );
     return;
   }

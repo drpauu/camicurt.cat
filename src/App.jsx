@@ -53,6 +53,7 @@ const LEVEL_STATS_KEY = "rumb-level-stats-v1";
 const DAILY_RESULTS_KEY = "rumb-daily-results-v1";
 const CALENDAR_WEEKDAYS = ["dl", "dt", "dc", "dj", "dv", "ds", "dg"];
 const CALENDAR_CACHE_KEY = "rumb-calendar-cache-v1";
+const CALENDAR_CACHE_VERSION = "2026-05-18-authoritative-day";
 const CALENDAR_CACHE_TTL_MS = 1000 * 60 * 15;
 const CALENDAR_AVAILABILITY_LOOKBACK_YEARS = 1;
 const CALENDAR_AVAILABILITY_LOOKAHEAD_YEARS = 6;
@@ -715,6 +716,28 @@ function getDayKeyOffset(offsetDays) {
   return getDayKey(date);
 }
 
+function getMadridDayKey(date = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(date);
+}
+
+function addDaysToDayKey(dayKey, offsetDays) {
+  const normalized = normalizeDayKey(dayKey);
+  if (!normalized) return null;
+  const [year, month, day] = normalized.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + offsetDays);
+  return date.toISOString().slice(0, 10);
+}
+
+function getMadridDayKeyOffset(offsetDays) {
+  return addDaysToDayKey(getMadridDayKey(), offsetDays);
+}
+
 function getLocalDayKey(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -745,7 +768,13 @@ function calendarAvailabilityEntryFromRow(row) {
   return {
     date,
     levelId: row.level_id || row.levelId || null,
-    level: row.level || null
+    level: row.level || null,
+    isUnlocked:
+      typeof row.is_unlocked === "boolean"
+        ? row.is_unlocked
+        : typeof row.isUnlocked === "boolean"
+          ? row.isUnlocked
+          : null
   };
 }
 
@@ -779,7 +808,13 @@ function mergeCalendarEntries(currentEntries, incomingEntries) {
       ...previous,
       ...entry,
       levelId: entry.levelId || previous.levelId || null,
-      level: entry.level || previous.level || null
+      level: entry.level || previous.level || null,
+      isUnlocked:
+        typeof entry.isUnlocked === "boolean"
+          ? entry.isUnlocked
+          : typeof previous.isUnlocked === "boolean"
+            ? previous.isUnlocked
+            : null
     });
   });
   return [...byDate.values()].sort((a, b) => String(b.date).localeCompare(String(a.date)));
@@ -874,7 +909,7 @@ function getLatestUnlockedCalendarDay(entries, maxDayKey) {
 }
 
 function getCalendarAvailabilityWindow(dayKey) {
-  const normalized = normalizeDayKey(dayKey) || getLocalDayKey();
+  const normalized = normalizeDayKey(dayKey) || getMadridDayKey();
   const [year] = normalized.split("-").map(Number);
   return {
     from: `${year - CALENDAR_AVAILABILITY_LOOKBACK_YEARS}-01-01`,
@@ -917,18 +952,31 @@ function writeMapCache(payload) {
   }
 }
 
-function readCalendarCache({ allowStale = false } = {}) {
+function readCalendarCache({ allowStale = false, expectedFrom = null, expectedTo = null } = {}) {
   if (typeof window === "undefined") return null;
   const raw = localStorage.getItem(CALENDAR_CACHE_KEY);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    if (!parsed?.updatedAt) return null;
-    const isStale = Date.now() - parsed.updatedAt > CALENDAR_CACHE_TTL_MS;
+    const updatedAt = Number(parsed?.updatedAt) || 0;
+    const from = normalizeDayKey(parsed?.from);
+    const to = normalizeDayKey(parsed?.to);
+    const serverDay = normalizeDayKey(parsed?.serverDay);
+    const isExpired = !updatedAt || Date.now() - updatedAt > CALENDAR_CACHE_TTL_MS;
+    const isLegacy = parsed?.version !== CALENDAR_CACHE_VERSION || !from || !to || !serverDay;
+    const expectedStart = normalizeDayKey(expectedFrom);
+    const expectedEnd = normalizeDayKey(expectedTo);
+    const isIncomplete =
+      Boolean(expectedStart && (!from || from > expectedStart)) ||
+      Boolean(expectedEnd && (!to || to < expectedEnd));
+    const isStale = isExpired || isLegacy || isIncomplete;
     if (isStale && !allowStale) return null;
     return {
       ...parsed,
       daily: Array.isArray(parsed.daily) ? parsed.daily : [],
+      from,
+      to,
+      serverDay,
       stale: isStale
     };
   } catch {
@@ -941,7 +989,14 @@ function writeCalendarCache(payload) {
   try {
     localStorage.setItem(
       CALENDAR_CACHE_KEY,
-      JSON.stringify({ ...payload, updatedAt: Date.now() })
+      JSON.stringify({
+        ...payload,
+        version: CALENDAR_CACHE_VERSION,
+        from: normalizeDayKey(payload?.from) || null,
+        to: normalizeDayKey(payload?.to) || null,
+        serverDay: normalizeDayKey(payload?.serverDay) || getMadridDayKey(),
+        updatedAt: Date.now()
+      })
     );
   } catch {
     // Sense espai a localStorage o privacitat estricta.
@@ -962,10 +1017,33 @@ function readRuleHistory() {
   }
 }
 
-async function fetchCalendarAvailabilityEntries(supabase, fromKey, toKey, dayKey) {
+async function fetchCalendarAvailabilityState(supabase, fromKey, toKey, fallbackDayKey) {
   const normalizedFrom = normalizeDayKey(fromKey);
   const normalizedTo = normalizeDayKey(toKey);
-  if (!supabase || !normalizedFrom || !normalizedTo) return [];
+  const fallbackServerDay = normalizeDayKey(fallbackDayKey) || getMadridDayKey();
+  if (!supabase || !normalizedFrom || !normalizedTo) {
+    return { rows: [], serverDay: fallbackServerDay };
+  }
+
+  const resolveServerDay = (rows) => {
+    const rowServerDay = (rows || [])
+      .map((row) => normalizeDayKey(row?.server_day || row?.serverDay))
+      .find(Boolean);
+    return rowServerDay || fallbackServerDay;
+  };
+
+  const readAvailabilityStateRpc = async () => {
+    const result = await withRetry(
+      () =>
+        supabase.rpc("calendar_daily_availability_state_public", {
+          p_from: normalizedFrom,
+          p_to: normalizedTo
+        }),
+      { retries: 2, backoffMs: 500 }
+    );
+    if (result.error) throw result.error;
+    return Array.isArray(result.data) ? result.data : [];
+  };
 
   const readDirectAvailability = async () => {
     const result = await withRetry(
@@ -997,7 +1075,7 @@ async function fetchCalendarAvailabilityEntries(supabase, fromKey, toKey, dayKey
   };
 
   const readPublicDetailsAvailability = async () => {
-    const publicTo = normalizedTo <= dayKey ? normalizedTo : dayKey;
+    const publicTo = normalizedTo <= fallbackServerDay ? normalizedTo : fallbackServerDay;
     if (publicTo < normalizedFrom) return [];
     const result = await withRetry(
       () =>
@@ -1016,19 +1094,20 @@ async function fetchCalendarAvailabilityEntries(supabase, fromKey, toKey, dayKey
 
   let lastError = null;
   for (const loader of [
-    readDirectAvailability,
+    readAvailabilityStateRpc,
     readAvailabilityRpc,
+    readDirectAvailability,
     readPublicDetailsAvailability
   ]) {
     try {
       const rows = await loader();
-      if (rows.length) return rows;
+      if (rows.length) return { rows, serverDay: resolveServerDay(rows) };
     } catch (error) {
       lastError = error;
     }
   }
   if (lastError) throw lastError;
-  return [];
+  return { rows: [], serverDay: fallbackServerDay };
 }
 
 function writeRuleHistory(history) {
@@ -1590,12 +1669,15 @@ export function PublicGameApp({
   const [calendarMode, setCalendarMode] = useState("daily");
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
+    const today = new Date(`${getMadridDayKey()}T00:00:00`);
+    return Number.isNaN(today.valueOf())
+      ? new Date()
+      : new Date(today.getFullYear(), today.getMonth(), 1);
   });
   const [calendarDaily, setCalendarDaily] = useState([]);
   const [calendarStatus, setCalendarStatus] = useState("idle");
   const [calendarLoaded, setCalendarLoaded] = useState(false);
+  const [calendarTodayKey, setCalendarTodayKey] = useState(() => getMadridDayKey());
   const [calendarSelection, setCalendarSelection] = useState(null);
   const [calendarLoadingDayKey, setCalendarLoadingDayKey] = useState(null);
   const [levelStats, setLevelStats] = useState(() => {
@@ -1652,6 +1734,11 @@ export function PublicGameApp({
   const calendarResetRef = useRef(null);
   const calendarAutoSetRef = useRef({ daily: false });
   const calendarLoadingRef = useRef(false);
+  const calendarCacheMetaRef = useRef({
+    from: null,
+    to: null,
+    serverDay: getMadridDayKey()
+  });
   const calendarDetailRequestsRef = useRef(new Map());
   const pendingRepeatSnapshotRef = useRef(null);
   const calendarCountsRef = useRef({ daily: 0 });
@@ -1742,7 +1829,7 @@ export function PublicGameApp({
     return DIFFICULTIES.find((entry) => entry.id === activeDifficulty) || DIFFICULTIES[0];
   }, [activeDifficulty]);
   const timeLeftMs = Math.max(timeLimitMs - elapsedMs - timePenaltyMs, 0);
-  const dayKey = useMemo(() => getDayKey(), []);
+  const dayKey = calendarTodayKey;
   const centroidMap = useMemo(() => buildCentroidMap(comarques), [comarques]);
   const isMapReady = comarques.length > 0;
   const triggerWeatherForComarca = useCallback(
@@ -1802,13 +1889,13 @@ export function PublicGameApp({
   );
   const displayStreak = useMemo(() => {
     if (!dailyStreak.lastDate) return 0;
-    const today = getLocalDayKey(new Date());
-    const yesterday = getLocalDayKeyOffset(-1);
+    const today = dayKey;
+    const yesterday = addDaysToDayKey(dayKey, -1);
     if (dailyStreak.lastDate === today || dailyStreak.lastDate === yesterday) {
       return dailyStreak.count || 0;
     }
     return 0;
-  }, [dailyStreak]);
+  }, [dailyStreak, dayKey]);
   const streakTitle = getStreakTitle(displayStreak);
   const t = useMemo(() => (key, vars = {}) => translate(DEFAULT_LOCALE, key, vars), []);
   const playManifestSfx = useCallback(
@@ -1968,8 +2055,8 @@ export function PublicGameApp({
   useEffect(() => {
     if (typeof window === "undefined") return;
     setDailyStreak((prev) => {
-      const today = getLocalDayKey(new Date());
-      const yesterday = getLocalDayKeyOffset(-1);
+      const today = dayKey;
+      const yesterday = addDaysToDayKey(dayKey, -1);
       if (!prev?.lastDate) {
         const next = { count: 1, lastDate: today };
         localStorage.setItem(STREAK_KEY, JSON.stringify(next));
@@ -1985,7 +2072,7 @@ export function PublicGameApp({
       localStorage.setItem(STREAK_KEY, JSON.stringify(next));
       return next;
     });
-  }, []);
+  }, [dayKey]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -2484,35 +2571,60 @@ export function PublicGameApp({
   }, [leaderboardEndpoint, disableLocalRecords]);
 
   useEffect(() => {
-    if (!shouldLoadCalendar || calendarLoaded || calendarLoadingRef.current) return;
+    if (!shouldLoadCalendar || calendarLoadingRef.current) return;
     let isMounted = true;
     async function loadCalendar() {
-      const canReadCalendar = Boolean(supabaseEnabled && supabase);
-      const cached = readCalendarCache({ allowStale: true });
+      const { from, to } = getCalendarAvailabilityWindow(dayKey);
+      const canReadCalendar = Boolean(supabaseEnabled && supabase && !supabaseBlocked);
+      const cached = readCalendarCache({
+        allowStale: true,
+        expectedFrom: from,
+        expectedTo: to
+      });
       const hasCache = Boolean(cached?.daily?.length);
       if (hasCache && isMounted) {
         setCalendarDaily(cached.daily || []);
+        if (cached.serverDay) setCalendarTodayKey(cached.serverDay);
+        calendarCacheMetaRef.current = {
+          from: cached.from || from,
+          to: cached.to || to,
+          serverDay: cached.serverDay || dayKey
+        };
         setCalendarStatus(cached.stale ? "refreshing" : "ready");
         setCalendarLoaded(true);
       }
       if (!canReadCalendar) {
-        if (isMounted && !hasCache) setCalendarStatus("error");
+        if (isMounted && !hasCache) {
+          setCalendarStatus(supabaseEnabled && !supabaseBlocked ? "loading" : "error");
+        }
         return;
       }
       calendarLoadingRef.current = true;
       setCalendarStatus(hasCache ? "refreshing" : "loading");
       try {
-        const { from, to } = getCalendarAvailabilityWindow(dayKey);
-        const dailyRows = await fetchCalendarAvailabilityEntries(supabase, from, to, dayKey);
+        const { rows: dailyRows, serverDay } = await fetchCalendarAvailabilityState(
+          supabase,
+          from,
+          to,
+          dayKey
+        );
+        const authoritativeDay = normalizeDayKey(serverDay) || dayKey;
         const dailyEntries = dailyRows
           .map((row) => calendarAvailabilityEntryFromRow(row))
           .filter(Boolean);
         const mergedEntries = mergeCalendarEntries(cached?.daily || [], dailyEntries);
         if (isMounted) {
+          setCalendarTodayKey(authoritativeDay);
           setCalendarDaily(mergedEntries);
           setCalendarStatus("ready");
           setCalendarLoaded(true);
-          writeCalendarCache({ daily: mergedEntries });
+          calendarCacheMetaRef.current = { from, to, serverDay: authoritativeDay };
+          writeCalendarCache({
+            daily: mergedEntries,
+            from,
+            to,
+            serverDay: authoritativeDay
+          });
         }
       } catch {
         if (isMounted) {
@@ -2529,12 +2641,16 @@ export function PublicGameApp({
     return () => {
       isMounted = false;
     };
-  }, [shouldLoadCalendar, calendarLoaded, dayKey]);
+  }, [shouldLoadCalendar, supabase, supabaseBlocked, dayKey]);
 
   useEffect(() => {
     if (!calendarLoaded || !calendarDaily.length) return;
-    writeCalendarCache({ daily: calendarDaily });
-  }, [calendarLoaded, calendarDaily]);
+    writeCalendarCache({
+      daily: calendarDaily,
+      ...calendarCacheMetaRef.current,
+      serverDay: calendarCacheMetaRef.current.serverDay || dayKey
+    });
+  }, [calendarLoaded, calendarDaily, dayKey]);
 
   useEffect(() => {
     if (gameMode === "daily") return;
@@ -3472,7 +3588,7 @@ export function PublicGameApp({
     setGuessFeedback(null);
     lastGuessRef.current = null;
     const ids = comarques.map((featureItem) => featureItem.properties.id);
-    const todayKey = getDayKey();
+    const todayKey = activeDayKey || dayKey;
     const baseSeed = gameMode === "daily" ? todayKey : null;
     const seed = baseSeed && !forceNew ? baseSeed : null;
     const rng = seed ? mulberry32(hashString(seed)) : Math.random;
@@ -4473,8 +4589,10 @@ export function PublicGameApp({
   function handleCalendarOpen() {
     playManifestSfx("open");
     setOptionsOpen(false);
-    const now = new Date();
-    let targetMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const todayDate = new Date(`${dayKey}T00:00:00`);
+    let targetMonth = Number.isNaN(todayDate.valueOf())
+      ? new Date()
+      : new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
     if (!calendarDailyMap.has(dayKey)) {
       const latestDay = getLatestUnlockedCalendarDay(calendarDaily, dayKey);
       if (latestDay) {
@@ -4733,8 +4851,8 @@ export function PublicGameApp({
     let nextStreak = dailyStreak;
     const isCurrentDaily = gameMode === "daily" && activeDayKey === dayKey;
     if (isCurrentDaily) {
-      const today = getLocalDayKey(new Date());
-      const yesterday = getLocalDayKeyOffset(-1);
+      const today = dayKey;
+      const yesterday = addDaysToDayKey(dayKey, -1);
       if (dailyStreak.lastDate === today) {
         nextStreak = dailyStreak;
       } else if (dailyStreak.lastDate === yesterday) {
