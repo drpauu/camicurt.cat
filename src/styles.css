@@ -38,10 +38,30 @@
   --map-control-offset: clamp(10px, 1.5vw, 14px);
   --map-control-padding-y: clamp(7px, 0.8vw, 9px);
   --map-control-padding-x: clamp(9px, 1vw, 12px);
+  --app-height: 100vh;
+  --app-height: 100svh;
+  --page-pad-x: clamp(14px, 2vw, 26px);
+  --page-pad-top: clamp(12px, 2.2vh, 20px);
+  --page-pad-bottom: clamp(14px, 2.6vh, 24px);
+  --page-gap: clamp(12px, 2vh, 18px);
+  --layout-gap: clamp(14px, 1.7vw, 20px);
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+}
+
+html {
+  min-width: 0;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  min-width: 0;
+  min-height: 100%;
 }
 
 body {
@@ -50,10 +70,48 @@ body {
   font-size: 18px;
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
-  height: 100vh;
+  min-height: var(--app-height);
+  height: var(--app-height);
   overflow: hidden;
+  overflow-x: hidden;
   position: relative;
+}
+
+button,
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
+:where(
+  .page,
+  .topbar,
+  .brand,
+  .brand-row,
+  .topbar-right,
+  .topbar-actions,
+  .game-layout,
+  .map-wrap,
+  .map-stage,
+  .side-panel,
+  .panel-card,
+  .calendar-panel,
+  .calendar-header,
+  .calendar-body,
+  .calendar-month,
+  .calendar-grid,
+  .modal,
+  .tutorial-shell,
+  .tutorial-copy,
+  .result-modal
+) {
+  min-width: 0;
 }
 
 body::before {
@@ -124,20 +182,25 @@ html[data-weather="wind"] body::before {
 }
 
 .page {
-  padding: 20px 26px 24px;
+  padding:
+    max(var(--page-pad-top), env(safe-area-inset-top))
+    max(var(--page-pad-x), env(safe-area-inset-right))
+    max(var(--page-pad-bottom), env(safe-area-inset-bottom))
+    max(var(--page-pad-x), env(safe-area-inset-left));
   display: grid;
-  gap: 18px;
-  min-height: 100vh;
-  height: 100vh;
+  gap: var(--page-gap);
+  min-height: var(--app-height);
+  height: var(--app-height);
   grid-template-rows: auto 1fr;
   position: relative;
   z-index: 1;
+  overflow: hidden;
 }
 
 .topbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--desktop-panel-column);
-  gap: 20px;
+  gap: var(--layout-gap);
   align-items: end;
 }
 
@@ -364,6 +427,8 @@ textarea:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
+  line-height: 1.12;
 }
 
 .calendar-toggle-button.active {
@@ -429,6 +494,8 @@ textarea:focus-visible {
   font-size: 0.82rem;
   cursor: pointer;
   transition: background 0.15s;
+  min-width: 0;
+  line-height: 1.12;
 }
 
 .calendar-tab.active {
@@ -454,8 +521,13 @@ textarea:focus-visible {
   display: flex;
   justify-content: flex-end;
   align-items: flex-start;
-  padding: 32px;
+  padding:
+    max(32px, env(safe-area-inset-top))
+    max(32px, env(safe-area-inset-right))
+    max(32px, env(safe-area-inset-bottom))
+    max(32px, env(safe-area-inset-left));
   z-index: 50;
+  overflow: hidden;
 }
 
 .calendar-panel {
@@ -463,13 +535,15 @@ textarea:focus-visible {
   border: 1px solid var(--border);
   border-radius: 18px;
   padding: 18px;
-  width: min(520px, 90vw);
+  width: min(520px, calc(100vw - 64px - env(safe-area-inset-left) - env(safe-area-inset-right)));
   display: grid;
   gap: 12px;
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto auto minmax(0, 1fr);
   box-shadow: 0 24px 60px rgba(31, 42, 48, 0.18);
   height: min(80vh, 640px);
+  height: min(80svh, 640px);
   max-height: calc(100vh - 64px);
+  max-height: calc(100svh - 64px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   overflow: hidden;
 }
 
@@ -497,6 +571,8 @@ textarea:focus-visible {
   display: grid;
   gap: 12px;
   min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .calendar-month {
@@ -509,6 +585,8 @@ textarea:focus-visible {
 .calendar-month-label {
   font-weight: 600;
   text-transform: none;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .calendar-weekdays {
@@ -533,8 +611,8 @@ textarea:focus-visible {
   background: var(--surface);
   color: var(--text);
   border-radius: 10px;
-  padding: 9px 7px;
-  min-height: 60px;
+  padding: clamp(6px, 1.35svh, 9px) clamp(5px, 1.2vw, 7px);
+  min-height: clamp(44px, 8.5svh, 60px);
   cursor: pointer;
   display: grid;
   align-content: start;
@@ -675,10 +753,11 @@ h1 {
 .game-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--desktop-panel-column);
-  gap: 20px;
-  align-items: start;
+  gap: var(--layout-gap);
+  align-items: stretch;
   min-height: 0;
   height: 100%;
+  overflow: hidden;
 }
 
 .side-panel {
@@ -1907,8 +1986,13 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding:
+    max(24px, env(safe-area-inset-top))
+    max(24px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom))
+    max(24px, env(safe-area-inset-left));
   z-index: 20;
+  overflow: hidden;
 }
 
 .modal {
@@ -1916,9 +2000,11 @@ h1 {
   border-radius: 8px;
   padding: 28px;
   max-width: 580px;
-  width: min(580px, 100%);
-  max-height: 90vh;
+  width: min(580px, calc(100vw - 48px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  max-height: calc(100vh - 48px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  max-height: calc(100svh - 48px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   overflow-y: auto;
+  overscroll-behavior: contain;
   display: grid;
   gap: 16px;
   border: 1px solid var(--border);
@@ -1955,7 +2041,7 @@ h1 {
 
 .result-modal {
   max-width: 760px;
-  width: min(760px, 100%);
+  width: min(760px, calc(100vw - 48px - env(safe-area-inset-left) - env(safe-area-inset-right)));
   gap: 18px;
   padding: 18px;
 }
@@ -2826,6 +2912,68 @@ button.tutorial-shot {
   }
 }
 
+@media (min-width: 901px) and (max-height: 720px) {
+  :root {
+    --page-pad-top: clamp(10px, 1.8vh, 16px);
+    --page-pad-bottom: clamp(10px, 2vh, 18px);
+    --page-gap: clamp(10px, 1.6vh, 14px);
+    --layout-gap: clamp(12px, 1.4vw, 18px);
+  }
+
+  .panel-card {
+    padding: clamp(14px, 2.2vh, 18px);
+    gap: clamp(9px, 1.5vh, 12px);
+  }
+
+  .side-panel {
+    gap: clamp(10px, 1.7vh, 14px);
+  }
+
+  .map-wrap {
+    padding: clamp(9px, 1.7vh, 12px);
+    gap: clamp(8px, 1.4vh, 10px);
+  }
+
+  .prompt {
+    padding: clamp(9px, 1.6vh, 12px) clamp(11px, 1.5vw, 15px);
+    font-size: clamp(0.94rem, 1.8vh, 1.06rem);
+  }
+
+  .brand-button {
+    min-height: clamp(54px, 9vh, 62px);
+  }
+
+  .brand-logo {
+    width: clamp(66px, 10vh, 76px);
+    height: clamp(56px, 8.5vh, 64px);
+    flex-basis: clamp(66px, 10vh, 76px);
+  }
+
+  .brand-logo-image {
+    width: clamp(82px, 13vh, 92px);
+    height: clamp(82px, 13vh, 92px);
+  }
+
+  h1 {
+    font-size: clamp(2.2rem, 6vh, 2.55rem);
+  }
+
+  .action-card,
+  .options-card,
+  .powerups {
+    gap: clamp(9px, 1.5vh, 14px);
+  }
+}
+
+@media (min-width: 901px) and (max-height: 540px) {
+  .side-panel {
+    height: 100%;
+    max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
 /* ── MOBILE ── */
 @media (max-width: 900px) {
   body {
@@ -2835,9 +2983,15 @@ button.tutorial-shot {
   }
 
   .page {
-    padding: 13px 13px 82px;
+    padding:
+      max(13px, env(safe-area-inset-top))
+      max(13px, env(safe-area-inset-right))
+      calc(82px + env(safe-area-inset-bottom))
+      max(13px, env(safe-area-inset-left));
     height: auto;
     min-height: 100vh;
+    min-height: 100svh;
+    overflow: visible;
   }
 
   .topbar {
@@ -2934,17 +3088,24 @@ button.tutorial-shot {
   }
 
   .calendar-overlay {
-    padding: 16px;
+    padding:
+      max(16px, env(safe-area-inset-top))
+      max(16px, env(safe-area-inset-right))
+      max(16px, env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
     justify-content: center;
     align-items: flex-end;
   }
 
   .calendar-panel {
-    width: 100%;
+    width: calc(100vw - 32px - env(safe-area-inset-left) - env(safe-area-inset-right));
     max-width: none;
     border-radius: 8px 8px 0 0;
     height: min(86vh, 660px);
-    max-height: calc(100vh - 20px);
+    height: min(86svh, 660px);
+    max-height: calc(100vh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    max-height: calc(100svh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    padding: clamp(12px, 3.5vw, 18px);
   }
 
   .stats {
@@ -2974,11 +3135,13 @@ button.tutorial-shot {
   .game-layout {
     grid-template-columns: 1fr;
     gap: 14px;
+    height: auto;
+    overflow: visible;
   }
 
   .map-wrap {
-    height: clamp(340px, 74vw, 450px);
-    min-height: 340px;
+    height: clamp(320px, 74vw, 450px);
+    min-height: min(340px, calc(100svh - 150px));
     max-height: 450px;
     border-radius: 8px;
     gap: 8px;
@@ -3041,19 +3204,29 @@ button.tutorial-shot {
   }
 
   .modal-backdrop {
-    padding: 14px;
+    padding:
+      max(14px, env(safe-area-inset-top))
+      max(14px, env(safe-area-inset-right))
+      max(14px, env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
   }
 
   .tutorial-backdrop {
     align-items: stretch;
-    padding: 10px;
+    padding:
+      max(10px, env(safe-area-inset-top))
+      max(10px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom))
+      max(10px, env(safe-area-inset-left));
   }
 
   .tutorial-modal {
-    width: 100%;
+    width: calc(100vw - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));
     max-width: none;
     height: calc(100dvh - 20px);
+    height: calc(100svh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     max-height: calc(100dvh - 20px);
+    max-height: calc(100svh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     border-radius: 14px;
   }
 
@@ -3222,8 +3395,10 @@ button.tutorial-shot {
   }
 
   .result-modal {
+    width: calc(100vw - 28px - env(safe-area-inset-left) - env(safe-area-inset-right));
     max-width: none;
-    max-height: calc(100vh - 110px);
+    max-height: calc(100vh - 96px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    max-height: calc(100svh - 96px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     padding: 14px;
   }
 
@@ -3252,6 +3427,10 @@ button.tutorial-shot {
 
   .result-actions {
     grid-template-columns: 1fr;
+    position: sticky;
+    bottom: 0;
+    background: var(--panel);
+    padding-top: 8px;
   }
 
   .ranking-lists {
@@ -3352,6 +3531,59 @@ button.tutorial-shot {
   .bottom-nav-new-game .bottom-nav-label {
     font-size: clamp(0.68rem, 2.25vw, 0.82rem);
     font-weight: 750;
+  }
+}
+
+@media (max-width: 900px) and (max-height: 520px) {
+  .page {
+    padding-top: max(9px, env(safe-area-inset-top));
+  }
+
+  .topbar {
+    gap: 6px;
+  }
+
+  .brand h1 {
+    font-size: clamp(1.78rem, 7.5vh, 2.05rem);
+  }
+
+  .brand-logo {
+    width: clamp(50px, 13vh, 58px);
+    height: clamp(44px, 11vh, 50px);
+    flex-basis: clamp(50px, 13vh, 58px);
+  }
+
+  .brand-logo-image {
+    width: clamp(64px, 17vh, 72px);
+    height: clamp(64px, 17vh, 72px);
+  }
+
+  .map-wrap {
+    height: clamp(250px, calc(100svh - 128px), 330px);
+    min-height: 250px;
+  }
+
+  .calendar-overlay {
+    align-items: center;
+  }
+
+  .calendar-panel {
+    border-radius: 8px;
+    height: calc(100svh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    max-height: calc(100svh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+
+  .calendar-day {
+    min-height: 42px;
+    gap: 3px;
+  }
+
+  .modal {
+    padding: 18px;
+  }
+
+  .result-modal {
+    max-height: calc(100svh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   }
 }
 

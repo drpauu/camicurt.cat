@@ -2395,3 +2395,199 @@ test("la barra mobil no talla accions ni solapa el mapa", async ({ page }) => {
   expect(completedMetrics.overlapsCompletedRoute).toBeFalsy();
 });
 
+test("el layout public encaixa sense overflow en viewports clau", async ({ page }) => {
+  const viewports = [
+    { name: "desktop gran", width: 1440, height: 900 },
+    { name: "portatil", width: 1280, height: 720 },
+    { name: "desktop compacte", width: 945, height: 562 },
+    { name: "tablet horitzontal", width: 1024, height: 768 },
+    { name: "tablet vertical", width: 768, height: 1024 },
+    { name: "mobil gran", width: 390, height: 844 },
+    { name: "mobil petit", width: 320, height: 568 },
+    { name: "mobil horitzontal", width: 844, height: 390 },
+    { name: "pantalla baixa", width: 1024, height: 500 },
+    { name: "pantalla estreta", width: 360, height: 740 }
+  ];
+
+  for (const viewport of viewports) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await gotoHome(page);
+    await page.waitForSelector("svg.map");
+    await page.waitForTimeout(120);
+
+    const metrics = await page.evaluate(() => {
+      const isVisible = (element) => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return (
+          style.display !== "none" &&
+          style.visibility !== "hidden" &&
+          rect.width > 0 &&
+          rect.height > 0
+        );
+      };
+      const rectOf = (selector) => document.querySelector(selector)?.getBoundingClientRect() || null;
+      const overlaps = (a, b) =>
+        Boolean(
+          a &&
+            b &&
+            a.left < b.right &&
+            a.right > b.left &&
+            a.top < b.bottom &&
+            a.bottom > b.top
+        );
+      const criticalSelectors = [
+        ".page",
+        ".topbar",
+        ".game-layout",
+        ".map-wrap",
+        ".map-stage",
+        ".map-controls",
+        ".map-brief",
+        ".side-panel",
+        ".play-card",
+        ".topbar-actions",
+        ".bottom-nav"
+      ];
+      const badHorizontal = criticalSelectors.flatMap((selector) =>
+        [...document.querySelectorAll(selector)]
+          .filter(isVisible)
+          .map((element) => {
+            const rect = element.getBoundingClientRect();
+            return {
+              selector,
+              left: Math.round(rect.left),
+              right: Math.round(rect.right),
+              width: Math.round(rect.width)
+            };
+          })
+          .filter((rect) => rect.left < -1 || rect.right > window.innerWidth + 1)
+      );
+      const checkedButtons = [
+        ...document.querySelectorAll(
+          ".topbar-actions button, .bottom-nav button, .map-controls button, .submit, .options-launch-button"
+        )
+      ].filter(isVisible);
+      const clippedButtons = checkedButtons
+        .map((button) => {
+          const rect = button.getBoundingClientRect();
+          return {
+            text: button.textContent.trim(),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+            scrollWidth: button.scrollWidth,
+            clientWidth: button.clientWidth,
+            scrollHeight: button.scrollHeight,
+            clientHeight: button.clientHeight
+          };
+        })
+        .filter(
+          (button) =>
+            button.scrollWidth > button.clientWidth + 2 ||
+            button.scrollHeight > button.clientHeight + 2
+        );
+      const prompt = rectOf(".map-brief");
+      const svg = rectOf("svg.map");
+      const controls = rectOf(".map-controls");
+      const bottomNav = rectOf(".bottom-nav");
+      const map = rectOf(".map-wrap");
+      return {
+        rootOverflow: document.documentElement.scrollWidth - window.innerWidth,
+        bodyOverflow: document.body.scrollWidth - window.innerWidth,
+        badHorizontal,
+        clippedButtons,
+        mapInsideViewport:
+          Boolean(map) && map.left >= -1 && map.right <= window.innerWidth + 1,
+        controlsInsideMap:
+          Boolean(controls && map) &&
+          controls.left >= map.left - 1 &&
+          controls.right <= map.right + 1 &&
+          controls.top >= map.top - 1 &&
+          controls.bottom <= map.bottom + 1,
+        promptOverlapsControls: overlaps(prompt, controls),
+        promptOverlapsSvg: overlaps(prompt, svg),
+        promptBeforeSvg: Boolean(prompt && svg) && prompt.bottom <= svg.top + 1,
+        bottomNavInsideViewport:
+          !bottomNav ||
+          (bottomNav.left >= -1 &&
+            bottomNav.right <= window.innerWidth + 1 &&
+            bottomNav.bottom <= window.innerHeight + 1)
+      };
+    });
+
+    expect(metrics.rootOverflow, viewport.name).toBeLessThanOrEqual(1);
+    expect(metrics.bodyOverflow, viewport.name).toBeLessThanOrEqual(1);
+    expect(metrics.badHorizontal, viewport.name).toEqual([]);
+    expect(metrics.clippedButtons, viewport.name).toEqual([]);
+    expect(metrics.mapInsideViewport, viewport.name).toBeTruthy();
+    expect(metrics.controlsInsideMap, viewport.name).toBeTruthy();
+    expect(metrics.promptOverlapsControls, viewport.name).toBeFalsy();
+    expect(metrics.promptOverlapsSvg, viewport.name).toBeFalsy();
+    expect(metrics.promptBeforeSvg, viewport.name).toBeTruthy();
+    expect(metrics.bottomNavInsideViewport, viewport.name).toBeTruthy();
+
+    await page.getByRole("button", { name: /Calendari/i }).first().click();
+    await expect(page.locator(".calendar-panel")).toBeVisible();
+    await page.waitForTimeout(120);
+
+    const calendarMetrics = await page.evaluate(() => {
+      const panel = document.querySelector(".calendar-panel")?.getBoundingClientRect();
+      const body = document.querySelector(".calendar-body")?.getBoundingClientRect();
+      const grid = document.querySelector(".calendar-grid")?.getBoundingClientRect();
+      const isVisible = (element) => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return (
+          style.display !== "none" &&
+          style.visibility !== "hidden" &&
+          rect.width > 0 &&
+          rect.height > 0
+        );
+      };
+      const clippedButtons = [...document.querySelectorAll(".calendar-panel button")]
+        .filter(isVisible)
+        .map((button) => ({
+          text: button.textContent.trim(),
+          scrollWidth: button.scrollWidth,
+          clientWidth: button.clientWidth,
+          scrollHeight: button.scrollHeight,
+          clientHeight: button.clientHeight
+        }))
+        .filter(
+          (button) =>
+            button.scrollWidth > button.clientWidth + 2 ||
+            button.scrollHeight > button.clientHeight + 2
+        );
+      const daySizes = [...document.querySelectorAll(".calendar-day")]
+        .filter(isVisible)
+        .map((day) => {
+          const rect = day.getBoundingClientRect();
+          return { width: rect.width, height: rect.height };
+        });
+      return {
+        panelInsideViewport:
+          Boolean(panel) &&
+          panel.left >= -1 &&
+          panel.top >= -1 &&
+          panel.right <= window.innerWidth + 1 &&
+          panel.bottom <= window.innerHeight + 1,
+        gridFitsPanel: Boolean(grid && body) && grid.width <= body.width + 2,
+        dayCount: daySizes.length,
+        tinyDays: daySizes.filter((day) => day.width < 30 || day.height < 38),
+        clippedButtons,
+        rootOverflow: document.documentElement.scrollWidth - window.innerWidth
+      };
+    });
+
+    expect(calendarMetrics.panelInsideViewport, viewport.name).toBeTruthy();
+    expect(calendarMetrics.gridFitsPanel, viewport.name).toBeTruthy();
+    expect(calendarMetrics.dayCount, viewport.name).toBeGreaterThanOrEqual(28);
+    expect(calendarMetrics.tinyDays, viewport.name).toEqual([]);
+    expect(calendarMetrics.clippedButtons, viewport.name).toEqual([]);
+    expect(calendarMetrics.rootOverflow, viewport.name).toBeLessThanOrEqual(1);
+
+    await page.locator(".calendar-header .icon-button").click();
+    await expect(page.locator(".calendar-panel")).toHaveCount(0);
+  }
+});
+
