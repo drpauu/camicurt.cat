@@ -32,7 +32,7 @@ export default function AulaLanding() {
             pensament lògic a classe.
           </p>
           <div className="aula-actions">
-            <AulaButton href="mailto:hola@camicurt.cat?subject=Prova%20gratu%C3%AFta%20Camicurt%20Aula">
+            <AulaButton href="mailto:pau@camicurt.cat?subject=Prova%20gratu%C3%AFta%20Camicurt%20Aula">
               Demanar prova gratuïta
             </AulaButton>
             <AulaButton href="/aula/login" variant="secondary">

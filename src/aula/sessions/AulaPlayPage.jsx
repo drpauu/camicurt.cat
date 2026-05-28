@@ -28,7 +28,8 @@ function toFixedLevelSnapshot(challenge) {
     mustPassIds: challenge.mustPassIds || [],
     shortestPath: challenge.shortestPath || [],
     shortestInternalCount: challenge.shortestInternalCount,
-    studentPrompt: challenge.studentPrompt || ""
+    studentPrompt: challenge.studentPrompt || "",
+    gameSettings: challenge.gameSettings || {}
   };
 }
 
@@ -51,11 +52,13 @@ export default function AulaPlayPage({ sessionId, PublicGameApp }) {
               ...(result.playerPath || []).map((entry) => entry.id).filter(Boolean),
               fixedLevelSnapshot.targetId
             ];
+      const completed = !result.failed;
       await submitAulaResult({
         sessionId,
         participantId: participant.participantId,
         participantToken: participant.participantToken,
-        completed: true,
+        completed,
+        failureReason: completed ? null : result.failureReason || "manual",
         attempts: (result.playerPath || []).map((entry) => entry.id || entry.name).filter(Boolean),
         attemptsCount: result.attempts || 0,
         timeSeconds: Math.round((result.timeMs || 0) / 1000),
@@ -68,7 +71,8 @@ export default function AulaPlayPage({ sessionId, PublicGameApp }) {
         clientPayload: {
           difficulty: result.difficulty,
           ruleLabel: result.ruleLabel,
-          displayName: participant.displayName
+          displayName: participant.displayName,
+          sessionType: participant.session?.type || "classroom"
         }
       });
       setSubmitState("sent");
@@ -100,6 +104,7 @@ export default function AulaPlayPage({ sessionId, PublicGameApp }) {
       <div className="aula-play-bar">
         <strong>Camicurt Aula</strong>
         <span>{participant.displayName}</span>
+        {participant.session?.type === "homework" ? <span>Deures</span> : null}
         {message ? <span>{message}</span> : null}
         <a href="/aula/join">Sortir</a>
       </div>

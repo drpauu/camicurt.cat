@@ -96,7 +96,34 @@ function challengeSnapshot(challenge: any) {
     mustPassIds: challenge.must_pass_ids || [],
     shortestPath: challenge.shortest_path || [],
     shortestInternalCount: challenge.shortest_internal_count,
-    studentPrompt: challenge.student_prompt || ""
+    studentPrompt: challenge.student_prompt || "",
+    gameSettings: challenge.game_settings || {}
+  };
+}
+
+function mergeGameSettings(challenge: any, session: any) {
+  const challengeSettings =
+    challenge?.game_settings && typeof challenge.game_settings === "object"
+      ? challenge.game_settings
+      : {};
+  const sessionSettings =
+    session?.settings && typeof session.settings === "object" ? session.settings : {};
+  return {
+    ...challengeSettings,
+    ...sessionSettings
+  };
+}
+
+function sessionSnapshot(session: any) {
+  return {
+    id: session.id,
+    title: session.title || "",
+    type: session.session_type || "classroom",
+    status: session.status,
+    joinCode: session.join_code,
+    dueAt: session.due_at || null,
+    instructions: session.instructions || "",
+    expiresAt: session.expires_at
   };
 }
 
@@ -148,8 +175,18 @@ async function handleJoin(req: Request, supabase: any, payload: any) {
     return json(req, { error: "La sessió ha caducat." }, 410);
   }
 
+  const { data: existingParticipant, error: existingError } = await supabase
+    .from("aula_participants")
+    .select("id")
+    .eq("session_id", session.id)
+    .eq("display_name_normalized", displayName.toLowerCase().trim())
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (existingError) throw existingError;
+
   const license = await requireActiveLicense(supabase, session.organization_id);
-  if (license.max_participants_per_session !== null) {
+  if (!existingParticipant?.id && license.max_participants_per_session !== null) {
     const { count, error: countError } = await supabase
       .from("aula_participants")
       .select("id", { count: "exact", head: true })
@@ -162,23 +199,44 @@ async function handleJoin(req: Request, supabase: any, payload: any) {
 
   const participantToken = createToken();
   const participantTokenHash = await sha256Hex(participantToken);
-  const { data: participant, error: participantError } = await supabase
-    .from("aula_participants")
-    .insert({
-      session_id: session.id,
-      display_name: displayName,
-      participant_token_hash: participantTokenHash,
-      last_seen_at: new Date().toISOString()
-    })
-    .select("id")
-    .single();
-  if (participantError) throw participantError;
+
+  let participant = existingParticipant;
+  if (participant?.id) {
+    const { data: updatedParticipant, error: updateError } = await supabase
+      .from("aula_participants")
+      .update({
+        participant_token_hash: participantTokenHash,
+        last_seen_at: new Date().toISOString()
+      })
+      .eq("id", participant.id)
+      .select("id")
+      .single();
+    if (updateError) throw updateError;
+    participant = updatedParticipant;
+  } else {
+    const { data: insertedParticipant, error: participantError } = await supabase
+      .from("aula_participants")
+      .insert({
+        session_id: session.id,
+        display_name: displayName,
+        participant_token_hash: participantTokenHash,
+        last_seen_at: new Date().toISOString()
+      })
+      .select("id")
+      .single();
+    if (participantError) throw participantError;
+    participant = insertedParticipant;
+  }
+
+  const challenge = challengeSnapshot(session.challenge);
+  challenge.gameSettings = mergeGameSettings(session.challenge, session);
 
   return json(req, {
     sessionId: session.id,
     participantId: participant.id,
     participantToken,
-    challenge: challengeSnapshot(session.challenge)
+    session: sessionSnapshot(session),
+    challenge
   });
 }
 
@@ -206,12 +264,15 @@ async function handleSubmit(req: Request, supabase: any, payload: any) {
 
   const { data: session, error: sessionError } = await supabase
     .from("aula_sessions")
-    .select("id,status,organization_id")
+    .select("id,status,organization_id,expires_at")
     .eq("id", sessionId)
     .maybeSingle();
   if (sessionError) throw sessionError;
   if (!session || session.status === "archived") {
     return json(req, { error: "La sessió no accepta resultats." }, 409);
+  }
+  if (new Date(session.expires_at).getTime() <= Date.now()) {
+    return json(req, { error: "La sessió ha caducat." }, 410);
   }
   await requireActiveLicense(supabase, session.organization_id);
 
@@ -224,6 +285,11 @@ async function handleSubmit(req: Request, supabase: any, payload: any) {
   const optimalInternalCount = clampInt(payload.optimalInternalCount, null, 0, 100);
   const foundInternalCount = clampInt(payload.foundInternalCount, null, 0, 100);
   const distanceFromOptimal = clampInt(payload.distanceFromOptimal, null, 0, 100);
+  const failureReason = ["attempts", "time", "abandoned", "manual"].includes(
+    String(payload.failureReason || "")
+  )
+    ? String(payload.failureReason)
+    : null;
   const clientPayload =
     payload.clientPayload && typeof payload.clientPayload === "object"
       ? payload.clientPayload
@@ -247,6 +313,7 @@ async function handleSubmit(req: Request, supabase: any, payload: any) {
         optimal_path: optimalPath,
         client_payload: clientPayload,
         verified: false,
+        failure_reason: Boolean(payload.completed) ? null : failureReason,
         submitted_at: new Date().toISOString()
       },
       { onConflict: "session_id,participant_id" }

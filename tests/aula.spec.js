@@ -65,3 +65,11 @@ test("les rutes SPA d'Aula es poden refrescar", async ({ page }) => {
   await page.goto("/aula/materials", { waitUntil: "domcontentloaded" });
   await expect(page.locator("body")).toContainText(/Camicurt Aula|Accés restringit/);
 });
+
+test("les rutes de nivells i deures d'Aula es poden refrescar", async ({ page }) => {
+  await page.goto("/aula/levels", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("body")).toContainText(/Crear nivell|Accés restringit|Camicurt Aula/);
+
+  await page.goto("/aula/homework", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("body")).toContainText(/Assignar deures|Accés restringit|Camicurt Aula/);
+});

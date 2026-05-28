@@ -2,6 +2,12 @@
 
 Executa aquests exemples des del SQL editor de Supabase. Canvia emails, noms i dates abans d'aplicar-los.
 
+## Llicencia demo per testing
+
+Per proves locals o staging, pots executar el fitxer `supabase/aula_demo_license.sql` des del SQL editor de Supabase. Abans d'executar-lo, canvia la constant `v_teacher_email` pel correu amb que faras login a `/aula/login`.
+
+Aquest script no es una migracio: es idempotent, refresca una llicencia demo de 90 dies amb pla `centre` i activa les features necessaries per provar nivells personalitzats, deures, projector, CSV i estadistiques.
+
 ## Crear organitzacio i llicencia
 
 ```sql

@@ -50,6 +50,12 @@ export default function AulaPanel({ access }) {
         </div>
         <div className="aula-actions">
           <AulaButton href="/aula/sessions/new">Crear sessió</AulaButton>
+          <AulaButton href="/aula/levels" variant="secondary">
+            Crear nivell
+          </AulaButton>
+          <AulaButton href="/aula/homework" variant="secondary">
+            Assignar deures
+          </AulaButton>
           <AulaButton href="/aula/materials" variant="secondary">
             Materials docents
           </AulaButton>
@@ -75,6 +81,7 @@ export default function AulaPanel({ access }) {
                 <tr>
                   <th>Títol</th>
                   <th>Codi</th>
+                  <th>Tipus</th>
                   <th>Estat</th>
                   <th>Data</th>
                   <th>Accions</th>
@@ -87,6 +94,7 @@ export default function AulaPanel({ access }) {
                     <td>
                       <strong>{session.join_code}</strong>
                     </td>
+                    <td>{session.session_type === "homework" ? "Deures" : "Aula"}</td>
                     <td>{session.status}</td>
                     <td>{formatDate(session.created_at)}</td>
                     <td>

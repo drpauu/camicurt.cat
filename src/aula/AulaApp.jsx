@@ -8,6 +8,8 @@ import AulaPanel from "./AulaPanel.jsx";
 import AulaProtectedRoute from "./AulaProtectedRoute.jsx";
 import AulaBlocked from "./components/AulaBlocked.jsx";
 import AulaLayout from "./components/AulaLayout.jsx";
+import HomeworkPage from "./homework/HomeworkPage.jsx";
+import LevelBuilderPage from "./levels/LevelBuilderPage.jsx";
 import AulaPlayPage from "./sessions/AulaPlayPage.jsx";
 import CreateSessionPage from "./sessions/CreateSessionPage.jsx";
 import JoinSessionPage from "./sessions/JoinSessionPage.jsx";
@@ -44,6 +46,20 @@ export default function AulaApp({ PublicGameApp }) {
   if (pathname === "/aula/materials") {
     return (
       <AulaProtectedRoute>{(access) => <AulaMaterials access={access} />}</AulaProtectedRoute>
+    );
+  }
+  if (pathname === "/aula/levels") {
+    return (
+      <AulaProtectedRoute>
+        {(access) => <LevelBuilderPage access={access} PublicGameApp={PublicGameApp} />}
+      </AulaProtectedRoute>
+    );
+  }
+  if (pathname === "/aula/homework") {
+    return (
+      <AulaProtectedRoute>
+        {(access) => <HomeworkPage access={access} />}
+      </AulaProtectedRoute>
     );
   }
   if (pathname === "/aula/admin") {

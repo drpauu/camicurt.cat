@@ -38,6 +38,7 @@ import {
 } from "./lib/completion.js";
 import { ThemeProvider } from "./ThemeProvider.jsx";
 import AulaApp from "./aula/AulaApp.jsx";
+import AristocraciaApp from "./aristocracia/AristocraciaApp.jsx";
 
 const VIEW_WIDTH = 900;
 const VIEW_HEIGHT = 700;
@@ -157,6 +158,9 @@ function BrandLogo({ className = "" }) {
 
 export default function App() {
   const pathname = typeof window === "undefined" ? "/" : window.location.pathname;
+  if (pathname.startsWith("/aristocracia")) {
+    return <AristocraciaApp />;
+  }
   if (pathname.startsWith("/aula")) {
     return <AulaApp PublicGameApp={PublicGameApp} />;
   }
@@ -1371,6 +1375,60 @@ function getMaxAttemptsForDifficulty(difficultyId, shortestCount) {
   return Math.max(optimal + margin, 1);
 }
 
+function clampPositiveInteger(value, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return null;
+  return Math.max(min, Math.min(max, Math.trunc(number)));
+}
+
+function normalizeAulaGameMode(value) {
+  return ["normal", "timed", "explore"].includes(value) ? value : "normal";
+}
+
+function normalizeAulaGameSettings(snapshot) {
+  const raw =
+    snapshot?.gameSettings && typeof snapshot.gameSettings === "object"
+      ? snapshot.gameSettings
+      : snapshot?.game_settings && typeof snapshot.game_settings === "object"
+        ? snapshot.game_settings
+        : {};
+  return {
+    mode: normalizeAulaGameMode(raw.mode || snapshot?.gameMode || "normal"),
+    maxAttempts: clampPositiveInteger(raw.max_attempts ?? raw.maxAttempts, 1, 500),
+    timeLimitSeconds: clampPositiveInteger(
+      raw.time_limit_seconds ?? raw.timeLimitSeconds,
+      10,
+      7200
+    ),
+    allowPowerups: Boolean(raw.allow_powerups ?? raw.allowPowerups ?? snapshot?.allowPowerups),
+    showRanking: raw.show_ranking ?? raw.showRanking ?? true,
+    showSolutionAtEnd: raw.show_solution_at_end ?? raw.showSolutionAtEnd ?? true,
+    powerups: raw.powerups && typeof raw.powerups === "object" ? raw.powerups : null
+  };
+}
+
+function getAulaPowerupUses(settings, difficultyId) {
+  if (settings.mode === "explore") {
+    return Object.fromEntries(POWERUPS.map((powerup) => [powerup.id, 99]));
+  }
+  if (!settings.allowPowerups) {
+    return Object.fromEntries(POWERUPS.map((powerup) => [powerup.id, 0]));
+  }
+  const defaults = getPowerupUses(difficultyId);
+  if (!settings.powerups) return defaults;
+  return Object.fromEntries(
+    POWERUPS.map((powerup) => {
+      const value = Number(settings.powerups[powerup.id]);
+      return [
+        powerup.id,
+        Number.isFinite(value) && value >= 0
+          ? Math.max(0, Math.min(99, Math.trunc(value)))
+          : defaults[powerup.id] ?? 0
+      ];
+    })
+  );
+}
+
 function formatRuleDifficulty(value) {
   if (value === "easy") return "Fàcil";
   if (value === "medium") return "Mitjà";
@@ -1837,6 +1895,8 @@ export function PublicGameApp({
   const [isOnline, setIsOnline] = useState(true);
   const [timeLimitMs, setTimeLimitMs] = useState(DEFAULT_TIME_LIMIT_MS);
   const [timePenaltyMs, setTimePenaltyMs] = useState(0);
+  const [aulaAttemptLimit, setAulaAttemptLimit] = useState(null);
+  const [aulaShowSolutionAtEnd, setAulaShowSolutionAtEnd] = useState(true);
 
   const svgRef = useRef(null);
   const gRef = useRef(null);
@@ -2594,29 +2654,43 @@ export function PublicGameApp({
   useEffect(() => {
     if (!isTimedMode || !startedAt || isComplete || isFailed) return;
     if (timeLeftMs <= 0) {
+      const shortestCount = shortestPath.length ? Math.max(shortestPath.length - 2, 0) : 0;
+      const foundCount = pathInGuesses.length ? Math.max(pathInGuesses.length - 2, 0) : 0;
+      const shortestNames = shortestPath
+        .filter((id) => id !== startId && id !== targetId)
+        .map((pathId) => comarcaById.get(pathId)?.properties.name || pathId);
+      const timeoutPayload = {
+        failed: true,
+        failureReason: "time",
+        attempts,
+        maxAttempts,
+        timeMs: elapsedMs,
+        playerPath: guessHistory,
+        ruleLabel: activeRule?.label || t("noRule"),
+        ruleDifficulty: activeRule?.difficulty || null,
+        ruleExplanation: activeRule?.explanation || "",
+        ruleComarques: activeRule?.comarques || [],
+        shortestPath: shortestNames,
+        shortestCount,
+        foundCount,
+        distance: Math.max(foundCount - shortestCount, 0),
+        mode: gameMode,
+        difficulty: activeDifficulty,
+        streak: displayStreak,
+        levelSnapshot: buildCurrentLevelSnapshot()
+      };
       play("level_lose", { bypassCooldown: true });
       setIsFailed(true);
       setShowModal(true);
-      setResultData((prev) =>
-        prev || {
-          failed: true,
-          attempts,
-          maxAttempts,
-          timeMs: elapsedMs,
-          playerPath: guessHistory,
-          ruleLabel: activeRule?.label || t("noRule"),
-          ruleDifficulty: activeRule?.difficulty || null,
-          ruleExplanation: activeRule?.explanation || "",
-          ruleComarques: activeRule?.comarques || [],
-          shortestPath: [],
-          shortestCount: 0,
-          distance: 0,
-          mode: gameMode,
-          difficulty: activeDifficulty,
-          streak: displayStreak,
-          levelSnapshot: buildCurrentLevelSnapshot()
-        }
-      );
+      setResultData((prev) => prev || timeoutPayload);
+      if (isAulaMode && onClassroomComplete && !aulaCompletionSentRef.current) {
+        aulaCompletionSentRef.current = true;
+        void onClassroomComplete({
+          ...timeoutPayload,
+          foundPathIds: pathInGuesses,
+          accuracy: getRouteAccuracy(timeoutPayload)
+        });
+      }
       enqueueTelemetry("level_fail", {
         reason: "timeout",
         attempts,
@@ -2634,6 +2708,15 @@ export function PublicGameApp({
     guessHistory,
     activeRule,
     activeDifficulty,
+    shortestPath,
+    startId,
+    targetId,
+    comarcaById,
+    pathInGuesses,
+    maxAttempts,
+    isAulaMode,
+    onClassroomComplete,
+    displayStreak,
     dailyStreak,
     play,
     t
@@ -2662,9 +2745,16 @@ export function PublicGameApp({
 
   useEffect(() => {
     if (!isAulaMode || !fixedLevelSnapshot || !comarques.length || !adjacency.size) return;
+    const settingsKey = JSON.stringify(
+      fixedLevelSnapshot.gameSettings || fixedLevelSnapshot.game_settings || {}
+    );
     const key = `${classroomSession?.sessionId || "aula"}:${fixedLevelSnapshot.id || ""}:${
       fixedLevelSnapshot.startId || fixedLevelSnapshot.start_id
-    }:${fixedLevelSnapshot.targetId || fixedLevelSnapshot.target_id}`;
+    }:${fixedLevelSnapshot.targetId || fixedLevelSnapshot.target_id}:${
+      Array.isArray(fixedLevelSnapshot.shortestPath)
+        ? fixedLevelSnapshot.shortestPath.join(">")
+        : ""
+    }:${settingsKey}`;
     if (aulaApplyRef.current === key) return;
     aulaApplyRef.current = key;
     applyAulaLevel(fixedLevelSnapshot);
@@ -3112,8 +3202,9 @@ export function PublicGameApp({
   );
   const maxAttempts = useMemo(() => {
     if (isExploreMode || optimalCount === null) return null;
+    if (isAulaMode && aulaAttemptLimit) return aulaAttemptLimit;
     return getMaxAttemptsForDifficulty(activeDifficulty, optimalCount);
-  }, [activeDifficulty, isExploreMode, optimalCount]);
+  }, [activeDifficulty, aulaAttemptLimit, isAulaMode, isExploreMode, optimalCount]);
 
   function resolveShortestPaths(start, target, rule, fallbackPath = []) {
     const allIds = comarques.map((featureItem) => featureItem.properties.id);
@@ -3564,6 +3655,8 @@ export function PublicGameApp({
       classifyDifficultyByShortestCount(Math.max(nextShortest.length - 2, 0));
     const basePowerups = getPowerupUses(levelDifficulty);
     setLevelDifficultyId(levelDifficulty);
+    setAulaAttemptLimit(null);
+    setAulaShowSolutionAtEnd(true);
 
     setStartId(start);
     setTargetId(target);
@@ -3647,12 +3740,14 @@ export function PublicGameApp({
       snapshot.difficulty_id ||
       snapshot.difficulty ||
       classifyDifficultyByShortestCount(Math.max(nextShortest.length - 2, 0));
-    const basePowerups = snapshot.allowPowerups
-      ? getPowerupUses(levelDifficulty)
-      : Object.fromEntries(POWERUPS.map((powerup) => [powerup.id, 0]));
+    const aulaSettings = normalizeAulaGameSettings(snapshot);
+    const basePowerups = getAulaPowerupUses(aulaSettings, levelDifficulty);
+    const internalCount = Math.max(nextShortest.length - 2, 0);
 
-    setGameMode("normal");
+    setGameMode(aulaSettings.mode);
     setLevelDifficultyId(levelDifficulty);
+    setAulaAttemptLimit(aulaSettings.maxAttempts);
+    setAulaShowSolutionAtEnd(aulaSettings.showSolutionAtEnd !== false);
     setStartId(start);
     setTargetId(target);
     setCurrentId(start);
@@ -3682,9 +3777,17 @@ export function PublicGameApp({
     setElapsedMs(0);
     setStartedAt(null);
     setTimePenaltyMs(0);
-    setTimeLimitMs(DEFAULT_TIME_LIMIT_MS);
-    setIsCountdownActive(false);
-    setCountdownValue(null);
+    if (aulaSettings.mode === "timed") {
+      const configuredMs = aulaSettings.timeLimitSeconds
+        ? aulaSettings.timeLimitSeconds * 1000
+        : Math.max(15000, internalCount * 5000);
+      setTimeLimitMs(configuredMs);
+      beginTimedCountdown();
+    } else {
+      setTimeLimitMs(DEFAULT_TIME_LIMIT_MS);
+      setIsCountdownActive(false);
+      setCountdownValue(null);
+    }
     setLastEntryId(null);
     setCopyStatus("idle");
     aulaCompletionSentRef.current = false;
@@ -4058,6 +4161,8 @@ export function PublicGameApp({
     }
     const generatedDifficulty = classifyDifficultyByShortestCount(nextShortest);
     setLevelDifficultyId(generatedDifficulty);
+    setAulaAttemptLimit(null);
+    setAulaShowSolutionAtEnd(true);
 
     setStartId(start);
     setTargetId(target);
@@ -4373,10 +4478,7 @@ export function PublicGameApp({
       .map((pathId) => comarcaById.get(pathId)?.properties.name || pathId);
     playManifestSfx("error");
     play("level_lose", { bypassCooldown: true });
-    setIsFailed(true);
-    setShowModal(true);
-    setCompletionCelebrating(false);
-    setResultData({
+    const failurePayload = {
       failed: true,
       failureReason: "attempts",
       attempts: nextAttempts,
@@ -4399,7 +4501,19 @@ export function PublicGameApp({
       dayKey: isDailyMode ? activeDayKey : null,
       streak: displayStreak,
       levelSnapshot: buildCurrentLevelSnapshot()
-    });
+    };
+    setIsFailed(true);
+    setShowModal(true);
+    setCompletionCelebrating(false);
+    setResultData(failurePayload);
+    if (isAulaMode && onClassroomComplete && !aulaCompletionSentRef.current) {
+      aulaCompletionSentRef.current = true;
+      void onClassroomComplete({
+        ...failurePayload,
+        foundPathIds: nextPath,
+        accuracy: getRouteAccuracy(failurePayload)
+      });
+    }
     enqueueTelemetry("level_fail", {
       reason: "attempt_limit",
       attempts: nextAttempts,
@@ -5450,7 +5564,8 @@ export function PublicGameApp({
       ...(!failed && resultTarget ? [resultTarget] : [])
     ]);
     const accuracy = getRouteAccuracy(normalizedResult);
-    const showOptimalPath = !failed && optimalRouteNames.length > 1;
+    const showOptimalPath =
+      !failed && optimalRouteNames.length > 1 && (!isAulaMode || aulaShowSolutionAtEnd);
     return {
       title,
       subtitle,
@@ -5469,6 +5584,8 @@ export function PublicGameApp({
     resultData,
     isFailed,
     gameMode,
+    isAulaMode,
+    aulaShowSolutionAtEnd,
     startName,
     targetName,
     t
@@ -6360,4 +6477,3 @@ export function PublicGameApp({
     </ThemeProvider>
   );
 }
-

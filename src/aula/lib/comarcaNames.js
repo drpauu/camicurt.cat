@@ -42,6 +42,10 @@ const COMARCA_NAMES = {
   "valles-oriental": "Vallès Oriental"
 };
 
+export const COMARCA_OPTIONS = Object.entries(COMARCA_NAMES)
+  .map(([id, name]) => ({ id, name }))
+  .sort((a, b) => a.name.localeCompare(b.name, "ca"));
+
 export function formatComarcaName(id) {
   return COMARCA_NAMES[id] || id || "";
 }

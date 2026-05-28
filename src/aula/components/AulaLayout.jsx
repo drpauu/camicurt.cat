@@ -25,6 +25,8 @@ export default function AulaLayout({ children, access = null, wide = false }) {
         <nav className="aula-nav" aria-label="Navegació Aula">
           <a href="/aula/panel">Panell</a>
           <a href="/aula/sessions/new">Crear sessió</a>
+          <a href="/aula/levels">Nivells</a>
+          <a href="/aula/homework">Deures</a>
           <a href="/aula/materials">Materials</a>
           <a href="/aula/join">Entrar amb codi</a>
           {isAdmin ? <a href="/aula/admin">Admin</a> : null}

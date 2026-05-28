@@ -27,6 +27,7 @@
     "calendar:repair-invalid-rules": "node scripts/generate-level.mjs repair-invalid-rules 2026-01-01 2028-12-31",
     "calendar:health": "node scripts/check-daily-calendar-health.mjs",
     "calendar:health:public": "node scripts/check-public-calendar-bootstrap.mjs",
+    "aristocracia:owner": "node scripts/create-aristocracia-owner.mjs",
     "levels:health": "node scripts/check-level-health.mjs",
     "levels:repair-invalid-rules": "node scripts/generate-level.mjs repair-all-invalid-rules",
     "audio:generate": "node scripts/generate-audio-placeholders.mjs",

@@ -5,23 +5,22 @@ import AulaLayout from "../components/AulaLayout.jsx";
 import AulaLoading from "../components/AulaLoading.jsx";
 import {
   createAulaSession,
-  listChallengePacks,
-  listChallenges,
+  listAulaLevels,
   setAulaSessionStatus
 } from "../lib/aulaApi.js";
+import { formatComarcaName } from "../lib/comarcaNames.js";
 
 export default function CreateSessionPage({ access }) {
-  const [packs, setPacks] = useState([]);
-  const [challenges, setChallenges] = useState([]);
-  const [packId, setPackId] = useState("");
+  const [levels, setLevels] = useState([]);
+  const [levelFilter, setLevelFilter] = useState("all");
   const [challengeId, setChallengeId] = useState("");
   const [title, setTitle] = useState("");
   const [settings, setSettings] = useState({
-    mode: "equips",
+    classroom_mode: "equips",
     time_limit_seconds: "",
-    show_ranking: true,
-    show_solution_at_end: true,
-    allow_powerups: false
+    show_ranking: "level",
+    show_solution_at_end: "level",
+    allow_powerups: "level"
   });
   const [created, setCreated] = useState(null);
   const [status, setStatus] = useState("loading");
@@ -29,12 +28,11 @@ export default function CreateSessionPage({ access }) {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([listChallengePacks(), listChallenges()])
-      .then(([packItems, challengeItems]) => {
+    listAulaLevels()
+      .then((levelItems) => {
         if (cancelled) return;
-        setPacks(packItems);
-        setChallenges(challengeItems);
-        setPackId(packItems[0]?.id || "");
+        setLevels(levelItems);
+        setChallengeId(levelItems[0]?.id || "");
         setStatus("ready");
       })
       .catch((error) => {
@@ -48,16 +46,21 @@ export default function CreateSessionPage({ access }) {
     };
   }, []);
 
-  const filteredChallenges = useMemo(
-    () => challenges.filter((challenge) => !packId || challenge.pack_id === packId),
-    [challenges, packId]
+  const filteredLevels = useMemo(
+    () =>
+      levels.filter((level) => {
+        if (levelFilter === "custom") return level.source === "custom";
+        if (levelFilter === "packs") return level.source !== "custom";
+        return true;
+      }),
+    [levels, levelFilter]
   );
 
   useEffect(() => {
-    if (!filteredChallenges.some((challenge) => challenge.id === challengeId)) {
-      setChallengeId(filteredChallenges[0]?.id || "");
+    if (!filteredLevels.some((level) => level.id === challengeId)) {
+      setChallengeId(filteredLevels[0]?.id || "");
     }
-  }, [filteredChallenges, challengeId]);
+  }, [filteredLevels, challengeId]);
 
   function updateSetting(key, value) {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -69,11 +72,20 @@ export default function CreateSessionPage({ access }) {
     setMessage("");
     try {
       const cleanSettings = {
-        ...settings,
-        time_limit_seconds: settings.time_limit_seconds
-          ? Number(settings.time_limit_seconds)
-          : null
+        classroom_mode: settings.classroom_mode
       };
+      if (settings.time_limit_seconds) {
+        cleanSettings.time_limit_seconds = Number(settings.time_limit_seconds);
+      }
+      if (settings.show_ranking !== "level") {
+        cleanSettings.show_ranking = settings.show_ranking === "true";
+      }
+      if (settings.show_solution_at_end !== "level") {
+        cleanSettings.show_solution_at_end = settings.show_solution_at_end === "true";
+      }
+      if (settings.allow_powerups !== "level") {
+        cleanSettings.allow_powerups = settings.allow_powerups === "true";
+      }
       const session = await createAulaSession({
         challengeId,
         title,
@@ -135,25 +147,24 @@ export default function CreateSessionPage({ access }) {
         <AulaCard>
           <form className="aula-form aula-form-grid" onSubmit={handleSubmit}>
             <label>
-              Pack
-              <select value={packId} onChange={(event) => setPackId(event.target.value)} required>
-                {packs.map((pack) => (
-                  <option key={pack.id} value={pack.id}>
-                    {pack.title}
-                  </option>
-                ))}
+              Biblioteca
+              <select value={levelFilter} onChange={(event) => setLevelFilter(event.target.value)}>
+                <option value="all">Tots els nivells</option>
+                <option value="custom">Nivells propis</option>
+                <option value="packs">Packs preparats</option>
               </select>
             </label>
             <label>
-              Repte
+              Nivell
               <select
                 value={challengeId}
                 onChange={(event) => setChallengeId(event.target.value)}
                 required
               >
-                {filteredChallenges.map((challenge) => (
-                  <option key={challenge.id} value={challenge.id}>
-                    {challenge.title}
+                {filteredLevels.map((level) => (
+                  <option key={level.id} value={level.id}>
+                    {level.source === "custom" ? "Propi · " : ""}
+                    {level.title} ({formatComarcaName(level.start_id)} → {formatComarcaName(level.target_id)})
                   </option>
                 ))}
               </select>
@@ -164,7 +175,10 @@ export default function CreateSessionPage({ access }) {
             </label>
             <label>
               Modalitat
-              <select value={settings.mode} onChange={(event) => updateSetting("mode", event.target.value)}>
+              <select
+                value={settings.classroom_mode}
+                onChange={(event) => updateSetting("classroom_mode", event.target.value)}
+              >
                 <option value="equips">Equips</option>
                 <option value="individual">Individual</option>
               </select>
@@ -178,31 +192,38 @@ export default function CreateSessionPage({ access }) {
                 onChange={(event) => updateSetting("time_limit_seconds", event.target.value)}
               />
             </label>
-            <label className="aula-check">
-              <input
-                type="checkbox"
-                checked={settings.show_ranking}
-                onChange={(event) => updateSetting("show_ranking", event.target.checked)}
-              />
-              Mostrar rànquing
+            <label>
+              Rànquing
+              <select
+                value={settings.show_ranking}
+                onChange={(event) => updateSetting("show_ranking", event.target.value)}
+              >
+                <option value="level">Segons el nivell</option>
+                <option value="true">Mostrar</option>
+                <option value="false">Amagar</option>
+              </select>
             </label>
-            <label className="aula-check">
-              <input
-                type="checkbox"
-                checked={settings.show_solution_at_end}
-                onChange={(event) =>
-                  updateSetting("show_solution_at_end", event.target.checked)
-                }
-              />
-              Mostrar solució al final
+            <label>
+              Solució al final
+              <select
+                value={settings.show_solution_at_end}
+                onChange={(event) => updateSetting("show_solution_at_end", event.target.value)}
+              >
+                <option value="level">Segons el nivell</option>
+                <option value="true">Mostrar</option>
+                <option value="false">Amagar</option>
+              </select>
             </label>
-            <label className="aula-check">
-              <input
-                type="checkbox"
-                checked={settings.allow_powerups}
-                onChange={(event) => updateSetting("allow_powerups", event.target.checked)}
-              />
-              Permetre comodins
+            <label>
+              Comodins
+              <select
+                value={settings.allow_powerups}
+                onChange={(event) => updateSetting("allow_powerups", event.target.value)}
+              >
+                <option value="level">Segons el nivell</option>
+                <option value="true">Permetre</option>
+                <option value="false">Bloquejar</option>
+              </select>
             </label>
             <AulaButton type="submit" disabled={status === "saving" || !challengeId}>
               {status === "saving" ? "Creant..." : "Crear sessió"}

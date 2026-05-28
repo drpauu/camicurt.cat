@@ -20,6 +20,7 @@ import {
   isActiveRuleSource,
   isLevelRulePayloadValid
 } from "../src/lib/ruleValidation.js";
+import { validateLevelDraft } from "../src/aula/lib/aulaLevelValidation.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -75,6 +76,34 @@ test("les regles avoid i mustIncludeAny canvien les rutes optimes", () => {
     { centroidMap: centroids }
   );
   expect(must.primaryPath).toEqual(["a", "c", "d", "e"]);
+});
+
+test("la validacio Aula bloqueja camins impossibles i avisa si el cami no sembla optim", () => {
+  const graphData = {
+    ids: [...graph.keys()],
+    idSet: new Set(graph.keys()),
+    adjacency: graph
+  };
+  const baseDraft = {
+    title: "Ruta de prova",
+    startId: "a",
+    targetId: "e",
+    difficultyId: "pixapi",
+    ruleKind: null,
+    ruleComarcaIds: [],
+    gameSettings: { mode: "normal" }
+  };
+
+  expect(
+    validateLevelDraft({ ...baseDraft, shortestPath: ["a", "e"] }, graphData).errors
+  ).toContain("El camí manual no és continu: alguna comarca no toca la següent.");
+
+  const warningResult = validateLevelDraft(
+    { ...baseDraft, shortestPath: ["a", "b", "a", "c", "d", "e"] },
+    graphData
+  );
+  expect(warningResult.errors).toEqual([]);
+  expect(warningResult.warnings.join(" ")).toContain("no sembla òptim");
 });
 
 test("la normalitzacio de comarca exigeix accents i apostrofs", () => {

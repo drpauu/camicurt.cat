@@ -20,7 +20,8 @@ La migracio `202605140001_aula_schema.sql` crea les taules Aula, RLS, helpers a 
 - `aula_teachers`: docents convidats o actius.
 - `aula_license_events`: registre comercial i d'activacio.
 - `aula_challenge_packs` i `aula_challenges`: reptes preparats.
-- `aula_sessions`: sessions amb codi temporal.
+- `aula_challenges`: tambe pot contenir nivells personalitzats de centre, amb avisos de validacio i configuracio de joc.
+- `aula_sessions`: sessions amb codi temporal, de tipus `classroom` o `homework`.
 - `aula_participants`: equips/pseudonims, sense email.
 - `aula_results`: resultats de sessio.
 - `aula_materials`: materials docents.
@@ -46,6 +47,14 @@ Nota: Supabase recomana evitar `security definer` en esquemes exposats. Per aixo
 5. Si hi ha llicencia activa, `/aula/panel` mostra el centre i sessions.
 6. El docent crea una sessio a `/aula/sessions/new`.
 7. El docent obre la sessio i projecta el codi.
+
+## Nivells personalitzats i deures
+
+- `/aula/levels` permet crear nivells propis amb inici, desti, norma, cami curt manual, intents, temps, mode de joc i comodins.
+- La validacio bloqueja dades no jugables i desa avisos si el cami manual no sembla optim o la norma no quadra.
+- `/aula/homework` assigna un nivell com a deures amb codi compartit, instruccions i data limit.
+- Amb codi compartit es registra qui entra i envia resultat pel pseudonim escrit; no hi ha llista d'alumnes ni comptes individuals.
+- El projector mostra codi, QR, participants i ranquing si l'activitat el permet.
 
 ## Flux alumne
 

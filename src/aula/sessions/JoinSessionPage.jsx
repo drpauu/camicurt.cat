@@ -30,6 +30,7 @@ export default function JoinSessionPage() {
           participantId: result.participantId,
           participantToken: result.participantToken,
           displayName: displayName.trim(),
+          session: result.session || null,
           challenge: result.challenge
         })
       );

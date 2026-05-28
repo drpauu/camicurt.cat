@@ -3807,6 +3807,10 @@ body.aula-route::before {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.aula-grid-four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .aula-card,
 .aula-mini-card {
   background: var(--aula-surface);
@@ -3825,6 +3829,11 @@ body.aula-route::before {
 
 .aula-card p,
 .aula-panel-head p {
+  color: var(--aula-muted);
+  line-height: 1.45;
+}
+
+.aula-muted-line {
   color: var(--aula-muted);
   line-height: 1.45;
 }
@@ -3883,6 +3892,10 @@ body.aula-route::before {
 
 .aula-form-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.aula-field-wide {
+  grid-column: 1 / -1;
 }
 
 .aula-form label {
@@ -3976,6 +3989,10 @@ body.aula-route::before {
   min-width: 720px;
 }
 
+.aula-table-compact {
+  min-width: 560px;
+}
+
 .aula-table th,
 .aula-table td {
   border-bottom: 1px solid var(--aula-border);
@@ -4039,6 +4056,62 @@ body.aula-route::before {
   font-size: 1.4rem;
 }
 
+.aula-projector-live {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.42fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  margin: 20px 0;
+}
+
+.aula-qr {
+  width: 180px;
+  height: 180px;
+  border: 1px solid var(--aula-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.aula-ranking {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 1.4rem;
+}
+
+.aula-ranking li {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--aula-border);
+}
+
+.aula-ranking strong,
+.aula-ranking span {
+  display: block;
+}
+
+.aula-level-builder {
+  align-items: start;
+}
+
+.aula-preview-card {
+  overflow: hidden;
+}
+
+.aula-preview-frame {
+  height: min(760px, 82vh);
+  min-height: 520px;
+  border: 1px solid var(--aula-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.aula-preview-frame .aula-play,
+.aula-preview-frame .page {
+  min-height: 100%;
+  height: 100%;
+}
+
 .aula-play {
   min-height: 100vh;
   background: var(--bg);
@@ -4081,6 +4154,105 @@ body.aula-route::before {
   display: none !important;
 }
 
+.aristocracia-shell .aula-header {
+  border-color: rgba(20, 28, 35, 0.16);
+}
+
+.aristocracia-tab {
+  border: 1px solid var(--aula-border);
+  border-radius: 8px;
+  background: var(--aula-surface);
+  color: var(--aula-text);
+  padding: 9px 12px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.aristocracia-tab.is-active {
+  background: var(--aula-accent);
+  border-color: var(--aula-accent);
+  color: #fff;
+}
+
+.aristocracia-status-list {
+  display: grid;
+  gap: 10px;
+}
+
+.aristocracia-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--aula-border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--aula-surface-2);
+}
+
+.aristocracia-status-row strong,
+.aristocracia-status-row span {
+  display: block;
+}
+
+.aristocracia-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  border: 1px solid var(--aula-border);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #fff;
+  color: var(--aula-text);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.aristocracia-status-badge.status-online {
+  border-color: rgba(47, 111, 117, 0.38);
+  color: var(--aula-accent);
+}
+
+.aristocracia-status-badge.status-degraded,
+.aristocracia-status-badge.status-maintenance {
+  border-color: rgba(178, 119, 28, 0.40);
+  color: #a15b00;
+}
+
+.aristocracia-status-badge.status-offline {
+  border-color: rgba(186, 61, 52, 0.42);
+  color: var(--aula-danger);
+}
+
+.aristocracia-social-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.aristocracia-social-grid .aula-mini-card {
+  display: grid;
+  gap: 12px;
+}
+
+.aristocracia-social-grid label {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.aristocracia-social-grid input,
+.aristocracia-social-grid select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--aula-border);
+  border-radius: 8px;
+  padding: 9px 10px;
+  font: inherit;
+}
+
 @media (max-width: 760px) {
   .aula-shell {
     width: min(100% - 22px, 1160px);
@@ -4091,8 +4263,10 @@ body.aula-route::before {
   .aula-hero,
   .aula-panel-head,
   .aula-grid-two,
+  .aula-grid-four,
   .aula-form-grid,
-  .aula-projector-grid {
+  .aula-projector-grid,
+  .aula-projector-live {
     grid-template-columns: 1fr;
   }
 
@@ -4102,6 +4276,15 @@ body.aula-route::before {
 
   .aula-header-actions {
     justify-self: start;
+  }
+
+  .aristocracia-status-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .aristocracia-social-grid {
+    grid-template-columns: 1fr;
   }
 
   .aula-hero h1 {

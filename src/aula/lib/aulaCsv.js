@@ -3,6 +3,7 @@ import { formatComarcaPath } from "./comarcaNames.js";
 const CSV_HEADERS = [
   "equip",
   "completat",
+  "motiu",
   "intents",
   "temps_segons",
   "precisió",
@@ -20,6 +21,7 @@ export function resultsToCsv(results = []) {
   const rows = results.map((result) => [
     result.display_name || result.participant?.display_name || "",
     result.completed ? "sí" : "no",
+    result.failure_reason || "",
     result.attempts_count ?? "",
     result.time_seconds ?? "",
     result.precision ?? "",
