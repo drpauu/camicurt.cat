@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { geoMercator, geoPath } from "d3-geo";
 import { select } from "d3-selection";
 import { zoom, zoomIdentity } from "d3-zoom";
@@ -38,7 +38,8 @@ import {
 } from "./lib/completion.js";
 import { ThemeProvider } from "./ThemeProvider.jsx";
 import AulaApp from "./aula/AulaApp.jsx";
-import AristocraciaApp from "./aristocracia/AristocraciaApp.jsx";
+
+const AristocraciaApp = lazy(() => import("./aristocracia/AristocraciaApp.jsx"));
 
 const VIEW_WIDTH = 900;
 const VIEW_HEIGHT = 700;
@@ -159,7 +160,11 @@ function BrandLogo({ className = "" }) {
 export default function App() {
   const pathname = typeof window === "undefined" ? "/" : window.location.pathname;
   if (pathname.startsWith("/aristocracia")) {
-    return <AristocraciaApp />;
+    return (
+      <Suspense fallback={null}>
+        <AristocraciaApp />
+      </Suspense>
+    );
   }
   if (pathname.startsWith("/aula")) {
     return <AulaApp PublicGameApp={PublicGameApp} />;
@@ -2652,77 +2657,6 @@ export function PublicGameApp({
   }, [isTimedMode, isCountdownActive, countdownValue]);
 
   useEffect(() => {
-    if (!isTimedMode || !startedAt || isComplete || isFailed) return;
-    if (timeLeftMs <= 0) {
-      const shortestCount = shortestPath.length ? Math.max(shortestPath.length - 2, 0) : 0;
-      const foundCount = pathInGuesses.length ? Math.max(pathInGuesses.length - 2, 0) : 0;
-      const shortestNames = shortestPath
-        .filter((id) => id !== startId && id !== targetId)
-        .map((pathId) => comarcaById.get(pathId)?.properties.name || pathId);
-      const timeoutPayload = {
-        failed: true,
-        failureReason: "time",
-        attempts,
-        maxAttempts,
-        timeMs: elapsedMs,
-        playerPath: guessHistory,
-        ruleLabel: activeRule?.label || t("noRule"),
-        ruleDifficulty: activeRule?.difficulty || null,
-        ruleExplanation: activeRule?.explanation || "",
-        ruleComarques: activeRule?.comarques || [],
-        shortestPath: shortestNames,
-        shortestCount,
-        foundCount,
-        distance: Math.max(foundCount - shortestCount, 0),
-        mode: gameMode,
-        difficulty: activeDifficulty,
-        streak: displayStreak,
-        levelSnapshot: buildCurrentLevelSnapshot()
-      };
-      play("level_lose", { bypassCooldown: true });
-      setIsFailed(true);
-      setShowModal(true);
-      setResultData((prev) => prev || timeoutPayload);
-      if (isAulaMode && onClassroomComplete && !aulaCompletionSentRef.current) {
-        aulaCompletionSentRef.current = true;
-        void onClassroomComplete({
-          ...timeoutPayload,
-          foundPathIds: pathInGuesses,
-          accuracy: getRouteAccuracy(timeoutPayload)
-        });
-      }
-      enqueueTelemetry("level_fail", {
-        reason: "timeout",
-        attempts,
-        timeMs: elapsedMs
-      });
-    }
-  }, [
-    gameMode,
-    startedAt,
-    timeLeftMs,
-    isComplete,
-    isFailed,
-    attempts,
-    elapsedMs,
-    guessHistory,
-    activeRule,
-    activeDifficulty,
-    shortestPath,
-    startId,
-    targetId,
-    comarcaById,
-    pathInGuesses,
-    maxAttempts,
-    isAulaMode,
-    onClassroomComplete,
-    displayStreak,
-    dailyStreak,
-    play,
-    t
-  ]);
-
-  useEffect(() => {
     if (!comarques.length || !adjacency.size) return;
     if (isAulaMode) return;
     if (!isExploreMode && !rulesReady) return;
@@ -3205,6 +3139,76 @@ export function PublicGameApp({
     if (isAulaMode && aulaAttemptLimit) return aulaAttemptLimit;
     return getMaxAttemptsForDifficulty(activeDifficulty, optimalCount);
   }, [activeDifficulty, aulaAttemptLimit, isAulaMode, isExploreMode, optimalCount]);
+
+  useEffect(() => {
+    if (!isTimedMode || !startedAt || isComplete || isFailed) return;
+    if (timeLeftMs <= 0) {
+      const shortestCount = shortestPath.length ? Math.max(shortestPath.length - 2, 0) : 0;
+      const foundCount = pathInGuesses.length ? Math.max(pathInGuesses.length - 2, 0) : 0;
+      const shortestNames = shortestPath
+        .filter((id) => id !== startId && id !== targetId)
+        .map((pathId) => comarcaById.get(pathId)?.properties.name || pathId);
+      const timeoutPayload = {
+        failed: true,
+        failureReason: "time",
+        attempts,
+        maxAttempts,
+        timeMs: elapsedMs,
+        playerPath: guessHistory,
+        ruleLabel: activeRule?.label || t("noRule"),
+        ruleDifficulty: activeRule?.difficulty || null,
+        ruleExplanation: activeRule?.explanation || "",
+        ruleComarques: activeRule?.comarques || [],
+        shortestPath: shortestNames,
+        shortestCount,
+        foundCount,
+        distance: Math.max(foundCount - shortestCount, 0),
+        mode: gameMode,
+        difficulty: activeDifficulty,
+        streak: displayStreak,
+        levelSnapshot: buildCurrentLevelSnapshot()
+      };
+      play("level_lose", { bypassCooldown: true });
+      setIsFailed(true);
+      setShowModal(true);
+      setResultData((prev) => prev || timeoutPayload);
+      if (isAulaMode && onClassroomComplete && !aulaCompletionSentRef.current) {
+        aulaCompletionSentRef.current = true;
+        void onClassroomComplete({
+          ...timeoutPayload,
+          foundPathIds: pathInGuesses,
+          accuracy: getRouteAccuracy(timeoutPayload)
+        });
+      }
+      enqueueTelemetry("level_fail", {
+        reason: "timeout",
+        attempts,
+        timeMs: elapsedMs
+      });
+    }
+  }, [
+    gameMode,
+    startedAt,
+    timeLeftMs,
+    isComplete,
+    isFailed,
+    attempts,
+    elapsedMs,
+    guessHistory,
+    activeRule,
+    activeDifficulty,
+    shortestPath,
+    startId,
+    targetId,
+    comarcaById,
+    pathInGuesses,
+    maxAttempts,
+    isAulaMode,
+    onClassroomComplete,
+    displayStreak,
+    play,
+    t
+  ]);
 
   function resolveShortestPaths(start, target, rule, fallbackPath = []) {
     const allIds = comarques.map((featureItem) => featureItem.properties.id);
