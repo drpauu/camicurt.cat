@@ -71,6 +71,16 @@ Frontend:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_PUBLISHABLE_KEY` o `VITE_SUPABASE_ANON_KEY`
+- `VITE_AULA_AUTH_REDIRECT_ORIGIN` opcional. Si no existeix, en local el magic link apunta a `https://www.camicurt.cat/aula/callback` per evitar enllaços morts a `localhost`.
+- `VITE_PUBLIC_SITE_URL` opcional com a origen public compartit.
+
+Supabase Auth:
+
+- Site URL recomanat: `https://www.camicurt.cat`
+- Redirect URLs recomanades:
+  - `https://www.camicurt.cat/aula/callback`
+  - `https://camicurt.cat/aula/callback`
+  - `http://localhost:5173/aula/callback` nomes si vols provar magic links locals amb el dev server obert.
 
 Edge Functions:
 

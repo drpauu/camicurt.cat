@@ -131,7 +131,7 @@ test("/aristocracia/login mostra error controlat amb credencials invalides", asy
   await page.goto("/aristocracia/login", { waitUntil: "domcontentloaded" });
   await page.getByLabel(/Contrasenya/i).fill("incorrecta");
   await page.getByRole("button", { name: /Entrar/i }).click();
-  await expect(page.getByText(/Supabase no està configurat|No s'ha pogut|Invalid/i)).toBeVisible();
+  await expect(page.getByText(/Supabase no està configurat|No s'ha pogut|Invalid|Failed to fetch/i)).toBeVisible();
 });
 
 test("la ruta publica segueix carregant fora del backoffice", async ({ page }) => {

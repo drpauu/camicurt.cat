@@ -24,6 +24,18 @@ test("/aula/login mostra formulari de magic link", async ({ page }) => {
   await expect(page.getByRole("button", { name: /Enviar enllaç d'accés/i })).toBeVisible();
 });
 
+test("el callback del magic link no queda atrapat a localhost per defecte", async ({ page }) => {
+  await page.goto("/aula/login", { waitUntil: "domcontentloaded" });
+  const redirectTo = await page.evaluate(async () => {
+    const { getAulaMagicLinkRedirectTo } = await import("/src/aula/lib/aulaAuth.js");
+    return getAulaMagicLinkRedirectTo();
+  });
+
+  expect(redirectTo).toContain("/aula/callback");
+  expect(redirectTo).not.toContain("localhost");
+  expect(redirectTo).not.toContain("127.0.0.1");
+});
+
 test("/aula/join mostra formulari de codi i pseudònim", async ({ page }) => {
   await page.goto("/aula/join?code=ABC123", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: /Entra a la sessió/i })).toBeVisible();

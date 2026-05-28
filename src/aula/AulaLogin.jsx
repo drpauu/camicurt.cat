@@ -16,7 +16,7 @@ export default function AulaLogin() {
     try {
       await sendAulaMagicLink(email.trim());
       setStatus("sent");
-      setMessage("T'hem enviat un enllaç d'accés. Obre'l des del mateix navegador.");
+      setMessage("T'hem enviat un enllaç d'accés. Obre'l i entraràs a Camicurt Aula.");
     } catch (error) {
       setStatus("error");
       setMessage(error.message || "No s'ha pogut enviar l'enllaç d'accés.");
