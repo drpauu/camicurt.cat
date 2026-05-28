@@ -3,6 +3,21 @@
 
 create extension if not exists pgcrypto;
 
+create schema if not exists app_private;
+
+grant usage on schema app_private to anon, authenticated;
+
+create or replace function app_private.aristocracia_set_updated_at()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
 create table if not exists public.aristocracia_workers (
   id uuid primary key default gen_random_uuid(),
   user_id uuid unique references auth.users(id) on delete set null,
@@ -80,17 +95,17 @@ create table if not exists public.aristocracia_audit_logs (
 drop trigger if exists aristocracia_workers_updated_at on public.aristocracia_workers;
 create trigger aristocracia_workers_updated_at
   before update on public.aristocracia_workers
-  for each row execute function public.set_updated_at();
+  for each row execute function app_private.aristocracia_set_updated_at();
 
 drop trigger if exists aristocracia_social_links_updated_at on public.aristocracia_social_links;
 create trigger aristocracia_social_links_updated_at
   before update on public.aristocracia_social_links
-  for each row execute function public.set_updated_at();
+  for each row execute function app_private.aristocracia_set_updated_at();
 
 drop trigger if exists aristocracia_status_services_updated_at on public.aristocracia_status_services;
 create trigger aristocracia_status_services_updated_at
   before update on public.aristocracia_status_services
-  for each row execute function public.set_updated_at();
+  for each row execute function app_private.aristocracia_set_updated_at();
 
 create or replace function app_private.aristocracia_current_worker()
 returns public.aristocracia_workers
