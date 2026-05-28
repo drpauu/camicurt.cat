@@ -3623,6 +3623,41 @@ body.aula-route::before {
   display: none;
 }
 
+html.aristocracia-route {
+  height: auto;
+  min-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+html.aristocracia-route #root {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: visible;
+}
+
+html.aristocracia-route body,
+body.aristocracia-route {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: static;
+  background:
+    linear-gradient(180deg, rgba(47, 111, 117, 0.08), transparent 320px),
+    #f4f5f1;
+}
+
+html.aristocracia-route body {
+  -webkit-overflow-scrolling: touch;
+}
+
+body.aristocracia-route::before {
+  display: none;
+}
+
 .aula-shell {
   --aula-bg: #f6f4ee;
   --aula-surface: #fffdf8;
@@ -4154,19 +4189,81 @@ body.aula-route::before {
   display: none !important;
 }
 
+.aristocracia-shell {
+  --aula-bg: #f4f5f1;
+  --aula-surface: #fffef9;
+  --aula-surface-2: #eef2ea;
+  --aula-border: #d8dfd2;
+  --aula-accent: #245f63;
+  --aula-accent-2: #2f5f8f;
+  width: min(1440px, calc(100% - 32px));
+  padding-bottom: 72px;
+}
+
 .aristocracia-shell .aula-header {
-  border-color: rgba(20, 28, 35, 0.16);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  min-height: 70px;
+  margin: 0 -2px;
+  padding: 10px 2px;
+  border-color: rgba(20, 28, 35, 0.12);
+  background: color-mix(in srgb, #f4f5f1 88%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.aristocracia-shell .aula-main {
+  gap: 20px;
+  padding-top: 22px;
+  padding-bottom: 48px;
+}
+
+.aristocracia-shell .aula-brand-mark {
+  background: linear-gradient(135deg, #1f4f52, #2f6f75);
+}
+
+.aristocracia-shell .aula-nav {
+  gap: 8px;
+}
+
+.aristocracia-shell .aula-header-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.aristocracia-role-pill,
+.aristocracia-tab,
+.aristocracia-status-badge {
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.aristocracia-role-pill {
+  border: 1px solid rgba(47, 111, 117, 0.24);
+  background: #fff;
+  color: var(--aula-accent);
+  padding: 7px 10px;
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 .aristocracia-tab {
-  border: 1px solid var(--aula-border);
-  border-radius: 8px;
-  background: var(--aula-surface);
-  color: var(--aula-text);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--aula-muted);
   padding: 9px 12px;
   font: inherit;
+  font-size: 0.94rem;
   font-weight: 800;
   cursor: pointer;
+}
+
+.aristocracia-tab:hover,
+.aristocracia-tab:focus-visible {
+  background: rgba(47, 111, 117, 0.08);
+  color: var(--aula-accent);
 }
 
 .aristocracia-tab.is-active {
@@ -4175,12 +4272,99 @@ body.aula-route::before {
   color: #fff;
 }
 
-.aristocracia-status-list {
+.aristocracia-auth-card {
+  margin-top: min(8vh, 72px);
+}
+
+.aristocracia-hero {
+  align-items: center;
+  border-bottom: 1px solid var(--aula-border);
+  padding-bottom: 18px;
+}
+
+.aristocracia-hero h1 {
+  font-size: clamp(2.4rem, 5vw, 4.4rem);
+}
+
+.aristocracia-dashboard {
+  align-items: start;
+}
+
+.aristocracia-metrics {
+  gap: 14px;
+}
+
+.aristocracia-metric-card {
+  display: grid;
+  gap: 6px;
+  min-height: 142px;
+  border-top: 4px solid transparent;
+}
+
+.aristocracia-metric-card.tone-good {
+  border-top-color: var(--aula-accent);
+}
+
+.aristocracia-metric-card.tone-warning {
+  border-top-color: #b2771c;
+}
+
+.aristocracia-metric-card.tone-neutral {
+  border-top-color: var(--aula-accent-2);
+}
+
+.aristocracia-metric-card strong {
+  display: block;
+  color: var(--aula-text);
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 0.95;
+}
+
+.aristocracia-metric-card span {
+  color: var(--aula-muted);
+  line-height: 1.35;
+}
+
+.aristocracia-panel-card {
+  min-width: 0;
+}
+
+.aristocracia-table-card {
+  overflow: hidden;
+}
+
+.aristocracia-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.aristocracia-section-header h2 {
+  margin: 0 0 6px;
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+}
+
+.aristocracia-section-header p {
+  margin: 0;
+}
+
+.aristocracia-section-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.aristocracia-status-list,
+.aristocracia-license-list {
   display: grid;
   gap: 10px;
 }
 
-.aristocracia-status-row {
+.aristocracia-status-row,
+.aristocracia-license-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -4189,11 +4373,31 @@ body.aula-route::before {
   border-radius: 8px;
   padding: 12px;
   background: var(--aula-surface-2);
+  min-width: 0;
+}
+
+.aristocracia-status-row > div,
+.aristocracia-license-item > div {
+  min-width: 0;
 }
 
 .aristocracia-status-row strong,
-.aristocracia-status-row span {
+.aristocracia-status-row span,
+.aristocracia-license-item strong,
+.aristocracia-license-item span {
   display: block;
+}
+
+.aristocracia-status-row strong,
+.aristocracia-license-item strong {
+  overflow-wrap: anywhere;
+}
+
+.aristocracia-status-row span:not(.aristocracia-status-badge),
+.aristocracia-license-item span:not(.aristocracia-status-badge) {
+  color: var(--aula-muted);
+  font-size: 0.94rem;
+  line-height: 1.35;
 }
 
 .aristocracia-status-badge {
@@ -4202,39 +4406,52 @@ body.aula-route::before {
   justify-content: center;
   min-width: 96px;
   border: 1px solid var(--aula-border);
-  border-radius: 999px;
   padding: 6px 10px;
   background: #fff;
   color: var(--aula-text);
+  font-size: 0.84rem;
   font-weight: 800;
-  white-space: nowrap;
 }
 
 .aristocracia-status-badge.status-online {
-  border-color: rgba(47, 111, 117, 0.38);
+  border-color: rgba(47, 111, 117, 0.34);
+  background: rgba(47, 111, 117, 0.08);
   color: var(--aula-accent);
 }
 
-.aristocracia-status-badge.status-degraded,
-.aristocracia-status-badge.status-maintenance {
-  border-color: rgba(178, 119, 28, 0.40);
-  color: #a15b00;
+.aristocracia-status-badge.status-degraded {
+  border-color: rgba(178, 119, 28, 0.34);
+  background: rgba(178, 119, 28, 0.10);
+  color: #945900;
 }
 
 .aristocracia-status-badge.status-offline {
-  border-color: rgba(186, 61, 52, 0.42);
+  border-color: rgba(186, 61, 52, 0.34);
+  background: rgba(186, 61, 52, 0.08);
   color: var(--aula-danger);
+}
+
+.aristocracia-status-badge.status-unknown {
+  color: var(--aula-muted);
 }
 
 .aristocracia-social-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 14px;
 }
 
-.aristocracia-social-grid .aula-mini-card {
+.aristocracia-social-grid .aula-mini-card,
+.aristocracia-social-card {
   display: grid;
   gap: 12px;
+}
+
+.aristocracia-social-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .aristocracia-social-grid label {
@@ -4251,6 +4468,61 @@ body.aula-route::before {
   border-radius: 8px;
   padding: 9px 10px;
   font: inherit;
+}
+
+.aristocracia-editor-grid {
+  align-items: start;
+}
+
+.aristocracia-floating-message {
+  margin: 0;
+}
+
+.aristocracia-shell .aula-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.aristocracia-shell .aula-table {
+  font-size: 0.94rem;
+}
+
+.aristocracia-shell .aula-table th,
+.aristocracia-shell .aula-table td {
+  white-space: nowrap;
+}
+
+.aristocracia-shell .aula-table td:first-child,
+.aristocracia-shell .aula-table th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--aula-surface);
+  white-space: normal;
+  min-width: 180px;
+}
+
+@media (max-width: 980px) {
+  .aristocracia-shell .aula-header {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .aristocracia-shell .aula-nav {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+
+  .aristocracia-shell .aula-header-actions {
+    justify-content: flex-start;
+  }
+
+  .aristocracia-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
@@ -4278,7 +4550,43 @@ body.aula-route::before {
     justify-self: start;
   }
 
+  .aristocracia-shell {
+    width: min(100% - 20px, 1160px);
+    padding-bottom: 48px;
+  }
+
+  .aristocracia-shell .aula-header {
+    position: relative;
+    padding-bottom: 12px;
+  }
+
+  .aristocracia-shell .aula-nav {
+    flex-wrap: nowrap;
+    margin-inline: -2px;
+  }
+
+  .aristocracia-tab {
+    flex: 0 0 auto;
+  }
+
+  .aristocracia-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .aristocracia-section-header {
+    display: grid;
+  }
+
+  .aristocracia-section-actions {
+    justify-content: flex-start;
+  }
+
   .aristocracia-status-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .aristocracia-license-item {
     align-items: flex-start;
     flex-direction: column;
   }

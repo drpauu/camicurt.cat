@@ -1,4 +1,38 @@
 import { createClient } from "@supabase/supabase-js";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+function parseEnvValue(rawValue) {
+  const value = rawValue.trim();
+  const quote = value[0];
+  if ((quote === "\"" || quote === "'") && value.endsWith(quote)) {
+    const unquoted = value.slice(1, -1);
+    return quote === "\""
+      ? unquoted.replace(/\\n/g, "\n").replace(/\\r/g, "\r").replace(/\\t/g, "\t")
+      : unquoted;
+  }
+  return value;
+}
+
+function loadLocalEnvFiles() {
+  const originalEnvKeys = new Set(Object.keys(process.env));
+  for (const fileName of [".env", ".env.local"]) {
+    const filePath = resolve(process.cwd(), fileName);
+    if (!existsSync(filePath)) continue;
+    const lines = readFileSync(filePath, "utf8").split(/\r?\n/);
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const match = trimmed.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+      if (!match) continue;
+      const [, key, rawValue] = match;
+      if (originalEnvKeys.has(key)) continue;
+      process.env[key] = parseEnvValue(rawValue);
+    }
+  }
+}
+
+loadLocalEnvFiles();
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const serviceRoleKey =

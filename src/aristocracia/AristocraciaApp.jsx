@@ -39,10 +39,28 @@ function statusLabel(value) {
     unknown: "Sense dades",
     active: "Actiu",
     trial: "Prova",
+    expired: "Caducada",
+    pending_payment: "Pagament pendent",
+    suspended: "Suspesa",
+    cancelled: "Cancel·lada",
     draft: "Esborrany",
-    hidden: "Amagat"
+    hidden: "Amagat",
+    owner: "Owner",
+    admin: "Admin",
+    support: "Suport"
   };
   return labels[value] || value || "Sense dades";
+}
+
+function statusTone(value) {
+  if (["online", "active", "owner", "admin"].includes(value)) return "online";
+  if (["trial", "draft", "support", "pending_payment", "degraded", "maintenance"].includes(value)) {
+    return "degraded";
+  }
+  if (["offline", "expired", "suspended", "cancelled", "hidden", "disabled", "removed"].includes(value)) {
+    return "offline";
+  }
+  return "unknown";
 }
 
 function formatDateTime(value) {
@@ -55,6 +73,37 @@ function formatDateTime(value) {
 
 function normalizeLicenses(dashboard) {
   return Array.isArray(dashboard?.licenses) ? dashboard.licenses : [];
+}
+
+function StatusBadge({ value }) {
+  return (
+    <span className={`aristocracia-status-badge status-${statusTone(value)}`}>
+      {statusLabel(value)}
+    </span>
+  );
+}
+
+function MetricCard({ label, value, detail, tone = "neutral" }) {
+  return (
+    <AulaCard className={`aristocracia-metric-card tone-${tone}`}>
+      <p className="aula-eyebrow">{label}</p>
+      <strong>{value}</strong>
+      <span>{detail}</span>
+    </AulaCard>
+  );
+}
+
+function SectionHeader({ eyebrow, title, description, children }) {
+  return (
+    <div className="aristocracia-section-header">
+      <div>
+        <p className="aula-eyebrow">{eyebrow}</p>
+        <h2>{title}</h2>
+        {description ? <p>{description}</p> : null}
+      </div>
+      {children ? <div className="aristocracia-section-actions">{children}</div> : null}
+    </div>
+  );
 }
 
 function AristocraciaLogin({ initialMessage = "" }) {
@@ -84,10 +133,10 @@ function AristocraciaLogin({ initialMessage = "" }) {
     <div className="aula-shell aristocracia-shell">
       <main className="aula-main">
         <div className="aula-narrow">
-          <AulaCard>
+          <AulaCard className="aristocracia-auth-card">
             <p className="aula-eyebrow">Backoffice intern</p>
             <h1>Aristocracia</h1>
-            <p>Accés privat per gestionar Camicurt, Aula, llicències i status.</p>
+            <p>Accés privat per gestionar Camicurt, Aula, llicències, status i equip intern.</p>
             <form className="aula-form" onSubmit={handleSubmit}>
               <label>
                 Correu
@@ -154,6 +203,7 @@ function AristocraciaLayout({ access, activeTab, onTabChange, children }) {
           ))}
         </nav>
         <div className="aula-header-actions">
+          <span className="aristocracia-role-pill">{statusLabel(access?.worker?.role)}</span>
           <button type="button" className="aula-link-button" onClick={handleSignOut}>
             Sortir
           </button>
@@ -168,47 +218,99 @@ function OverviewTab({ dashboard }) {
   const summary = dashboard?.license_summary || {};
   const services = dashboard?.status_services || [];
   const workers = dashboard?.workers || [];
+  const licenses = normalizeLicenses(dashboard);
   const incidents = services.filter((service) =>
     ["degraded", "offline", "maintenance"].includes(service.effective_status)
   );
+  const latestLicenses = licenses.slice(0, 5);
 
   return (
-    <div className="aula-grid">
-      <div className="aula-grid aula-grid-four">
-        <AulaCard>
-          <p className="aula-eyebrow">Llicències</p>
-          <h2>{summary.total || 0}</h2>
-          <p>{summary.active || 0} actives · {summary.trial || 0} en prova</p>
+    <div className="aula-grid aristocracia-dashboard">
+      <div className="aula-grid aula-grid-four aristocracia-metrics">
+        <MetricCard
+          label="Llicències"
+          value={summary.total || 0}
+          detail={`${summary.active || 0} actives · ${summary.trial || 0} en prova`}
+          tone="good"
+        />
+        <MetricCard
+          label="Alertes comercials"
+          value={(summary.expired || 0) + (summary.pending_payment || 0)}
+          detail={`${summary.expired || 0} caducades · ${summary.pending_payment || 0} pendents`}
+          tone={summary.expired || summary.pending_payment ? "warning" : "good"}
+        />
+        <MetricCard
+          label="Serveis"
+          value={services.length}
+          detail={incidents.length ? `${incidents.length} incidències` : "Tot operatiu o sense avisos"}
+          tone={incidents.length ? "warning" : "good"}
+        />
+        <MetricCard
+          label="Treballadors"
+          value={workers.length}
+          detail={`${workers.filter((worker) => worker.status === "active").length} actius`}
+          tone="neutral"
+        />
+      </div>
+
+      <div className="aula-grid aula-grid-two aristocracia-overview-grid">
+        <AulaCard className="aristocracia-panel-card">
+          <SectionHeader
+            eyebrow="Status ràpid"
+            title="Salut dels serveis"
+            description="Última lectura automàtica o override manual actiu."
+          />
+          <div className="aristocracia-status-list">
+            {services.map((service) => (
+              <div key={service.id} className="aristocracia-status-row">
+                <div>
+                  <strong>{service.name}</strong>
+                  <span>{service.description}</span>
+                </div>
+                <StatusBadge value={service.effective_status} />
+              </div>
+            ))}
+          </div>
         </AulaCard>
-        <AulaCard>
-          <p className="aula-eyebrow">Alertes comercials</p>
-          <h2>{(summary.expired || 0) + (summary.pending_payment || 0)}</h2>
-          <p>{summary.expired || 0} caducades · {summary.pending_payment || 0} pendents</p>
-        </AulaCard>
-        <AulaCard>
-          <p className="aula-eyebrow">Serveis</p>
-          <h2>{services.length}</h2>
-          <p>{incidents.length ? `${incidents.length} incidències` : "Tot operatiu o sense avisos"}</p>
-        </AulaCard>
-        <AulaCard>
-          <p className="aula-eyebrow">Treballadors</p>
-          <h2>{workers.length}</h2>
-          <p>{workers.filter((worker) => worker.status === "active").length} actius</p>
+
+        <AulaCard className="aristocracia-panel-card">
+          <SectionHeader
+            eyebrow="Moviment"
+            title="Últimes llicències"
+            description="Centres ordenats per activitat comercial recent."
+          />
+          {latestLicenses.length ? (
+            <div className="aristocracia-license-list">
+              {latestLicenses.map((license) => (
+                <div className="aristocracia-license-item" key={license.license_id}>
+                  <div>
+                    <strong>{license.organization_name}</strong>
+                    <span>{license.city || "Sense ciutat"} · {license.plan}</span>
+                  </div>
+                  <StatusBadge value={license.status} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="aula-empty">Encara no hi ha llicències creades.</p>
+          )}
         </AulaCard>
       </div>
 
-      <AulaCard>
-        <p className="aula-eyebrow">Status ràpid</p>
+      <AulaCard className="aristocracia-panel-card">
+        <SectionHeader
+          eyebrow="Equip"
+          title="Accés intern"
+          description="Treballadors actius amb permisos sobre aquest backoffice."
+        />
         <div className="aristocracia-status-list">
-          {services.map((service) => (
-            <div key={service.id} className="aristocracia-status-row">
+          {workers.map((worker) => (
+            <div key={worker.id} className="aristocracia-status-row">
               <div>
-                <strong>{service.name}</strong>
-                <span>{service.description}</span>
+                <strong>{worker.full_name || worker.email}</strong>
+                <span>{worker.email} · Últim accés: {formatDateTime(worker.last_seen_at)}</span>
               </div>
-              <span className={`aristocracia-status-badge status-${service.effective_status}`}>
-                {statusLabel(service.effective_status)}
-              </span>
+              <StatusBadge value={worker.role} />
             </div>
           ))}
         </div>
@@ -295,12 +397,15 @@ function LicensesTab({ dashboard, onReload }) {
   }
 
   return (
-    <div className="aula-grid">
-      {message ? <p className="aula-message">{message}</p> : null}
-      <div className="aula-grid aula-grid-two">
-        <AulaCard>
-          <p className="aula-eyebrow">Nova llicència</p>
-          <h2>Crear centre</h2>
+    <div className="aula-grid aristocracia-dashboard">
+      {message ? <p className="aula-message aristocracia-floating-message">{message}</p> : null}
+      <div className="aula-grid aula-grid-two aristocracia-editor-grid">
+        <AulaCard className="aristocracia-panel-card">
+          <SectionHeader
+            eyebrow="Nova llicència"
+            title="Crear centre"
+            description="Alta comercial ràpida amb dates, límits i contacte principal."
+          />
           <form className="aula-form aula-form-grid" onSubmit={handleCreate}>
             <label>
               Centre
@@ -371,9 +476,12 @@ function LicensesTab({ dashboard, onReload }) {
           </form>
         </AulaCard>
 
-        <AulaCard>
-          <p className="aula-eyebrow">Docents Aula</p>
-          <h2>Convidar docent</h2>
+        <AulaCard className="aristocracia-panel-card">
+          <SectionHeader
+            eyebrow="Docents Aula"
+            title="Convidar docent"
+            description="Vincula el primer docent al centre seleccionat."
+          />
           <form className="aula-form" onSubmit={handleInvite}>
             <label>
               Centre
@@ -407,20 +515,23 @@ function LicensesTab({ dashboard, onReload }) {
         </AulaCard>
       </div>
 
-      <AulaCard>
-        <div className="aula-section-title">
-          <div>
-            <p className="aula-eyebrow">Llicències</p>
-            <h2>Estat comercial</h2>
-          </div>
+      <AulaCard className="aristocracia-panel-card aristocracia-table-card">
+        <SectionHeader
+          eyebrow="Llicències"
+          title="Estat comercial"
+          description={`${licenses.length} registres disponibles per renovar, suspendre o activar.`}
+        >
           <AulaButton variant="secondary" onClick={onReload}>Actualitzar</AulaButton>
-        </div>
+        </SectionHeader>
         <AdminLicenses licenses={licenses} onChanged={onReload} />
       </AulaCard>
 
-      <AulaCard>
-        <p className="aula-eyebrow">Centres</p>
-        <h2>Organitzacions</h2>
+      <AulaCard className="aristocracia-panel-card">
+        <SectionHeader
+          eyebrow="Centres"
+          title="Organitzacions"
+          description="Vista ràpida dels centres creats i el seu contacte principal."
+        />
         <AdminOrganizations licenses={licenses} />
       </AulaCard>
     </div>
@@ -466,16 +577,16 @@ function StatusTab({ dashboard, onReload }) {
   }
 
   return (
-    <AulaCard>
-      <div className="aula-section-title">
-        <div>
-          <p className="aula-eyebrow">Status</p>
-          <h2>Serveis Camicurt</h2>
-        </div>
+    <AulaCard className="aristocracia-panel-card aristocracia-table-card">
+      <SectionHeader
+        eyebrow="Status"
+        title="Serveis Camicurt"
+        description="Checks automàtics i overrides manuals per comunicar incidències internes."
+      >
         <AulaButton onClick={runChecks} disabled={busy}>
           {busy ? "Comprovant..." : "Executar checks"}
         </AulaButton>
-      </div>
+      </SectionHeader>
       {message ? <p className="aula-message">{message}</p> : null}
       <div className="aula-table-wrap">
         <table className="aula-table">
@@ -499,9 +610,7 @@ function StatusTab({ dashboard, onReload }) {
                   <span>{service.description}</span>
                 </td>
                 <td>
-                  <span className={`aristocracia-status-badge status-${service.effective_status}`}>
-                    {statusLabel(service.effective_status)}
-                  </span>
+                  <StatusBadge value={service.effective_status} />
                 </td>
                 <td>{statusLabel(service.automatic_status)}</td>
                 <td>{service.manual_status ? statusLabel(service.manual_status) : "Sense override"}</td>
@@ -563,15 +672,22 @@ function SocialTab({ dashboard, onReload }) {
   }
 
   return (
-    <AulaCard>
-      <p className="aula-eyebrow">Xarxes i canals</p>
-      <h2>Enllaços públics</h2>
+    <AulaCard className="aristocracia-panel-card">
+      <SectionHeader
+        eyebrow="Xarxes i canals"
+        title="Enllaços públics"
+        description="Slots editables per deixar preparada la presència pública de Camicurt."
+      />
       {message ? <p className="aula-message">{message}</p> : null}
       <div className="aristocracia-social-grid">
         {links.map((link) => {
           const draft = drafts[link.platform] || link;
           return (
-            <section className="aula-mini-card" key={link.platform}>
+            <section className="aula-mini-card aristocracia-social-card" key={link.platform}>
+              <div className="aristocracia-social-card-head">
+                <strong>{draft.label || link.platform}</strong>
+                <StatusBadge value={draft.status || "draft"} />
+              </div>
               <label>
                 Plataforma
                 <input value={draft.label || ""} onChange={(event) => update(link.platform, "label", event.target.value)} />
@@ -631,10 +747,13 @@ function WorkersTab({ dashboard, onReload }) {
   }
 
   return (
-    <div className="aula-grid aula-grid-two">
-      <AulaCard>
-        <p className="aula-eyebrow">Treballadors</p>
-        <h2>Accés intern</h2>
+    <div className="aula-grid aula-grid-two aristocracia-editor-grid">
+      <AulaCard className="aristocracia-panel-card aristocracia-table-card">
+        <SectionHeader
+          eyebrow="Treballadors"
+          title="Accés intern"
+          description="Persones amb rol actiu dins del backoffice."
+        />
         <div className="aula-table-wrap">
           <table className="aula-table aula-table-compact">
             <thead>
@@ -651,8 +770,8 @@ function WorkersTab({ dashboard, onReload }) {
                 <tr key={worker.id}>
                   <td>{worker.email}</td>
                   <td>{worker.full_name || ""}</td>
-                  <td>{worker.role}</td>
-                  <td>{worker.status}</td>
+                  <td><StatusBadge value={worker.role} /></td>
+                  <td><StatusBadge value={worker.status} /></td>
                   <td>{formatDateTime(worker.last_seen_at)}</td>
                 </tr>
               ))}
@@ -661,9 +780,12 @@ function WorkersTab({ dashboard, onReload }) {
         </div>
       </AulaCard>
 
-      <AulaCard>
-        <p className="aula-eyebrow">Alta o reset</p>
-        <h2>Crear credencial</h2>
+      <AulaCard className="aristocracia-panel-card">
+        <SectionHeader
+          eyebrow="Alta o reset"
+          title="Crear credencial"
+          description="La contrasenya és temporal i només viatja a l'Edge Function."
+        />
         <form className="aula-form" onSubmit={handleSubmit}>
           <label>
             Correu
@@ -701,16 +823,21 @@ function Dashboard({ access }) {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
-  async function loadDashboard() {
-    setLoading(true);
+  async function loadDashboard(options = {}) {
+    const silent = Boolean(options.silent);
+    if (!silent) setLoading(true);
     setMessage("");
     try {
       setDashboard(await getAristocraciaDashboard());
     } catch (error) {
       setMessage(error.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
+  }
+
+  function reloadDashboard() {
+    return loadDashboard({ silent: true });
   }
 
   useEffect(() => {
@@ -719,11 +846,11 @@ function Dashboard({ access }) {
 
   return (
     <AristocraciaLayout access={access} activeTab={activeTab} onTabChange={setActiveTab}>
-      <section className="aula-panel-head">
+      <section className="aula-panel-head aristocracia-hero">
         <div>
           <p className="aula-eyebrow">Camicurt intern</p>
           <h1>Aristocracia</h1>
-          <p>Gestió de llicències, status, xarxes i treballadors.</p>
+          <p>Control central de llicències, status, canals públics i equip intern.</p>
         </div>
         <div className="aula-actions">
           <AulaButton href="/aula/admin" variant="secondary">Admin Aula</AulaButton>
@@ -733,10 +860,10 @@ function Dashboard({ access }) {
       {loading ? <AulaLoading label="Carregant backoffice..." /> : null}
       {message ? <p className="aula-message aula-message-error">{message}</p> : null}
       {!loading && dashboard && activeTab === "resum" ? <OverviewTab dashboard={dashboard} /> : null}
-      {!loading && dashboard && activeTab === "llicencies" ? <LicensesTab dashboard={dashboard} onReload={loadDashboard} /> : null}
-      {!loading && dashboard && activeTab === "status" ? <StatusTab dashboard={dashboard} onReload={loadDashboard} /> : null}
-      {!loading && dashboard && activeTab === "xarxes" ? <SocialTab dashboard={dashboard} onReload={loadDashboard} /> : null}
-      {!loading && dashboard && activeTab === "treballadors" ? <WorkersTab dashboard={dashboard} onReload={loadDashboard} /> : null}
+      {!loading && dashboard && activeTab === "llicencies" ? <LicensesTab dashboard={dashboard} onReload={reloadDashboard} /> : null}
+      {!loading && dashboard && activeTab === "status" ? <StatusTab dashboard={dashboard} onReload={reloadDashboard} /> : null}
+      {!loading && dashboard && activeTab === "xarxes" ? <SocialTab dashboard={dashboard} onReload={reloadDashboard} /> : null}
+      {!loading && dashboard && activeTab === "treballadors" ? <WorkersTab dashboard={dashboard} onReload={reloadDashboard} /> : null}
     </AristocraciaLayout>
   );
 }
@@ -747,8 +874,12 @@ export default function AristocraciaApp() {
   const [state, setState] = useState({ loading: true, access: null, error: null });
 
   useEffect(() => {
+    document.documentElement.classList.add("aristocracia-route");
     document.body.classList.add("aristocracia-route");
-    return () => document.body.classList.remove("aristocracia-route");
+    return () => {
+      document.documentElement.classList.remove("aristocracia-route");
+      document.body.classList.remove("aristocracia-route");
+    };
   }, []);
 
   useEffect(() => {
