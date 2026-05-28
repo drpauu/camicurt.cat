@@ -7,6 +7,14 @@
     {
       "source": "/aula/(.*)",
       "destination": "/index.html"
+    },
+    {
+      "source": "/aristocracia",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/aristocracia/(.*)",
+      "destination": "/index.html"
     }
   ],
   "headers": [
