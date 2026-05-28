@@ -3,6 +3,7 @@ import AulaBlocked from "./components/AulaBlocked.jsx";
 import AulaLayout from "./components/AulaLayout.jsx";
 import AulaLoading from "./components/AulaLoading.jsx";
 import { claimAulaTeacher, getAulaAccess } from "./lib/aulaApi.js";
+import { waitForAulaMagicLinkSession } from "./lib/aulaAuth.js";
 
 export default function AulaCallback() {
   const [state, setState] = useState({ loading: true, error: null });
@@ -11,6 +12,7 @@ export default function AulaCallback() {
     let cancelled = false;
     async function run() {
       try {
+        await waitForAulaMagicLinkSession();
         await claimAulaTeacher();
         const access = await getAulaAccess();
         if (access?.allowed) {

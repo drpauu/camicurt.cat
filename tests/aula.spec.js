@@ -36,6 +36,16 @@ test("el callback del magic link no queda atrapat a localhost per defecte", asyn
   expect(redirectTo).not.toContain("127.0.0.1");
 });
 
+test("/aula/callback mostra un error clar si l'enllaç és invàlid", async ({ page }) => {
+  await page.goto(
+    "/aula/callback#error=access_denied&error_description=Email%20link%20is%20invalid",
+    { waitUntil: "domcontentloaded" }
+  );
+
+  await expect(page.getByText(/enllaç d'accés no és vàlid o ha caducat/i)).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: /Accés docent/i })).toBeVisible();
+});
+
 test("/aula/join mostra formulari de codi i pseudònim", async ({ page }) => {
   await page.goto("/aula/join?code=ABC123", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: /Entra a la sessió/i })).toBeVisible();
