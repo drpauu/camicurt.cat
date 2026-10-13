@@ -8,6 +8,22 @@
 
 No és només un mapa interactiu: és una experiència de resolució de rutes on cada partida té una solució òptima calculada, una dificultat classificable i una capa de feedback pensada perquè el jugador entengui si s'està acostant a la millor resposta.
 
+## Desenvolupament local
+
+```sh
+npm ci
+npm run dev
+```
+
+Per executar el build complet, crea `.env.local` a l'arrel del projecte i configura les variables públiques de Supabase:
+
+```sh
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<publishable-key>
+```
+
+També s'accepta `VITE_SUPABASE_ANON_KEY` com a alternativa. Si falta alguna variable, `npm run build` acaba amb un missatge explícit per evitar publicar una aplicació sense connexió. Aquestes variables són públiques per disseny; no hi posis `SUPABASE_SERVICE_ROLE_KEY`, codis de jugadors ni altres secrets. La comprovació viu a `scripts/validate-frontend-env.mjs`.
+
 ---
 
 ## Proposta de valor
